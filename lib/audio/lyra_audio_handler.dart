@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import '../database/database.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -41,6 +41,32 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
         queueIndex: event.currentIndex,
       ),
     );
+  }
+
+  /// Memutar daftar lagu secara berurutan (Queue)
+  Future<void> playQueue(List<Song> songs, int initialIndex) async {
+    // 1. Ubah list lagu dari database menjadi MediaItem
+    final mediaItems = songs
+        .map(
+          (s) => MediaItem(
+            id: s.path,
+            title: s.title,
+            artist: s.artist,
+            album: s.album,
+            duration: Duration(milliseconds: s.durationMs),
+          ),
+        )
+        .toList();
+
+    // 2. Masukkan ke antrean audio_service
+    queue.add(mediaItems);
+
+    // 3. Masukkan ke antrean just_audio
+    final audioSources = songs.map((s) => AudioSource.file(s.path)).toList();
+    await _player.setAudioSources(audioSources, initialIndex: initialIndex);
+
+    // 4. Putar
+    play();
   }
 
   /// Muat satu file audio lokal (dipanggil dari UI).

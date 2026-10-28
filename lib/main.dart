@@ -4,6 +4,7 @@ import 'audio/lyra_audio_handler.dart';
 import 'ui/home_page.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 late final AudioHandler audioHandler;
 
@@ -26,7 +27,7 @@ Future<void> main() async {
     ),
   );
 
-  runApp(const LyraApp());
+  runApp(const ProviderScope(child: LyraApp()));
 }
 
 class LyraApp extends StatelessWidget {
