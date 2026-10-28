@@ -1,0 +1,40 @@
+name: lyra
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # --- Core Audio ---
+  just_audio: ^0.10.6
+  audio_service: ^0.18.19
+  audio_session: ^0.2.4
+
+  # --- Local Database ---
+  drift: ^2.35.3
+  drift_flutter: ^0.3.1
+  path_provider: ^2.1.6
+
+  # --- State Management ---
+  flutter_riverpod: ^3.4.3
+
+  # --- File Picker ---
+  file_picker: ^13.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  
+  # --- Code Generation ---
+  drift_dev: ^2.35.2
+  build_runner: ^2.15.1
+
+flutter:
+  uses-material-design: true
