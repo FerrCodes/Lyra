@@ -169,7 +169,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   // =========================================================================
-  // DESAIN FOTO 1: 3 KAPSUL TERPISAH (MINI PLAYER, NAV, SEARCH)
+  // DESAIN 3 KAPSUL TERPISAH (MINI PLAYER, NAV, SEARCH)
   // =========================================================================
   Widget _buildDefaultState() {
     return StreamBuilder<MediaItem?>(
@@ -190,7 +190,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
-                      height: 64,
+                      height: 54,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(
@@ -285,7 +285,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                         child: Container(
-                          height: 64,
+                          height: 54,
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(30),
@@ -313,8 +313,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                       child: Container(
-                        width: 64,
-                        height: 64,
+                        width: 54,
+                        height: 54,
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(32),
@@ -340,7 +340,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   // =========================================================================
-  // DESAIN FOTO 2: 1 BARIS MENYATU (HOME - PLAYER - SEARCH)
+  // DESAIN 3 PILL TERPISAH (SAAT DI-SCROLL)
   // =========================================================================
   Widget _buildScrolledState() {
     return StreamBuilder<MediaItem?>(
@@ -349,51 +349,77 @@ class _HomePageState extends ConsumerState<HomePage> {
       builder: (context, snapshot) {
         final item = snapshot.data;
 
+        // Kita tidak pakai Container pembungkus luar. Langsung Row!
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(35),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.85), // Kaca menyatu
-                  borderRadius: BorderRadius.circular(35),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    // Tombol Home
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.home_filled,
-                        color: Colors.red,
-                        size: 24,
+          child: Row(
+            children: [
+              // ==========================================
+              // 1. PILL KIRI (HOME)
+              // ==========================================
+              ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(
+                        alpha: 0.85,
+                      ), // Putih solid/kaca
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.5),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    // Mini Player
-                    Expanded(
+                    child: const Icon(
+                      Icons.home_filled,
+                      color: Colors.red,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 8), // Jarak antar pill
+              // ==========================================
+              // 2. PILL TENGAH (MINI PLAYER)
+              // ==========================================
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      height: 54,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(
+                          alpha: 0.85,
+                        ), // Putih solid/kaca
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
                       child: item == null
-                          ? const SizedBox()
+                          ? const Center(
+                              child: Text(
+                                'Pilih lagu',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
                           : Row(
                               children: [
+                                const SizedBox(width: 4),
+                                // Cover
                                 Container(
-                                  width: 40,
-                                  height: 40,
+                                  width: 44,
+                                  height: 44,
                                   decoration: BoxDecoration(
                                     color: Colors.grey.shade300,
-                                    borderRadius: BorderRadius.circular(6),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Icon(
                                     Icons.music_note,
@@ -401,7 +427,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                                     size: 20,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: 12),
+                                // Teks
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -430,6 +457,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                     ],
                                   ),
                                 ),
+                                // Play Button
                                 StreamBuilder<PlaybackState>(
                                   stream: audioHandler.playbackState,
                                   builder: (context, snapshot) {
@@ -452,26 +480,39 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ],
                             ),
                     ),
-                    const SizedBox(width: 12),
-                    // Tombol Search
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.search,
-                        color: Colors.black,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
+                  ),
                 ),
               ),
-            ),
+
+              const SizedBox(width: 8), // Jarak antar pill
+              // ==========================================
+              // 3. PILL KANAN (SEARCH)
+              // ==========================================
+              ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(
+                        alpha: 0.85,
+                      ), // Putih solid/kaca
+                      borderRadius: BorderRadius.circular(32),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.search,
+                      color: Colors.black,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
