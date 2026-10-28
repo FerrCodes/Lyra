@@ -9,6 +9,11 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   LyraAudioHandler() {
     // Sinkronkan state just_audio ke audio_service.
     _player.playbackEventStream.listen(_broadcastState);
+    _player.currentIndexStream.listen((index) {
+      if (index != null && index < queue.value.length) {
+        mediaItem.add(queue.value[index]);
+      }
+    });
     _player.durationStream.listen((duration) {
       final current = mediaItem.value;
       if (current != null && duration != null) {
@@ -61,11 +66,17 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     // 2. Masukkan ke antrean audio_service
     queue.add(mediaItems);
 
-    // 3. Masukkan ke antrean just_audio
+    // ========================================================
+    // 3. TAMBAHKAN BARIS INI (Ini yang tadi hilang!)
+    // Memberitahu Mini Player lagu mana yang sedang diputar
+    mediaItem.add(mediaItems[initialIndex]);
+    // ========================================================
+
+    // 4. Masukkan ke antrean just_audio
     final audioSources = songs.map((s) => AudioSource.file(s.path)).toList();
     await _player.setAudioSources(audioSources, initialIndex: initialIndex);
 
-    // 4. Putar
+    // 5. Putar
     play();
   }
 

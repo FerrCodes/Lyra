@@ -18,6 +18,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentTab = 0;
   bool _isScrolled = false;
+  String _currentSortFilter = 'Name';
+
+  void _refreshBottomBar() {
+    setState(() {
+      // Memaksa rebuild UI untuk menampilkan Mini Player
+    });
+  }
 
   final List<String> _titles = ['Beranda', 'Songs', 'Playlist', 'Library'];
 
@@ -32,6 +39,12 @@ class _HomePageState extends State<HomePage> {
           // =========================================================
           NotificationListener<ScrollNotification>(
             onNotification: (scrollInfo) {
+              // Abaikan jika ini adalah scroll horizontal (seperti carousel)
+              if (scrollInfo.metrics.axis == Axis.horizontal) {
+                return false; // Biarkan carousel menangani scroll-nya sendiri
+              }
+
+              // Logika untuk scroll vertikal
               if (scrollInfo.metrics.pixels > 40 && !_isScrolled) {
                 setState(() => _isScrolled = true);
               } else if (scrollInfo.metrics.pixels <= 40 && _isScrolled) {
@@ -43,7 +56,17 @@ class _HomePageState extends State<HomePage> {
               index: _currentTab,
               children: [
                 _buildDashboardView(), // <--- TAB 0: BERANDA (KODE DISATUKAN DI SINI)
-                const SongsPage(), // <--- TAB 1
+                SongsPage(
+                  key: songsPageKey,
+                  onPlayTriggered: _refreshBottomBar,
+                  onSortChanged: (newFilter) {
+                    setState(() => _currentSortFilter = newFilter);
+                  },
+                  onDoubleTapHome: () {
+                    // Jika user klik 2x, pindah ke Beranda
+                    setState(() => _currentTab = 0);
+                  },
+                ), // <--- TAB 1
                 const PlaylistPage(), // <--- TAB 2
                 const LibraryPage(), // <--- TAB 3
               ],
@@ -51,21 +74,25 @@ class _HomePageState extends State<HomePage> {
           ),
 
           // HEADER
-          LyraHeader(
-            title: _titles[_currentTab],
-            // Jika bukan di Tab 0 (Beranda), tampilkan tombol Search.
-            // Jika di Tab 0 (Beranda), rightWidget bernilai null, jadi tombol hilang.
-            rightWidget: _currentTab != 0
-                ? GestureDetector(
-                    onTap: () {
-                      // Nanti kita arahkan ke halaman pencarian
-                    },
+          // HEADER
+          if (_currentTab == 1)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 16,
+              right: 16,
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => songsPageKey.currentState
+                        ?.triggerFilterDialog(), // <--- Panggil Filter
                     child: Container(
-                      height: 48,
-                      width: 48,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.1),
@@ -74,15 +101,68 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.search,
-                        color: Colors.black,
-                        size: 20,
+                      child: Row(
+                        children: [
+                          Icon(Icons.sort, color: Colors.black87, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            _currentSortFilter,
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ),
-                  )
-                : null, // Tombol search hilang di Beranda
-          ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      _buildHeaderCircleButton(
+                        Icons.shuffle,
+                        onTap: () => songsPageKey.currentState
+                            ?.playAllShuffled(), // <--- Panggil Shuffle
+                      ),
+                      const SizedBox(width: 8),
+                      _buildHeaderCircleButton(
+                        Icons.play_arrow,
+                        onTap: () => songsPageKey.currentState
+                            ?.playAll(), // <--- Panggil Play
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+          else // Jika di halaman Beranda, Playlist, atau Library
+            LyraHeader(
+              title: _titles[_currentTab],
+              rightWidget:
+                  _currentTab !=
+                      0 // Hilangkan search di Beranda
+                  ? GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        height: 48,
+                        width: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.search,
+                          color: Colors.black,
+                          size: 20,
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
 
           // BOTTOM BAR
           Positioned(
@@ -92,12 +172,48 @@ class _HomePageState extends State<HomePage> {
             child: LyraBottomBar(
               currentIndex: _currentTab,
               isScrolled: _isScrolled,
+              onHomeTap: () {
+                // Jika sedang di Beranda, tidak usah apa-apa
+                if (_currentTab == 0) return;
+                // Jika sedang di Songs (Tab 1), panggil fungsi scrollToTop
+                if (_currentTab == 1) {
+                  songsPageKey.currentState?.scrollToTop();
+                } else {
+                  // Jika di tab lain, langsung pindah ke Beranda
+                  setState(() => _currentTab = 0);
+                }
+              },
               onTabChanged: (index) {
                 setState(() => _currentTab = index);
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderCircleButton(
+    IconData icon, {
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap, // Pastikan baris ini ada
+      child: Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: Colors.black, size: 20),
       ),
     );
   }

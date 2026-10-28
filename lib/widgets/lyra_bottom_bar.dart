@@ -7,12 +7,14 @@ class LyraBottomBar extends StatefulWidget {
   final int currentIndex;
   final Function(int) onTabChanged;
   final bool isScrolled;
+  final VoidCallback? onHomeTap;
 
   const LyraBottomBar({
     super.key,
     required this.currentIndex,
     required this.onTabChanged,
     required this.isScrolled,
+    this.onHomeTap,
   });
 
   @override
@@ -224,7 +226,13 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                       ),
                     ),
                     child: GestureDetector(
-                      onTap: () => widget.onTabChanged(0),
+                      onTap: () {
+                        if (widget.onHomeTap != null) {
+                          widget.onHomeTap!(); // Panggil logika dari HomePage
+                        } else {
+                          widget.onTabChanged(0); // Fallback
+                        }
+                      },
                       child: const Icon(
                         Icons.home_filled,
                         color: Colors.red,
@@ -361,7 +369,13 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
     final isSelected = widget.currentIndex == index;
     final activeColor = isSelected ? Colors.red : Colors.black87;
     return GestureDetector(
-      onTap: () => widget.onTabChanged(index),
+      onTap: () {
+        if (index == 0 && widget.onHomeTap != null) {
+          widget.onHomeTap!(); // Jika tombol Home, jalankan logika Home
+        } else {
+          widget.onTabChanged(index);
+        }
+      },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
