@@ -1,13 +1,20 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-
 import 'audio/lyra_audio_handler.dart';
 import 'ui/home_page.dart';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 
 late final AudioHandler audioHandler;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isAndroid) {
+    await Permission.audio.request();
+    // Untuk Android 12 ke bawah, biasanya butuh storage
+    await Permission.storage.request();
+  }
 
   audioHandler = await AudioService.init(
     builder: () => LyraAudioHandler(),
