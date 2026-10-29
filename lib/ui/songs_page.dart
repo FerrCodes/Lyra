@@ -13,13 +13,8 @@ final GlobalKey<SongsPageState> songsPageKey = GlobalKey<SongsPageState>();
 class SongsPage extends ConsumerStatefulWidget {
   final VoidCallback? onPlayTriggered;
   final Function(String)? onSortChanged;
-  final VoidCallback? onDoubleTapHome;
-  const SongsPage({
-    super.key,
-    this.onPlayTriggered,
-    this.onSortChanged,
-    this.onDoubleTapHome,
-  });
+
+  const SongsPage({super.key, this.onPlayTriggered, this.onSortChanged});
 
   @override
   ConsumerState<SongsPage> createState() => SongsPageState();
@@ -30,42 +25,13 @@ class SongsPageState extends ConsumerState<SongsPage> {
   List<local.Song> _displayedSongs = [];
   List<Song> _favorites = [];
   bool _isLoading = true;
+
   String _sortBy = 'Name';
-  final ScrollController _scrollController = ScrollController();
-  DateTime? _lastHomeTap;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void scrollToTop() {
-    final now = DateTime.now();
-
-    // Jika tombol diklik dua kali dalam waktu kurang dari 300ms
-    if (_lastHomeTap != null &&
-        now.difference(_lastHomeTap!) < const Duration(milliseconds: 300)) {
-      _lastHomeTap = null;
-      // Aksi klik 2x: Beritahu HomePage untuk pindah tab
-      widget.onDoubleTapHome?.call();
-    } else {
-      _lastHomeTap = now;
-      // Aksi klik 1x: Scroll ke atas dengan animasi
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          0.0,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOutCubic,
-        );
-      }
-    }
   }
 
   Future<void> _loadData() async {
@@ -109,8 +75,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
           (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
         );
       } else if (_sortBy == 'Date Added') {
-        // Untuk sementara kita urutkan berdasarkan ID terbaru (terbalik)
-        // Karena kita belum punya tanggal file asli dari MediaStore
         _displayedSongs.sort((a, b) => b.id.compareTo(a.id));
       }
     });
@@ -177,10 +141,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
-  // --- FUNGSI DARI HOME_PAGE ---
-  void triggerFilterDialog() {
-    _showFilterDialog();
-  }
+  void triggerFilterDialog() => _showFilterDialog();
 
   void playAllShuffled() {
     if (_displayedSongs.isEmpty) return;
@@ -227,7 +188,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
     widget.onPlayTriggered?.call();
   }
 
-  // --- POPOVER MENU TITIK TIGA ---
   void _showSongOptions(local.Song song, bool isFav) {
     showModalBottomSheet(
       context: context,
@@ -239,7 +199,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header Info Lagu
+              // 1. Header Info Lagu
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -281,7 +241,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
               ),
               const Divider(height: 1),
 
-              // Menu Favorit
+              // 2. Menu Favorit
               ListTile(
                 leading: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border,
@@ -291,18 +251,108 @@ class SongsPageState extends ConsumerState<SongsPage> {
                   isFav ? 'Hapus dari Favorit' : 'Tambahkan ke Favorit',
                 ),
                 onTap: () async {
-                  Navigator.pop(context); // Tutup popover
-                  await _toggleFavorite(song, isFav); // Jalankan fungsi favorit
+                  Navigator.pop(context);
+                  await _toggleFavorite(song, isFav);
                 },
               ),
 
-              // Tempat untuk fitur tambahan nanti (misal: Tambah ke Playlist)
-              const ListTile(
-                leading: Icon(Icons.playlist_add, color: Colors.grey),
-                title: Text('Tambahkan ke Playlist (Segera)'),
-                enabled: false,
+              // 3. Menu Tambah ke Playlist (AKTIF SEKARANG)
+              ListTile(
+                leading: const Icon(Icons.playlist_add, color: Colors.black87),
+                title: const Text('Tambahkan ke Playlist'),
+                onTap: () async {
+                  Navigator.pop(context); // Tutup menu popover pertama
+                  _showPlaylistSelection(song); // Buka dialog pilih playlist
+                },
               ),
+
               const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- FUNGSI BARU UNTUK MEMILIH PLAYLIST ---
+  void _showPlaylistSelection(local.Song song) async {
+    final db = ref.read(databaseProvider);
+    // Ambil semua playlist dari database
+    final playlists = await db.select(db.playlists).get();
+
+    if (!mounted) return;
+
+    if (playlists.isEmpty) {
+      // Jika belum ada playlist
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Belum ada Playlist. Buat dulu di tab Playlist.'),
+        ),
+      );
+      return;
+    }
+
+    // Tampilkan dialog daftar playlist
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Pilih Playlist',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+              ),
+              const Divider(height: 1),
+              // List Playlist
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: playlists.length,
+                  itemBuilder: (context, index) {
+                    final pl = playlists[index];
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.queue_music,
+                        color: Colors.black54,
+                      ),
+                      title: Text(pl.name),
+                      onTap: () async {
+                        // Konversi lagu ke format database
+                        final dbSong = Song(
+                          id: song.id,
+                          title: song.title,
+                          artist: song.artist,
+                          album: song.album,
+                          path: song.path,
+                          durationMs: song.durationMs,
+                          addedAt: DateTime.now(),
+                        );
+                        // Simpan ke database
+                        await db.addSongToPlaylist(pl.id, dbSong);
+
+                        if (context.mounted) {
+                          Navigator.pop(context); // Tutup dialog
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${song.title} ditambahkan ke ${pl.name}',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         );
@@ -318,8 +368,8 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
     return Stack(
       children: [
+        // ListView TANPA ScrollController (Karena menggunakan PrimaryScrollController)
         ListView.builder(
-          controller: _scrollController,
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + 80,
             bottom: 160,
@@ -360,15 +410,12 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.grey),
                   ),
-                  // Hanya menyisakan tombol titik tiga
                   trailing: IconButton(
                     icon: const Icon(Icons.more_vert, color: Colors.grey),
                     onPressed: () => _showSongOptions(song, isFav),
                   ),
                   onTap: () async {
                     final handler = audioHandler as LyraAudioHandler;
-
-                    // Ganti loadFile dengan playQueue agar bisa lanjut otomatis
                     handler.playQueue(
                       _displayedSongs
                           .map(
@@ -383,9 +430,8 @@ class SongsPageState extends ConsumerState<SongsPage> {
                             ),
                           )
                           .toList(),
-                      index, // Memulai dari lagu yang diklik (berdasarkan urutan index)
+                      index,
                     );
-                    // Panggil sinyal untuk memunculkan Mini Player
                     widget.onPlayTriggered?.call();
                   },
                 );

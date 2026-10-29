@@ -1,7 +1,4 @@
-import 'dart:ui';
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-import '../main.dart';
 import '../widgets/lyra_bottom_bar.dart';
 import '../widgets/lyra_header.dart';
 import 'songs_page.dart';
@@ -19,12 +16,10 @@ class _HomePageState extends State<HomePage> {
   int _currentTab = 0;
   bool _isScrolled = false;
   String _currentSortFilter = 'Name';
+  final ScrollController _mainScrollController = ScrollController();
 
-  void _refreshBottomBar() {
-    setState(() {
-      // Memaksa rebuild UI untuk menampilkan Mini Player
-    });
-  }
+  // Menyimpan nilai posisi scroll saat ini
+  double _currentScrollOffset = 0;
 
   final List<String> _titles = ['Beranda', 'Songs', 'Playlist', 'Library'];
 
@@ -35,16 +30,15 @@ class _HomePageState extends State<HomePage> {
       body: Stack(
         children: [
           // =========================================================
-          // KONTEN UTAMA (TAB 0 = BERANDA, TAB 1-3 = FILE LUAR)
+          // KONTEN UTAMA
           // =========================================================
           NotificationListener<ScrollNotification>(
             onNotification: (scrollInfo) {
-              // Abaikan jika ini adalah scroll horizontal (seperti carousel)
-              if (scrollInfo.metrics.axis == Axis.horizontal) {
-                return false; // Biarkan carousel menangani scroll-nya sendiri
-              }
+              if (scrollInfo.metrics.axis == Axis.horizontal) return false;
 
-              // Logika untuk scroll vertikal
+              // Simpan posisi scroll saat ini
+              _currentScrollOffset = scrollInfo.metrics.pixels;
+
               if (scrollInfo.metrics.pixels > 40 && !_isScrolled) {
                 setState(() => _isScrolled = true);
               } else if (scrollInfo.metrics.pixels <= 40 && _isScrolled) {
@@ -52,30 +46,30 @@ class _HomePageState extends State<HomePage> {
               }
               return true;
             },
-            child: IndexedStack(
-              index: _currentTab,
-              children: [
-                _buildDashboardView(), // <--- TAB 0: BERANDA (KODE DISATUKAN DI SINI)
-                SongsPage(
-                  key: songsPageKey,
-                  onPlayTriggered: _refreshBottomBar,
-                  onSortChanged: (newFilter) {
-                    setState(() => _currentSortFilter = newFilter);
-                  },
-                  onDoubleTapHome: () {
-                    // Jika user klik 2x, pindah ke Beranda
-                    setState(() => _currentTab = 0);
-                  },
-                ), // <--- TAB 1
-                const PlaylistPage(), // <--- TAB 2
-                const LibraryPage(), // <--- TAB 3
-              ],
+            child: PrimaryScrollController(
+              controller: _mainScrollController,
+              child: IndexedStack(
+                index: _currentTab,
+                children: [
+                  _buildDashboardView(),
+                  SongsPage(
+                    key: songsPageKey,
+                    onPlayTriggered: () => setState(() {}),
+                    onSortChanged: (newFilter) {
+                      setState(() => _currentSortFilter = newFilter);
+                    },
+                  ),
+                  PlaylistPage(key: playlistPageKey),
+                  const LibraryPage(),
+                ],
+              ),
             ),
           ),
 
+          // =========================================================
           // HEADER
-          // HEADER
-          if (_currentTab == 1)
+          // =========================================================
+          if (_currentTab == 1) // HEADER SONGS
             Positioned(
               top: MediaQuery.of(context).padding.top + 12,
               left: 16,
@@ -83,16 +77,15 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => songsPageKey.currentState
-                        ?.triggerFilterDialog(), // <--- Panggil Filter
+                    onTap: () =>
+                        songsPageKey.currentState?.triggerFilterDialog(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
+                      height: 48,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.1),
@@ -102,42 +95,149 @@ class _HomePageState extends State<HomePage> {
                         ],
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.sort, color: Colors.black87, size: 20),
-                          SizedBox(width: 8),
+                          const Icon(
+                            Icons.sort,
+                            color: Colors.black87,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             _currentSortFilter,
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
                   ),
                   const Spacer(),
-                  Row(
-                    children: [
-                      _buildHeaderCircleButton(
-                        Icons.shuffle,
-                        onTap: () => songsPageKey.currentState
-                            ?.playAllShuffled(), // <--- Panggil Shuffle
-                      ),
-                      const SizedBox(width: 8),
-                      _buildHeaderCircleButton(
-                        Icons.play_arrow,
-                        onTap: () => songsPageKey.currentState
-                            ?.playAll(), // <--- Panggil Play
-                      ),
-                    ],
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () =>
+                              songsPageKey.currentState?.playAllShuffled(),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 16, right: 12),
+                            child: Icon(
+                              Icons.shuffle,
+                              color: Colors.black,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => songsPageKey.currentState?.playAll(),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 12, right: 16),
+                            child: Icon(
+                              Icons.play_arrow,
+                              color: Colors.black,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             )
-          else // Jika di halaman Beranda, Playlist, atau Library
+          else if (_currentTab == 2) // HEADER PLAYLIST
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 16,
+              right: 16,
+              child: Row(
+                children: [
+                  Container(
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: const Text(
+                      'Playlist',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () => playlistPageKey.currentState
+                              ?.showCreatePlaylistDialog(),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 16, right: 12),
+                            child: Icon(
+                              Icons.add,
+                              color: Colors.black,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () =>
+                              playlistPageKey.currentState?.showFilterDialog(),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 12, right: 16),
+                            child: Icon(
+                              Icons.sort,
+                              color: Colors.black,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else // HEADER BERANDA & LIBRARY
             LyraHeader(
               title: _titles[_currentTab],
-              rightWidget:
-                  _currentTab !=
-                      0 // Hilangkan search di Beranda
+              rightWidget: _currentTab != 0
                   ? GestureDetector(
                       onTap: () {},
                       child: Container(
@@ -164,7 +264,9 @@ class _HomePageState extends State<HomePage> {
                   : null,
             ),
 
-          // BOTTOM BAR
+          // =========================================================
+          // BOTTOM BAR (LOGIKA BARU)
+          // =========================================================
           Positioned(
             left: 0,
             right: 0,
@@ -173,13 +275,33 @@ class _HomePageState extends State<HomePage> {
               currentIndex: _currentTab,
               isScrolled: _isScrolled,
               onHomeTap: () {
-                // Jika sedang di Beranda, tidak usah apa-apa
-                if (_currentTab == 0) return;
-                // Jika sedang di Songs (Tab 1), panggil fungsi scrollToTop
-                if (_currentTab == 1) {
-                  songsPageKey.currentState?.scrollToTop();
+                // Jika sedang di Tab Beranda
+                if (_currentTab == 0) {
+                  if (_mainScrollController.hasClients &&
+                      _currentScrollOffset > 0) {
+                    _mainScrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutCubic,
+                    );
+                  }
+                  return;
+                }
+
+                // Jika di Tab Songs/Playlist/Library
+                if (_currentScrollOffset > 10) {
+                  // Jika sedang di tengah scroll (bukan di paling atas)
+                  // Maka: Scroll ke atas
+                  if (_mainScrollController.hasClients) {
+                    _mainScrollController.animateTo(
+                      0.0,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutCubic,
+                    );
+                  }
                 } else {
-                  // Jika di tab lain, langsung pindah ke Beranda
+                  // Jika sudah di ujung paling atas
+                  // Maka: Pindah ke Beranda
                   setState(() => _currentTab = 0);
                 }
               },
@@ -189,31 +311,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderCircleButton(
-    IconData icon, {
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap, // Pastikan baris ini ada
-      child: Container(
-        height: 48,
-        width: 48,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Icon(icon, color: Colors.black, size: 20),
       ),
     );
   }
@@ -228,7 +325,6 @@ class _HomePageState extends State<HomePage> {
         bottom: 160,
       ),
       children: [
-        // 1. SAPAAN
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -250,8 +346,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         const SizedBox(height: 32),
-
-        // 2. PLAYLIST TERAKHIR DIPUTAR
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -260,8 +354,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Carousel
         SizedBox(
           height: 170,
           child: ListView.builder(
@@ -305,8 +397,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         const SizedBox(height: 32),
-
-        // 3. LAGU SERING DIPUTAR
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -315,8 +405,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Grid
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: GridView.builder(

@@ -27,6 +27,7 @@ dependencies:
   # --- File Picker ---
   file_picker: ^13.3.0
   permission_handler: ^13.0.2
+  image_picker: ^1.2.4
 
 dev_dependencies:
   flutter_test:
