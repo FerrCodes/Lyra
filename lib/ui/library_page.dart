@@ -4,6 +4,7 @@ import '../providers/database_provider.dart';
 import 'albums_page.dart';
 import 'artists_page.dart';
 import 'folders_page.dart';
+import '../providers/songs_provider.dart';
 
 // Kabel untuk dipanggil dari home_page.dart
 final GlobalKey<LibraryPageState> libraryPageKey =
@@ -19,7 +20,9 @@ class LibraryPage extends ConsumerStatefulWidget {
 class LibraryPageState extends ConsumerState<LibraryPage> {
   bool _isLoading = true;
   int _totalFavorites = 0;
-
+  final ScrollController _scrollController = ScrollController();
+  bool get isScrolledDown => _scrollController.hasClients && _scrollController.offset > 10;
+  
   @override
   void initState() {
     super.initState();
@@ -123,8 +126,37 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 1. Ambil semua lagu dari provider (otomatis update jika ada lagu baru)
+    final allSongsAsync = ref.watch(allSongsProvider);
+
+    // 2. Ambil daftar lagunya (jika masih loading, gunakan list kosong)
+    final allSongs = allSongsAsync.value ?? [];
+
+    // 3. Hitung jumlah masing-masing kategori
+    final int totalAlbums = allSongs.map((s) => s.album).toSet().length;
+    final int totalArtists = allSongs.map((s) => s.artist).toSet().length;
+
+    // 4. Hitung jumlah folder dari path file
+    final int totalFolders = allSongs
+        .map((s) {
+          final parts = s.path.split('/');
+          return parts.length > 1 ? parts[parts.length - 2] : 'Unknown Folder';
+        })
+        .toSet()
+        .length;
+
     return ListView(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 80,
@@ -134,77 +166,62 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
       ),
       children: [
         const Text(
-          'Koleksi Saya',
+          'Semua Koleksi',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
 
-        // ==========================================
-        // KATEGORI (GRID)
-        // ==========================================
-        Row(
-          children: [
-            Expanded(
-              child: _buildCategoryCard(
-                'Favorit',
-                Icons.favorite,
-                Colors.red.shade400,
-                _isLoading ? 0 : _totalFavorites,
-                () {
-                  /* Nanti arahkan ke halaman Favorit */
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildCategoryCard(
-                'Album',
-                Icons.album,
-                Colors.blue.shade400,
-                0,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AlbumsPage()),
-                  );
-                },
-              ),
-            ),
-          ],
+        // === 4 CARD LIST VERTIKAL ===
+        _buildCategoryCard(
+          'Favorit',
+          Icons.favorite,
+          Colors.redAccent,
+          _isLoading ? 0 : _totalFavorites,
+          () {
+            /* Nanti arahkan ke halaman Favorit */
+          },
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildCategoryCard(
-                'Artis',
-                Icons.person,
-                Colors.green.shade400,
-                0,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ArtistsPage()),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildCategoryCard(
-                'Folder',
-                Icons.folder,
-                Colors.orange.shade400,
-                0,
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FoldersPage()),
-                  );
-                },
-              ),
-            ),
-          ],
+        const SizedBox(height: 12), // Jarak antar card
+
+        _buildCategoryCard(
+          'Album',
+          Icons.album,
+          Colors.blueAccent,
+          totalAlbums,
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AlbumsPage()),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+
+        _buildCategoryCard(
+          'Artis',
+          Icons.person,
+          Colors.greenAccent.shade700, // Warna hijau yang lebih pekat
+          totalArtists,
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ArtistsPage()),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+
+        _buildCategoryCard(
+          'Folder',
+          Icons.folder,
+          Colors.orangeAccent.shade700, // Warna oranye yang lebih pekat
+          totalFolders,
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FoldersPage()),
+            );
+          },
         ),
       ],
     );
@@ -220,61 +237,86 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 120,
+        height: 80, // Tinggi card list
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(24),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.3),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Stack(
+        child: Row(
           children: [
-            Positioned(
-              top: 16,
-              left: 16,
-              right: 16,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // 1. Garis Warna di Kiri (Aksen)
+            Container(
+              width: 8,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // 2. Kotak Ikon Berwarna Pastel
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15), // Warna pastel
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                icon,
+                color: color, // Ikon warna solid
+                size: 26,
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // 3. Teks (Judul & Jumlah)
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Colors.black87,
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 16,
                     ),
                   ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white70,
-                    size: 16,
+                  const SizedBox(height: 4),
+                  Text(
+                    '$count Lagu',
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
-            Positioned(
-              bottom: 16,
-              left: 16,
-              child: Text(
-                '$count Lagu',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -10,
-              right: -10,
+
+            // 4. Tombol Arrow Right
+            Padding(
+              padding: const EdgeInsets.only(right: 20.0),
               child: Icon(
-                icon,
-                size: 80,
-                color: Colors.white.withValues(alpha: 0.2),
+                Icons.arrow_forward_ios,
+                color: Colors.grey.shade400,
+                size: 18,
               ),
             ),
           ],

@@ -446,26 +446,67 @@ class _HomePageState extends State<HomePage> {
                 currentIndex: _currentTab,
                 isScrolled: _isScrolled,
                 onHomeTap: () {
-                  if (_currentTab == 0) {
-                    if (_mainScrollController.hasClients &&
-                        _currentScrollOffset > 0) {
+                  // 1. Jika sedang di halaman detail (bukan root), tutup halamannya dulu
+                  bool isInsideDetail = false;
+                  if (_currentTab == 1 && !_isSongsRoot) isInsideDetail = true;
+                  if (_currentTab == 2 && !_isPlaylistRoot)
+                    isInsideDetail = true;
+                  if (_currentTab == 3 && !_isLibraryRoot)
+                    isInsideDetail = true;
+
+                  if (isInsideDetail) {
+                    if (_currentTab == 1)
+                      _songsNavKey.currentState?.popUntil((r) => r.isFirst);
+                    if (_currentTab == 2)
+                      _playlistNavKey.currentState?.popUntil((r) => r.isFirst);
+                    if (_currentTab == 3)
+                      _libraryNavKey.currentState?.popUntil((r) => r.isFirst);
+                    return;
+                  }
+
+                  // 2. Cek apakah halaman saat ini sedang di-scroll (bukan di paling atas)
+                  bool isScrolledDown = false;
+
+                  // Cek scroll di Beranda
+                  if (_currentTab == 0 && _currentScrollOffset > 10) {
+                    isScrolledDown = true;
+                  }
+                  // Cek scroll di Songs
+                  else if (_currentTab == 1) {
+                    isScrolledDown =
+                        songsPageKey.currentState?.isScrolledDown ?? false;
+                  }
+                  // Cek scroll di Playlist
+                  else if (_currentTab == 2) {
+                    isScrolledDown =
+                        playlistPageKey.currentState?.isScrolledDown ?? false;
+                  }
+                  // Cek scroll di Library
+                  else if (_currentTab == 3) {
+                    isScrolledDown =
+                        libraryPageKey.currentState?.isScrolledDown ?? false;
+                  }
+
+                  // 3. Jika sedang di-scroll, luncurkan ke atas
+                  if (isScrolledDown) {
+                    if (_currentTab == 0 && _mainScrollController.hasClients) {
                       _mainScrollController.animateTo(
                         0.0,
                         duration: const Duration(milliseconds: 400),
                         curve: Curves.easeOutCubic,
                       );
+                    } else if (_currentTab == 1) {
+                      songsPageKey.currentState?.scrollToTop();
+                    } else if (_currentTab == 2) {
+                      playlistPageKey.currentState?.scrollToTop();
+                    } else if (_currentTab == 3) {
+                      libraryPageKey.currentState?.scrollToTop();
                     }
                     return;
                   }
-                  if (_currentScrollOffset > 10) {
-                    if (_mainScrollController.hasClients) {
-                      _mainScrollController.animateTo(
-                        0.0,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOutCubic,
-                      );
-                    }
-                  } else {
+
+                  // 4. Jika sudah di paling atas, pindah ke tab Beranda
+                  if (_currentTab != 0) {
                     setState(() => _currentTab = 0);
                   }
                 },

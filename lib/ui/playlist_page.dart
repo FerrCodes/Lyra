@@ -18,6 +18,9 @@ class PlaylistPage extends ConsumerStatefulWidget {
 class PlaylistPageState extends ConsumerState<PlaylistPage> {
   List<Playlist> _playlists = [];
   bool _isLoading = true;
+  final ScrollController _scrollController = ScrollController();
+  bool get isScrolledDown =>
+      _scrollController.hasClients && _scrollController.offset > 10;
 
   @override
   void initState() {
@@ -78,6 +81,16 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Fitur filter playlist segera hadir!')),
     );
+  }
+
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   @override

@@ -24,8 +24,10 @@ class SongsPageState extends ConsumerState<SongsPage> {
   List<local.Song> _allSongs = [];
   List<local.Song> _displayedSongs = [];
   List<Song> _favorites = [];
-
+  final ScrollController _scrollController = ScrollController();
   String _sortBy = 'Name';
+  bool get isScrolledDown =>
+      _scrollController.hasClients && _scrollController.offset > 10;
 
   @override
   void initState() {
@@ -510,6 +512,16 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // 1. Ambil data lagu dari Provider
@@ -531,12 +543,15 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
         return Stack(
           children: [
+            // 1. BUNGKUS DENGAN STREAMBUILDER DI SINI (Hanya 1 untuk semua lagu)
             StreamBuilder<MediaItem?>(
               stream: audioHandler.mediaItem,
               builder: (context, snapshot) {
                 final currentMediaItem = snapshot.data;
 
+                // 2. LISTVIEW BUILDER MASUK KE DALAM SINI
                 return ListView.builder(
+                  controller: _scrollController,
                   padding: EdgeInsets.only(
                     top: MediaQuery.of(context).padding.top + 80,
                     bottom: 160,
@@ -546,6 +561,8 @@ class SongsPageState extends ConsumerState<SongsPage> {
                   itemBuilder: (context, index) {
                     final song = _displayedSongs[index];
                     final isFav = _favorites.any((f) => f.id == song.id);
+
+                    // 3. CEK LAGU AKTIF MENGGUNAKAN DATA DARI STREAMBUILDER DI ATAS
                     final isPlaying = currentMediaItem?.id == song.path;
 
                     return ListTile(
@@ -603,6 +620,8 @@ class SongsPageState extends ConsumerState<SongsPage> {
                 );
               },
             ),
+
+            // (Sisa kode Alphabet Scroller A-Z milikmu biarkan saja di bawah sini)
             Positioned(
               right: 4,
               top: MediaQuery.of(context).padding.top + 120,
