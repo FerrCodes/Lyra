@@ -3,6 +3,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
 import '../audio/lyra_audio_handler.dart';
+import '../ui/player_page.dart';
 
 class LyraBottomBar extends StatefulWidget {
   final int currentIndex;
@@ -53,85 +54,40 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                   borderRadius: BorderRadius.circular(30),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(
-                      height: 54,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PlayerPage()),
+                        );
+                      },
+                      child: Container(
+                        height: 54,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(8),
+                        child: Row(
+                          children: [
+                            // Panggil widget helper yang baru kita buat
+                            Expanded(child: MiniPlayerContent(item: item)),
+                            // Tombol Next tetap ditaruh di sini (khusus untuk state default)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.skip_next,
+                                color: Colors.black,
+                                size: 28,
+                              ),
+                              onPressed: () =>
+                                  (audioHandler as LyraAudioHandler)
+                                      .skipToNext(),
                             ),
-                            child: const Icon(
-                              Icons.music_note,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  item.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                Text(
-                                  item.artist ?? 'Unknown',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          StreamBuilder<PlaybackState>(
-                            stream: audioHandler.playbackState,
-                            builder: (context, snapshot) {
-                              final playing = snapshot.data?.playing ?? false;
-                              return IconButton(
-                                icon: Icon(
-                                  playing ? Icons.pause : Icons.play_arrow,
-                                  color: Colors.black,
-                                  size: 28,
-                                ),
-                                onPressed: playing
-                                    ? audioHandler.pause
-                                    : audioHandler.play,
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.skip_next,
-                              color: Colors.black,
-                              size: 28,
-                            ),
-                            onPressed: () {
-                              (audioHandler as LyraAudioHandler).skipToNext();
-                            },
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -214,6 +170,7 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
+              // 1. Tombol Home
               ClipRRect(
                 borderRadius: BorderRadius.circular(32),
                 child: BackdropFilter(
@@ -231,9 +188,9 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                     child: GestureDetector(
                       onTap: () {
                         if (widget.onHomeTap != null) {
-                          widget.onHomeTap!(); // Panggil logika dari HomePage
+                          widget.onHomeTap!();
                         } else {
-                          widget.onTabChanged(0); // Fallback
+                          widget.onTabChanged(0);
                         }
                       },
                       child: const Icon(
@@ -246,99 +203,55 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                 ),
               ),
               const SizedBox(width: 8),
+
+              // 2. Mini Player (Dibungkus Expanded)
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(
-                      height: 54,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PlayerPage()),
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(32),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                      child: Container(
+                        height: 54,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
                         ),
-                      ),
-                      child: item == null
-                          ? const Center(
-                              child: Text(
-                                'Pilih lagu',
-                                style: TextStyle(color: Colors.grey),
+                        child: item == null
+                            ? const Center(
+                                child: Text(
+                                  'Pilih lagu',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              )
+                            : Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                ),
+                                child: MiniPlayerContent(
+                                  item: item,
+                                  isCompact: true,
+                                ),
                               ),
-                            )
-                          : Row(
-                              children: [
-                                const SizedBox(width: 4),
-                                Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade300,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Icon(
-                                    Icons.music_note,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        item.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      Text(
-                                        item.artist ?? 'Unknown',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                StreamBuilder<PlaybackState>(
-                                  stream: audioHandler.playbackState,
-                                  builder: (context, snapshot) {
-                                    final playing =
-                                        snapshot.data?.playing ?? false;
-                                    return IconButton(
-                                      icon: Icon(
-                                        playing
-                                            ? Icons.pause
-                                            : Icons.play_arrow,
-                                        color: Colors.black,
-                                        size: 28,
-                                      ),
-                                      onPressed: playing
-                                          ? audioHandler.pause
-                                          : audioHandler.play,
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
+                      ),
                     ),
                   ),
                 ),
               ),
+
               const SizedBox(width: 8),
+
+              // 3. Tombol Search
               ClipRRect(
                 borderRadius: BorderRadius.circular(32),
                 child: BackdropFilter(
@@ -394,6 +307,83 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Widget Khusus untuk Isi Mini Player (Cover, Teks, Tombol Play)
+class MiniPlayerContent extends StatelessWidget {
+  final MediaItem item;
+  final bool isCompact; // Untuk membedakan ukuran di state default vs scrolled
+
+  const MiniPlayerContent({
+    super.key,
+    required this.item,
+    this.isCompact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const SizedBox(width: 4),
+        // 1. Cover Album
+        Container(
+          width: isCompact ? 38 : 44,
+          height: isCompact ? 38 : 44,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.music_note, color: Colors.white, size: 20),
+        ),
+        const SizedBox(width: 12),
+
+        // 2. Judul & Artis
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                item.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isCompact ? 13 : 14,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                item.artist ?? 'Unknown',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isCompact ? 11 : 12,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 3. Tombol Play/Pause (Menggunakan StreamBuilder)
+        StreamBuilder<PlaybackState>(
+          stream: audioHandler.playbackState,
+          builder: (context, snapshot) {
+            final playing = snapshot.data?.playing ?? false;
+            return IconButton(
+              icon: Icon(
+                playing ? Icons.pause : Icons.play_arrow,
+                color: Colors.black,
+                size: isCompact ? 24 : 28,
+              ),
+              onPressed: playing ? audioHandler.pause : audioHandler.play,
+            );
+          },
+        ),
+      ],
     );
   }
 }

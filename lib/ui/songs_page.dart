@@ -5,7 +5,7 @@ import '../database/database.dart';
 import '../main.dart';
 import '../models/song.dart' as local;
 import '../providers/database_provider.dart';
-import '../services/media_store_service.dart';
+import '../providers/songs_provider.dart'; // Import Provider baru
 import '../audio/lyra_audio_handler.dart';
 
 final GlobalKey<SongsPageState> songsPageKey = GlobalKey<SongsPageState>();
@@ -24,28 +24,24 @@ class SongsPageState extends ConsumerState<SongsPage> {
   List<local.Song> _allSongs = [];
   List<local.Song> _displayedSongs = [];
   List<Song> _favorites = [];
-  bool _isLoading = true;
 
   String _sortBy = 'Name';
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // Hanya mengambil data favorit dari database
+    _loadFavorites();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    final rawSongs = await MediaStoreService.getSongs();
+  Future<void> _loadFavorites() async {
     final db = ref.read(databaseProvider);
     final favs = await db.getAllFavoriteSongs();
-
-    setState(() {
-      _allSongs = rawSongs.map((e) => local.Song.fromMap(e)).toList();
-      _favorites = favs;
-      _applySort();
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _favorites = favs;
+      });
+    }
   }
 
   Future<void> _toggleFavorite(local.Song song, bool isFav) async {
@@ -60,32 +56,29 @@ class SongsPageState extends ConsumerState<SongsPage> {
       addedAt: DateTime.now(),
     );
     await db.toggleFavorite(dbSong);
-    _loadData();
+    _loadFavorites(); // Cukup update daftar favorit
   }
 
+  // Tidak ada setState di sini agar aman dipanggil di dalam build
   void _applySort() {
-    setState(() {
-      _displayedSongs = List.from(_allSongs);
-      if (_sortBy == 'Name') {
-        _displayedSongs.sort(
-          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-        );
-      } else if (_sortBy == 'Artist') {
-        _displayedSongs.sort(
-          (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
-        );
-      } else if (_sortBy == 'Date Added') {
-        _displayedSongs.sort((a, b) => b.id.compareTo(a.id));
-      }
-    });
+    _displayedSongs = List.from(_allSongs);
+    if (_sortBy == 'Name') {
+      _displayedSongs.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
+    } else if (_sortBy == 'Artist') {
+      _displayedSongs.sort(
+        (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
+      );
+    } else if (_sortBy == 'Date Added') {
+      _displayedSongs.sort((a, b) => b.id.compareTo(a.id));
+    }
   }
 
-  // 1. TAMBAHKAN FUNGSI INI
   void _showFilterMenu(BuildContext buttonContext) {
     final RenderBox renderBox = buttonContext.findRenderObject() as RenderBox;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
 
-    // Menyesuaikan posisi agar menutupi tombol (seperti yang kamu minta di halaman playlist)
     final double topPosition = offset.dy - renderBox.size.height;
     final double leftPosition = offset.dx - 1;
 
@@ -121,7 +114,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                         child: Row(
                           children: [
                             Text(
-                              _sortBy, // Menampilkan teks filter aktif
+                              _sortBy,
                               style: TextStyle(
                                 color: Colors.blue.shade700,
                                 fontSize: 16,
@@ -143,7 +136,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                               ),
                               onPressed: () {
                                 Navigator.pop(context);
-                                // Jika nanti ada pengaturan tambahan, taruh di sini
                               },
                             ),
                           ],
@@ -165,11 +157,11 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
-  // 2. TAMBAHKAN FUNGSI INI UNTUK LIST PILIHANNYA
   Widget _buildFilterOption(String title) {
     final isSelected = _sortBy == title;
-    if (isSelected)
-      return const SizedBox.shrink(); // Sembunyikan jika sedang aktif
+    if (isSelected) {
+      return const SizedBox.shrink();
+    }
 
     return Material(
       color: Colors.transparent,
@@ -181,12 +173,11 @@ class SongsPageState extends ConsumerState<SongsPage> {
           style: const TextStyle(fontSize: 15, color: Colors.black87),
         ),
         onTap: () {
+          // setState dipindahkan ke sini agar UI terupdate saat filter diganti
           setState(() {
             _sortBy = title;
             _applySort();
-            widget.onSortChanged?.call(
-              title,
-            ); // Beritahu home_page agar teks di header berubah
+            widget.onSortChanged?.call(title);
           });
           Navigator.pop(context);
         },
@@ -194,7 +185,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
-  // 3. UBAH FUNGSI INI AGAR MENERIMA CONTEXT
   void triggerFilterDialog(BuildContext buttonContext) {
     _showFilterMenu(buttonContext);
   }
@@ -248,23 +238,20 @@ class SongsPageState extends ConsumerState<SongsPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
-      isScrollControlled: true, // Agar bisa menyesuaikan tinggi layar
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
           child: ConstrainedBox(
-            // Membatasi tinggi maksimal 80% dari layar agar tidak menutupi seluruhnya
             constraints: BoxConstraints(
               maxHeight: MediaQuery.of(context).size.height * 0.8,
             ),
             child: SingleChildScrollView(
-              // Membuat isinya bisa discroll jika layar sempit
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. Header Info Lagu
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
@@ -311,8 +298,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     ),
                   ),
                   const Divider(height: 1),
-
-                  // 2. Play Next
                   ListTile(
                     leading: const Icon(
                       Icons.playlist_play,
@@ -330,8 +315,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       );
                     },
                   ),
-
-                  // 3. Add to Queue
                   ListTile(
                     leading: const Icon(
                       Icons.add_to_queue,
@@ -348,8 +331,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     },
                   ),
                   const Divider(height: 1),
-
-                  // 4. Add to Playlist
                   ListTile(
                     leading: const Icon(
                       Icons.playlist_add,
@@ -361,8 +342,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       _showPlaylistSelection(song);
                     },
                   ),
-
-                  // 5. Favorites
                   ListTile(
                     leading: Icon(
                       isFav ? Icons.favorite : Icons.favorite_border,
@@ -376,8 +355,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       _toggleFavorite(song, isFav);
                     },
                   ),
-
-                  // 6. Track details
                   ListTile(
                     leading: const Icon(
                       Icons.info_outline,
@@ -389,8 +366,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       _showTrackDetails(song);
                     },
                   ),
-
-                  // 7. Album
                   ListTile(
                     leading: const Icon(Icons.album, color: Colors.black87),
                     title: const Text('Album'),
@@ -403,8 +378,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       );
                     },
                   ),
-
-                  // 8. Artist
                   ListTile(
                     leading: const Icon(Icons.person, color: Colors.black87),
                     title: const Text('Artist'),
@@ -417,8 +390,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       );
                     },
                   ),
-
-                  // 9. Share
                   ListTile(
                     leading: const Icon(Icons.share, color: Colors.black87),
                     title: const Text('Share'),
@@ -436,7 +407,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
-  // Fungsi Bantuan untuk Track Details di Songs
   void _showTrackDetails(local.Song song) {
     showDialog(
       context: context,
@@ -471,16 +441,13 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
-  // --- FUNGSI BARU UNTUK MEMILIH PLAYLIST ---
   void _showPlaylistSelection(local.Song song) async {
     final db = ref.read(databaseProvider);
-    // Ambil semua playlist dari database
     final playlists = await db.select(db.playlists).get();
 
     if (!mounted) return;
 
     if (playlists.isEmpty) {
-      // Jika belum ada playlist
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Belum ada Playlist. Buat dulu di tab Playlist.'),
@@ -489,7 +456,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
       return;
     }
 
-    // Tampilkan dialog daftar playlist
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -508,7 +474,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                 ),
               ),
               const Divider(height: 1),
-              // List Playlist
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -522,7 +487,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       ),
                       title: Text(pl.name),
                       onTap: () async {
-                        // Konversi lagu ke format database
                         final dbSong = Song(
                           id: song.id,
                           title: song.title,
@@ -532,11 +496,10 @@ class SongsPageState extends ConsumerState<SongsPage> {
                           durationMs: song.durationMs,
                           addedAt: DateTime.now(),
                         );
-                        // Simpan ke database
                         await db.addSongToPlaylist(pl.id, dbSong);
 
                         if (context.mounted) {
-                          Navigator.pop(context); // Tutup dialog
+                          Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -559,148 +522,158 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_allSongs.isEmpty) {
-      return const Center(child: Text('Tidak ada lagu ditemukan.'));
-    }
+    // 1. Ambil data lagu dari Provider
+    final songsAsyncValue = ref.watch(allSongsProvider);
 
-    return Stack(
-      children: [
-        StreamBuilder<MediaItem?>(
-          stream: audioHandler.mediaItem,
-          builder: (context, snapshot) {
-            // Ambil data lagu yang sedang aktif SEKALI SAJA di sini
-            final currentMediaItem = snapshot.data;
+    return songsAsyncValue.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Gagal memuat lagu: $err')),
+      data: (songs) {
+        // 2. Sinkronkan data provider ke variabel lokal
+        _allSongs = songs;
 
-            return ListView.builder(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 80,
-                bottom: 160,
-                right: 30,
-              ),
-              itemCount: _displayedSongs.length,
-              itemBuilder: (context, index) {
-                final song = _displayedSongs[index];
-                final isFav = _favorites.any((f) => f.id == song.id);
+        // 3. Panggil _applySort secara aman (tanpa setState)
+        _applySort();
 
-                // Cek apakah lagu ini yang sedang diputar
-                final isPlaying = currentMediaItem?.id == song.path;
+        if (_allSongs.isEmpty) {
+          return const Center(child: Text('Tidak ada lagu ditemukan.'));
+        }
 
-                return ListTile(
-                  contentPadding: const EdgeInsets.only(left: 16, right: 8),
-                  leading: Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.music_note, color: Colors.grey),
+        return Stack(
+          children: [
+            StreamBuilder<MediaItem?>(
+              stream: audioHandler.mediaItem,
+              builder: (context, snapshot) {
+                final currentMediaItem = snapshot.data;
+
+                return ListView.builder(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 80,
+                    bottom: 160,
+                    right: 30,
                   ),
-                  title: Text(
-                    song.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isPlaying ? Colors.blue : Colors.black87,
-                    ),
-                  ),
-                  subtitle: Text(
-                    song.artist,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.more_vert, color: Colors.grey),
-                    onPressed: () => _showSongOptions(song, isFav),
-                  ),
-                  onTap: () async {
-                    final handler = audioHandler as LyraAudioHandler;
-                    handler.playQueue(
-                      _displayedSongs
-                          .map(
-                            (s) => Song(
-                              // Ini model database
-                              id: s.id,
-                              title: s.title,
-                              artist: s.artist,
-                              album: s.album,
-                              path: s.path,
-                              durationMs: s.durationMs,
-                              addedAt: DateTime.now(),
-                            ),
-                          )
-                          .toList(),
-                      index,
+                  itemCount: _displayedSongs.length,
+                  itemBuilder: (context, index) {
+                    final song = _displayedSongs[index];
+                    final isFav = _favorites.any((f) => f.id == song.id);
+                    final isPlaying = currentMediaItem?.id == song.path;
+
+                    return ListTile(
+                      contentPadding: const EdgeInsets.only(left: 16, right: 8),
+                      leading: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.music_note, color: Colors.grey),
+                      ),
+                      title: Text(
+                        song.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: isPlaying ? Colors.blue : Colors.black87,
+                        ),
+                      ),
+                      subtitle: Text(
+                        song.artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.more_vert, color: Colors.grey),
+                        onPressed: () => _showSongOptions(song, isFav),
+                      ),
+                      onTap: () async {
+                        final handler = audioHandler as LyraAudioHandler;
+                        handler.playQueue(
+                          _displayedSongs
+                              .map(
+                                (s) => Song(
+                                  id: s.id,
+                                  title: s.title,
+                                  artist: s.artist,
+                                  album: s.album,
+                                  path: s.path,
+                                  durationMs: s.durationMs,
+                                  addedAt: DateTime.now(),
+                                ),
+                              )
+                              .toList(),
+                          index,
+                        );
+                        widget.onPlayTriggered?.call();
+                      },
                     );
-                    widget.onPlayTriggered?.call();
                   },
                 );
               },
-            );
-          },
-        ),
-        Positioned(
-          right: 4,
-          top: MediaQuery.of(context).padding.top + 120,
-          bottom: 160,
-          child: Container(
-            width: 24,
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children:
-                  [
-                        'A',
-                        'B',
-                        'C',
-                        'D',
-                        'E',
-                        'F',
-                        'G',
-                        'H',
-                        'I',
-                        'J',
-                        'K',
-                        'L',
-                        'M',
-                        'N',
-                        'O',
-                        'P',
-                        'Q',
-                        'R',
-                        'S',
-                        'T',
-                        'U',
-                        'V',
-                        'W',
-                        'X',
-                        'Y',
-                        'Z',
-                      ]
-                      .map(
-                        (l) => GestureDetector(
-                          onTap: () {},
-                          child: Text(
-                            l,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
+            Positioned(
+              right: 4,
+              top: MediaQuery.of(context).padding.top + 120,
+              bottom: 160,
+              child: Container(
+                width: 24,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children:
+                      [
+                            'A',
+                            'B',
+                            'C',
+                            'D',
+                            'E',
+                            'F',
+                            'G',
+                            'H',
+                            'I',
+                            'J',
+                            'K',
+                            'L',
+                            'M',
+                            'N',
+                            'O',
+                            'P',
+                            'Q',
+                            'R',
+                            'S',
+                            'T',
+                            'U',
+                            'V',
+                            'W',
+                            'X',
+                            'Y',
+                            'Z',
+                          ]
+                          .map(
+                            (l) => GestureDetector(
+                              onTap: () {},
+                              child: Text(
+                                l,
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                          )
+                          .toList(),
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
