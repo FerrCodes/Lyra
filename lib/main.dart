@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'audio/lyra_audio_handler.dart';
 import 'ui/home_page.dart';
 import 'dart:io';
@@ -10,6 +11,20 @@ late final AudioHandler audioHandler;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent, // Background status bar transparan
+      statusBarIconBrightness:
+          Brightness.dark, // Ikon jadi hitam (untuk background terang)
+      statusBarBrightness: Brightness.light, // Untuk iOS
+      systemNavigationBarColor: Color(
+        0xFFF2F2F7,
+      ), // Warna navigasi bawah Android
+      systemNavigationBarIconBrightness:
+          Brightness.dark, // Ikon navigasi bawah hitam
+    ),
+  );
 
   if (Platform.isAndroid) {
     await Permission.audio.request();
@@ -37,6 +52,7 @@ class LyraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Lyra',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,

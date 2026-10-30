@@ -5,7 +5,7 @@ import '../database/database.dart';
 import '../main.dart';
 import '../models/song.dart' as local;
 import '../providers/database_provider.dart';
-import '../providers/songs_provider.dart'; // Import Provider baru
+import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 
 final GlobalKey<SongsPageState> songsPageKey = GlobalKey<SongsPageState>();
@@ -79,7 +79,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
     final RenderBox renderBox = buttonContext.findRenderObject() as RenderBox;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
 
-    final double topPosition = offset.dy - renderBox.size.height;
+    final double topPosition = (offset.dy - renderBox.size.height) + 25;
     final double leftPosition = offset.dx - 1;
 
     showDialog(
@@ -94,7 +94,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  width: 240,
+                  width: 220,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -128,16 +128,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                               size: 18,
                             ),
                             const Spacer(),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.settings,
-                                color: Colors.grey,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                Navigator.pop(context);
-                              },
-                            ),
                           ],
                         ),
                       ),

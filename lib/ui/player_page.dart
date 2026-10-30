@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
 import '../main.dart';
