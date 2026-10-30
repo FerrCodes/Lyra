@@ -17,16 +17,19 @@ class PlaylistDetailPage extends ConsumerStatefulWidget {
 }
 
 class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
-  List<Song> _songsInPlaylist = []; // Daftar asli
-  List<Song> _displayedSongs = []; // Daftar yang ditampilkan (setelah disortir)
+  List<Song> _songsInPlaylist = [];
+  List<Song> _displayedSongs = [];
   bool _isLoading = true;
   final GlobalKey _filterButtonKey = GlobalKey();
   late String _currentPlaylistName;
   String? _currentImagePath;
 
-  // State untuk Filter
   String _currentSort = 'Custom order';
-  bool _addToBottom = true; // Untuk radio button
+  bool _addToBottom = true;
+
+  // === STATE UNTUK MULTI-SELECT & REORDER ===
+  bool _isSelectionMode = false;
+  Set<String> _selectedSongIds = {};
 
   @override
   void initState() {
@@ -47,7 +50,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     });
   }
 
-  // Fungsi untuk mengurutkan lagu
   void _applySort() {
     _displayedSongs = List.from(_songsInPlaylist);
     if (_currentSort == 'Name') {
@@ -59,11 +61,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
       );
     }
-    // Jika 'Custom order', biarkan urutan asli
     setState(() {});
   }
 
-  // Fungsi memutar lagu
   void _playPlaylist({bool shuffle = false, int startIndex = 0}) {
     if (_displayedSongs.isEmpty) return;
     final handler = audioHandler as LyraAudioHandler;
@@ -71,7 +71,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     List<Song> listToPlay = List.from(_displayedSongs);
     if (shuffle) {
       listToPlay.shuffle();
-      startIndex = 0; // Jika shuffle, selalu mulai dari awal list yang diacak
+      startIndex = 0;
     }
 
     handler.playQueue(
@@ -92,7 +92,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
-  // Fitur Hapus Lagu dari Playlist
   Future<void> _removeSongFromPlaylist(Song song) async {
     final db = ref.read(databaseProvider);
     await (db.delete(db.playlistSongs)..where(
@@ -101,18 +100,92 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               t.songId.equals(song.id),
         ))
         .go();
-    _loadSongs(); // Muat ulang list
+    _loadSongs();
+  }
+
+  // === FUNGSI UNTUK MULTI-SELECT & REORDER ===
+  void _toggleSelection(Song song) {
+    setState(() {
+      if (_selectedSongIds.contains(song.id)) {
+        _selectedSongIds.remove(song.id);
+      } else {
+        _selectedSongIds.add(song.id);
+      }
+      if (_selectedSongIds.isEmpty) {
+        _isSelectionMode = false;
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      if (_selectedSongIds.length == _displayedSongs.length) {
+        _selectedSongIds.clear();
+        _isSelectionMode = false;
+      } else {
+        _selectedSongIds = _displayedSongs.map((e) => e.id).toSet();
+      }
+    });
+  }
+
+  void _removeSelectedSongs() async {
+    final db = ref.read(databaseProvider);
+    await (db.delete(db.playlistSongs)..where(
+          (t) =>
+              t.playlistId.equals(widget.playlist.id) &
+              t.songId.isIn(_selectedSongIds),
+        ))
+        .go();
+
+    _isSelectionMode = false;
+    _selectedSongIds.clear();
+    _loadSongs();
+  }
+
+  // === FUNGSI TRACK DETAILS ===
+  void _showTrackDetails(Song song) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Track details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Title: ${song.title}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text('Artist: ${song.artist}'),
+            const SizedBox(height: 4),
+            Text('Album: ${song.album}'),
+            const SizedBox(height: 4),
+            Text(
+              'Path: ${song.path}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ==========================================
-  // UI DIALOG FILTER (POPOVER KUSTOM - DIPERBAIKI)
+  // UI DIALOG FILTER
   // ==========================================
   void _showFilterMenu() {
     final RenderBox renderBox =
         _filterButtonKey.currentContext!.findRenderObject() as RenderBox;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
     final double topPosition = offset.dy - renderBox.size.height;
-    final double leftPosition = offset.dx - 9;
+    final double leftPosition = offset.dx - 1;
 
     showDialog(
       context: context,
@@ -141,7 +214,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header: Judul Dinamis & Settings
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
                         child: Row(
@@ -176,8 +248,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         ),
                       ),
                       const Divider(height: 1, thickness: 0.5),
-
-                      // List Pilihan Sortir
                       _buildFilterOption('Custom order'),
                       _buildFilterOption('Name'),
                       _buildFilterOption('Artist'),
@@ -193,15 +263,11 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
-  // Widget bantuan untuk item filter
   Widget _buildFilterOption(String title) {
     final isSelected = _currentSort == title;
-
     if (isSelected) return const SizedBox.shrink();
-
     return Material(
-      color:
-          Colors.transparent, // Transparan agar menyatu dengan Container putih
+      color: Colors.transparent,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         visualDensity: VisualDensity.compact,
@@ -221,7 +287,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   }
 
   // ==========================================
-  // UI BOTTOM SHEET (ADD TRACKS)
+  // UI BOTTOM SHEET & EDIT PLAYLIST
   // ==========================================
   void _showAddTracksBottomSheet() {
     showModalBottomSheet(
@@ -232,7 +298,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       ),
       builder: (context) {
         return StatefulBuilder(
-          // Gunakan StatefulBuilder agar radio button bisa diklik
           builder: (context, setModalState) {
             return Padding(
               padding: const EdgeInsets.all(24.0),
@@ -258,7 +323,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(
@@ -271,11 +335,8 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       'Top of playlist',
                       style: TextStyle(color: Colors.black87, fontSize: 16),
                     ),
-                    onTap: () {
-                      setModalState(() => _addToBottom = false); // Ubah state
-                    },
+                    onTap: () => setModalState(() => _addToBottom = false),
                   ),
-
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(
@@ -288,9 +349,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       'Bottom of playlist',
                       style: TextStyle(color: Colors.black87, fontSize: 16),
                     ),
-                    onTap: () {
-                      setModalState(() => _addToBottom = true); // Ubah state
-                    },
+                    onTap: () => setModalState(() => _addToBottom = true),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -302,9 +361,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
-  // ==========================================
-  // UI EDIT PLAYLIST
-  // ==========================================
   void _showEditPlaylistBottomSheet() {
     final TextEditingController nameController = TextEditingController(
       text: _currentPlaylistName,
@@ -479,9 +535,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
-  // ==========================================
-  // MENU TITIK TIGA (MORE)
-  // ==========================================
   void _showMoreMenu() {
     showDialog(
       context: context,
@@ -581,7 +634,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   }
 
   Widget _buildListTile(IconData icon, String title, VoidCallback onTap) {
-    // BUNGKUS DENGAN MATERIAL TRANSPARAN
     return Material(
       color: Colors.transparent,
       child: ListTile(
@@ -602,11 +654,12 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   // ==========================================
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFFF2F2F7),
         body: Center(child: CircularProgressIndicator()),
       );
+    }
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -638,7 +691,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                 color: Colors.grey,
                               ),
                             ),
-
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -653,7 +705,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                           ),
                         ),
                       ),
-
                       Positioned(
                         bottom: 24,
                         left: 16,
@@ -690,21 +741,19 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               SliverToBoxAdapter(
                 child: Container(
                   decoration: const BoxDecoration(
-                    color: Colors.white, // Background putih
+                    color: Colors.white,
                     borderRadius: BorderRadius.vertical(
                       top: Radius.circular(32),
                     ),
                   ),
-                  clipBehavior: Clip
-                      .antiAlias, // Agar isi list tidak bocor melewati lengkungan
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
-                      // Baris Filter (Custom order, Shuffle, Play)
+                      // Baris Filter
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                         child: Row(
                           children: [
-                            // Tombol Filter Popover
                             Builder(
                               builder: (buttonContext) {
                                 return GestureDetector(
@@ -731,7 +780,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                               },
                             ),
                             const Spacer(),
-                            // Tombol Shuffle
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.grey.shade100,
@@ -747,7 +795,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Tombol Play
                             Container(
                               decoration: const BoxDecoration(
                                 color: Colors.black,
@@ -785,6 +832,84 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             ],
                           ),
                         )
+                      // MODE SELECT
+                      else if (_isSelectionMode)
+                        ReorderableListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          buildDefaultDragHandles: false,
+                          itemCount: _displayedSongs.length,
+                          onReorder: (oldIndex, newIndex) {
+                            setState(() {
+                              if (newIndex > oldIndex) newIndex -= 1;
+                              final song = _displayedSongs.removeAt(oldIndex);
+                              _displayedSongs.insert(newIndex, song);
+                            });
+                          },
+                          itemBuilder: (context, index) {
+                            final song = _displayedSongs[index];
+                            final isSelected = _selectedSongIds.contains(
+                              song.id,
+                            );
+
+                            return ReorderableDelayedDragStartListener(
+                              key: ValueKey(song.id),
+                              index: index,
+                              child: Material(
+                                color: isSelected
+                                    ? Colors.blue.withValues(alpha: 0.1)
+                                    : Colors.transparent,
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 4,
+                                  ),
+                                  onTap: () => _toggleSelection(song),
+                                  leading: Icon(
+                                    isSelected
+                                        ? Icons.check_circle
+                                        : Icons.radio_button_unchecked,
+                                    color: isSelected
+                                        ? Colors.blue.shade700
+                                        : Colors.grey,
+                                  ),
+                                  title: Text(
+                                    song.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    song.artist,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                  trailing: const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.keyboard_arrow_up,
+                                        color: Colors.grey,
+                                        size: 18,
+                                      ),
+                                      Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: Colors.grey,
+                                        size: 18,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      // MODE NORMAL
                       else
                         Material(
                           color: Colors.transparent,
@@ -834,20 +959,171 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                       color: Colors.grey,
                                     ),
                                     onPressed: () {
-                                      // Modal hapus lagu
                                       showModalBottomSheet(
                                         context: context,
+                                        backgroundColor: Colors.white,
+                                        shape: const RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(24),
+                                          ),
+                                        ),
                                         builder: (context) => SafeArea(
                                           child: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
+                                              Padding(
+                                                padding: const EdgeInsets.all(
+                                                  16.0,
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      width: 40,
+                                                      height: 40,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors
+                                                            .grey
+                                                            .shade300,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.music_note,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 12),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            song.title,
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontSize: 16,
+                                                                ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                          Text(
+                                                            song.artist,
+                                                            style:
+                                                                const TextStyle(
+                                                                  color: Colors
+                                                                      .grey,
+                                                                  fontSize: 13,
+                                                                ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const Divider(height: 1),
                                               ListTile(
                                                 leading: const Icon(
-                                                  Icons.delete,
+                                                  Icons.playlist_add,
+                                                  color: Colors.black87,
+                                                ),
+                                                title: const Text(
+                                                  'Add to Playlist',
+                                                ),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Fitur Add to Playlist segera hadir',
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.info_outline,
+                                                  color: Colors.black87,
+                                                ),
+                                                title: const Text(
+                                                  'Track details',
+                                                ),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  _showTrackDetails(song);
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.album,
+                                                  color: Colors.black87,
+                                                ),
+                                                title: const Text('Album'),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Fitur Album segera hadir',
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.person,
+                                                  color: Colors.black87,
+                                                ),
+                                                title: const Text('Artist'),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Fitur Artist segera hadir',
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.share,
+                                                  color: Colors.black87,
+                                                ),
+                                                title: const Text('Share'),
+                                                onTap: () {
+                                                  Navigator.pop(context);
+                                                },
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.delete_outline,
                                                   color: Colors.red,
                                                 ),
                                                 title: const Text(
-                                                  'Hapus dari Playlist',
+                                                  'Delete from Playlist',
                                                   style: TextStyle(
                                                     color: Colors.red,
                                                   ),
@@ -857,6 +1133,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                                   _removeSongFromPlaylist(song);
                                                 },
                                               ),
+                                              const SizedBox(height: 8),
                                             ],
                                           ),
                                         ),
@@ -864,13 +1141,20 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                     },
                                   ),
                                   onTap: () => _playPlaylist(startIndex: index),
+                                  onLongPress: () {
+                                    if (!_isSelectionMode) {
+                                      setState(() {
+                                        _isSelectionMode = true;
+                                        _selectedSongIds.add(song.id);
+                                      });
+                                    }
+                                  },
                                 ),
                               );
                             },
                           ),
                         ),
-
-                      const SizedBox(height: 100), // Jarak aman bawah
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
@@ -878,22 +1162,95 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             ],
           ),
 
-          // PILL MELAYANG
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
-            right: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
+          // TOP BAR
+          if (_isSelectionMode)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 12,
+                  left: 16,
+                  right: 16,
+                  bottom: 12,
+                ),
+                color: Colors.white,
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: _selectAll,
+                      child: Row(
+                        children: [
+                          Icon(
+                            _selectedSongIds.length == _displayedSongs.length &&
+                                    _displayedSongs.isNotEmpty
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            color: Colors.grey,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_selectedSongIds.length} selected',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black),
+                      onPressed: () {
+                        setState(() {
+                          _isSelectionMode = false;
+                          _selectedSongIds.clear();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 16,
+              right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      height: 48,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  Container(
                     height: 48,
-                    width: 48,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.15),
@@ -902,71 +1259,92 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.arrow_back_ios_new,
-                      color: Colors.black,
-                      size: 20,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {},
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 16, right: 12),
+                            child: Icon(
+                              Icons.person_add_alt_1,
+                              color: Colors.black87,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {},
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Icon(
+                              Icons.ios_share,
+                              color: Colors.black87,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _showMoreMenu,
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 12, right: 16),
+                            child: Icon(
+                              Icons.more_horiz,
+                              color: Colors.black87,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                // Pill Kanan (3 Ikon)
-                Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Ikon 1 (Add Person)
-                      GestureDetector(
-                        onTap: () {},
-                        child: const Padding(
-                          padding: EdgeInsets.only(left: 16, right: 12),
-                          child: Icon(
-                            Icons.person_add_alt_1,
-                            color: Colors.black87,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                      // Ikon 2 (Share)
-                      GestureDetector(
-                        onTap: () {},
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Icon(
-                            Icons.ios_share,
-                            color: Colors.black87,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                      // Ikon 3 (More)
-                      GestureDetector(
-                        onTap: _showMoreMenu,
-                        child: const Padding(
-                          padding: EdgeInsets.only(left: 12, right: 16),
-                          child: Icon(
-                            Icons.more_horiz,
-                            color: Colors.black87,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
+
+          // BOTTOM BAR
+          if (_isSelectionMode)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom + 8,
+                  top: 8,
+                ),
+                color: Colors.black87,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildBottomAction(Icons.play_arrow, 'Play', () {}),
+                    _buildBottomAction(Icons.add, 'Add', () {}),
+                    _buildBottomAction(Icons.share, 'Share', () {}),
+                    _buildBottomAction(
+                      Icons.remove_circle_outline,
+                      'Remove',
+                      _removeSelectedSongs,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomAction(IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
       ),

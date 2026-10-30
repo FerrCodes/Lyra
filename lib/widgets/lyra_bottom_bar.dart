@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../main.dart';
+import '../audio/lyra_audio_handler.dart';
 
 class LyraBottomBar extends StatefulWidget {
   final int currentIndex;
@@ -126,7 +127,9 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                               color: Colors.black,
                               size: 28,
                             ),
-                            onPressed: () => audioHandler.skipToNext,
+                            onPressed: () {
+                              (audioHandler as LyraAudioHandler).skipToNext();
+                            },
                           ),
                         ],
                       ),

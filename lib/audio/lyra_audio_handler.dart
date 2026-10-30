@@ -26,12 +26,17 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     final playing = _player.playing;
     playbackState.add(
       playbackState.value.copyWith(
+        // 1. TAMBAHKAN TOMBOL NEXT DAN PREV DI SINI
         controls: [
+          MediaControl.skipToPrevious,
           if (playing) MediaControl.pause else MediaControl.play,
-          MediaControl.stop,
+          MediaControl.skipToNext,
         ],
         systemActions: const {MediaAction.seek},
-        androidCompactActionIndices: const [0, 1],
+
+        // 2. BERI TAHU ANDROID UNTUK MENAMPILKAN KETIGA TOMBOL DI NOTIFIKASI
+        androidCompactActionIndices: const [0, 1, 2],
+
         processingState: switch (_player.processingState) {
           ProcessingState.idle => AudioProcessingState.idle,
           ProcessingState.loading => AudioProcessingState.loading,
@@ -108,6 +113,20 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
+  Future<void> skipToNext() async {
+    if (_player.hasNext) {
+      await _player.seekToNext();
+    }
+  }
+
+  @override
+  Future<void> skipToPrevious() async {
+    if (_player.hasPrevious) {
+      await _player.seekToPrevious();
+    }
+  }
 
   @override
   Future<void> onTaskRemoved() async {

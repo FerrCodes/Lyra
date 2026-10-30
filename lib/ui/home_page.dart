@@ -17,8 +17,6 @@ class _HomePageState extends State<HomePage> {
   bool _isScrolled = false;
   String _currentSortFilter = 'Name';
   final ScrollController _mainScrollController = ScrollController();
-
-  // Menyimpan nilai posisi scroll saat ini
   double _currentScrollOffset = 0;
 
   final List<String> _titles = ['Beranda', 'Songs', 'Playlist', 'Library'];
@@ -36,7 +34,6 @@ class _HomePageState extends State<HomePage> {
             onNotification: (scrollInfo) {
               if (scrollInfo.metrics.axis == Axis.horizontal) return false;
 
-              // Simpan posisi scroll saat ini
               _currentScrollOffset = scrollInfo.metrics.pixels;
 
               if (scrollInfo.metrics.pixels > 40 && !_isScrolled) {
@@ -60,7 +57,9 @@ class _HomePageState extends State<HomePage> {
                     },
                   ),
                   PlaylistPage(key: playlistPageKey),
-                  const LibraryPage(),
+                  LibraryPage(
+                    key: libraryPageKey,
+                  ), // <-- Key Library ditambahkan
                 ],
               ),
             ),
@@ -76,40 +75,46 @@ class _HomePageState extends State<HomePage> {
               right: 16,
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () =>
-                        songsPageKey.currentState?.triggerFilterDialog(),
-                    child: Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
+                  Builder(
+                    builder: (buttonContext) {
+                      return GestureDetector(
+                        onTap: () => songsPageKey.currentState
+                            ?.triggerFilterDialog(buttonContext),
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.sort,
-                            color: Colors.black87,
-                            size: 20,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.sort,
+                                color: Colors.black87,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _currentSortFilter,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _currentSortFilter,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
                   const Spacer(),
                   Container(
@@ -139,6 +144,11 @@ class _HomePageState extends State<HomePage> {
                               size: 20,
                             ),
                           ),
+                        ),
+                        Container(
+                          height: 24,
+                          width: 1,
+                          color: Colors.grey.withValues(alpha: 0.3),
                         ),
                         GestureDetector(
                           onTap: () => songsPageKey.currentState?.playAll(),
@@ -216,6 +226,11 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         ),
+                        Container(
+                          height: 24,
+                          width: 1,
+                          color: Colors.grey.withValues(alpha: 0.3),
+                        ),
                         GestureDetector(
                           onTap: () =>
                               playlistPageKey.currentState?.showFilterDialog(),
@@ -238,34 +253,54 @@ class _HomePageState extends State<HomePage> {
             LyraHeader(
               title: _titles[_currentTab],
               rightWidget: _currentTab != 0
-                  ? GestureDetector(
-                      onTap: () {},
-                      child: Container(
-                        height: 48,
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
+                  ? Builder(
+                      builder: (buttonContext) {
+                        return GestureDetector(
+                          onTap: () {
+                            if (_currentTab == 3) {
+                              // Panggil popover di Library
+                              libraryPageKey.currentState?.showMoreMenu(
+                                buttonContext,
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fitur pencarian segera hadir'),
+                                ),
+                              );
+                            }
+                          },
+                          child: Container(
+                            height: 48,
+                            width: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.search,
-                          color: Colors.black,
-                          size: 20,
-                        ),
-                      ),
+                            // Ganti ikon menjadi titik tiga jika di Library
+                            child: Icon(
+                              _currentTab == 3
+                                  ? Icons.more_horiz
+                                  : Icons.search,
+                              color: Colors.black,
+                              size: 20,
+                            ),
+                          ),
+                        );
+                      },
                     )
                   : null,
             ),
 
           // =========================================================
-          // BOTTOM BAR (LOGIKA BARU)
+          // BOTTOM BAR
           // =========================================================
           Positioned(
             left: 0,
@@ -275,7 +310,6 @@ class _HomePageState extends State<HomePage> {
               currentIndex: _currentTab,
               isScrolled: _isScrolled,
               onHomeTap: () {
-                // Jika sedang di Tab Beranda
                 if (_currentTab == 0) {
                   if (_mainScrollController.hasClients &&
                       _currentScrollOffset > 0) {
@@ -287,11 +321,7 @@ class _HomePageState extends State<HomePage> {
                   }
                   return;
                 }
-
-                // Jika di Tab Songs/Playlist/Library
                 if (_currentScrollOffset > 10) {
-                  // Jika sedang di tengah scroll (bukan di paling atas)
-                  // Maka: Scroll ke atas
                   if (_mainScrollController.hasClients) {
                     _mainScrollController.animateTo(
                       0.0,
@@ -300,8 +330,6 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
                 } else {
-                  // Jika sudah di ujung paling atas
-                  // Maka: Pindah ke Beranda
                   setState(() => _currentTab = 0);
                 }
               },

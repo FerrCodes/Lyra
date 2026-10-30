@@ -80,68 +80,124 @@ class SongsPageState extends ConsumerState<SongsPage> {
     });
   }
 
-  void _showFilterDialog() {
-    showModalBottomSheet(
+  // 1. TAMBAHKAN FUNGSI INI
+  void _showFilterMenu(BuildContext buttonContext) {
+    final RenderBox renderBox = buttonContext.findRenderObject() as RenderBox;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+
+    // Menyesuaikan posisi agar menutupi tombol (seperti yang kamu minta di halaman playlist)
+    final double topPosition = offset.dy - renderBox.size.height;
+    final double leftPosition = offset.dx - 1;
+
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      barrierColor: Colors.black.withValues(alpha: 0.1),
       builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Urutkan Berdasarkan',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        return Stack(
+          children: [
+            Positioned(
+              top: topPosition,
+              left: leftPosition,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 240,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+                        child: Row(
+                          children: [
+                            Text(
+                              _sortBy, // Menampilkan teks filter aktif
+                              style: TextStyle(
+                                color: Colors.blue.shade700,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.check,
+                              color: Colors.blue.shade700,
+                              size: 18,
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.settings,
+                                color: Colors.grey,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                // Jika nanti ada pengaturan tambahan, taruh di sini
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, thickness: 0.5),
+                      _buildFilterOption('Name'),
+                      _buildFilterOption('Artist'),
+                      _buildFilterOption('Date Added'),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
-              ListTile(
-                title: const Text('Name'),
-                trailing: _sortBy == 'Name'
-                    ? const Icon(Icons.check, color: Colors.blue)
-                    : null,
-                onTap: () {
-                  setState(() => _sortBy = 'Name');
-                  _applySort();
-                  Navigator.pop(context);
-                  widget.onSortChanged?.call('Name');
-                },
-              ),
-              ListTile(
-                title: const Text('Artist'),
-                trailing: _sortBy == 'Artist'
-                    ? const Icon(Icons.check, color: Colors.blue)
-                    : null,
-                onTap: () {
-                  setState(() => _sortBy = 'Artist');
-                  _applySort();
-                  Navigator.pop(context);
-                  widget.onSortChanged?.call('Artist');
-                },
-              ),
-              ListTile(
-                title: const Text('Date Added'),
-                trailing: _sortBy == 'Date Added'
-                    ? const Icon(Icons.check, color: Colors.blue)
-                    : null,
-                onTap: () {
-                  setState(() => _sortBy = 'Date Added');
-                  _applySort();
-                  Navigator.pop(context);
-                  widget.onSortChanged?.call('Date Added');
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
 
-  void triggerFilterDialog() => _showFilterDialog();
+  // 2. TAMBAHKAN FUNGSI INI UNTUK LIST PILIHANNYA
+  Widget _buildFilterOption(String title) {
+    final isSelected = _sortBy == title;
+    if (isSelected)
+      return const SizedBox.shrink(); // Sembunyikan jika sedang aktif
+
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+        visualDensity: VisualDensity.compact,
+        title: Text(
+          title,
+          style: const TextStyle(fontSize: 15, color: Colors.black87),
+        ),
+        onTap: () {
+          setState(() {
+            _sortBy = title;
+            _applySort();
+            widget.onSortChanged?.call(
+              title,
+            ); // Beritahu home_page agar teks di header berubah
+          });
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  // 3. UBAH FUNGSI INI AGAR MENERIMA CONTEXT
+  void triggerFilterDialog(BuildContext buttonContext) {
+    _showFilterMenu(buttonContext);
+  }
 
   void playAllShuffled() {
     if (_displayedSongs.isEmpty) return;
@@ -191,86 +247,227 @@ class SongsPageState extends ConsumerState<SongsPage> {
   void _showSongOptions(local.Song song, bool isFav) {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true, // Agar bisa menyesuaikan tinggi layar
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 1. Header Info Lagu
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.music_note, color: Colors.grey),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            song.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+          child: ConstrainedBox(
+            // Membatasi tinggi maksimal 80% dari layar agar tidak menutupi seluruhnya
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: SingleChildScrollView(
+              // Membuat isinya bisa discroll jika layar sempit
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. Header Info Lagu
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          Text(
-                            song.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.grey),
+                          child: const Icon(
+                            Icons.music_note,
+                            color: Colors.grey,
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                song.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                song.artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
+                  ),
+                  const Divider(height: 1),
 
-              // 2. Menu Favorit
-              ListTile(
-                leading: Icon(
-                  isFav ? Icons.favorite : Icons.favorite_border,
-                  color: isFav ? Colors.red : Colors.grey,
-                ),
-                title: Text(
-                  isFav ? 'Hapus dari Favorit' : 'Tambahkan ke Favorit',
-                ),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await _toggleFavorite(song, isFav);
-                },
-              ),
+                  // 2. Play Next
+                  ListTile(
+                    leading: const Icon(
+                      Icons.playlist_play,
+                      color: Colors.black87,
+                    ),
+                    title: const Text('Play Next'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '${song.title} akan diputar selanjutnya',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
 
-              // 3. Menu Tambah ke Playlist (AKTIF SEKARANG)
-              ListTile(
-                leading: const Icon(Icons.playlist_add, color: Colors.black87),
-                title: const Text('Tambahkan ke Playlist'),
-                onTap: () async {
-                  Navigator.pop(context); // Tutup menu popover pertama
-                  _showPlaylistSelection(song); // Buka dialog pilih playlist
-                },
-              ),
+                  // 3. Add to Queue
+                  ListTile(
+                    leading: const Icon(
+                      Icons.add_to_queue,
+                      color: Colors.black87,
+                    ),
+                    title: const Text('Add to Queue'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('${song.title} ditambahkan ke antrean'),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
 
-              const SizedBox(height: 8),
-            ],
+                  // 4. Add to Playlist
+                  ListTile(
+                    leading: const Icon(
+                      Icons.playlist_add,
+                      color: Colors.black87,
+                    ),
+                    title: const Text('Add to Playlist'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showPlaylistSelection(song);
+                    },
+                  ),
+
+                  // 5. Favorites
+                  ListTile(
+                    leading: Icon(
+                      isFav ? Icons.favorite : Icons.favorite_border,
+                      color: isFav ? Colors.red : Colors.black87,
+                    ),
+                    title: Text(
+                      isFav ? 'Remove from Favorites' : 'Add to Favorites',
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _toggleFavorite(song, isFav);
+                    },
+                  ),
+
+                  // 6. Track details
+                  ListTile(
+                    leading: const Icon(
+                      Icons.info_outline,
+                      color: Colors.black87,
+                    ),
+                    title: const Text('Track details'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showTrackDetails(song);
+                    },
+                  ),
+
+                  // 7. Album
+                  ListTile(
+                    leading: const Icon(Icons.album, color: Colors.black87),
+                    title: const Text('Album'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fitur Album segera hadir'),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // 8. Artist
+                  ListTile(
+                    leading: const Icon(Icons.person, color: Colors.black87),
+                    title: const Text('Artist'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fitur Artist segera hadir'),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // 9. Share
+                  ListTile(
+                    leading: const Icon(Icons.share, color: Colors.black87),
+                    title: const Text('Share'),
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
           ),
         );
       },
+    );
+  }
+
+  // Fungsi Bantuan untuk Track Details di Songs
+  void _showTrackDetails(local.Song song) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Track details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Title: ${song.title}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text('Artist: ${song.artist}'),
+            const SizedBox(height: 4),
+            Text('Album: ${song.album}'),
+            const SizedBox(height: 4),
+            Text(
+              'Path: ${song.path}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -363,27 +560,32 @@ class SongsPageState extends ConsumerState<SongsPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_allSongs.isEmpty)
+    if (_allSongs.isEmpty) {
       return const Center(child: Text('Tidak ada lagu ditemukan.'));
+    }
 
     return Stack(
       children: [
-        // ListView TANPA ScrollController (Karena menggunakan PrimaryScrollController)
-        ListView.builder(
-          padding: EdgeInsets.only(
-            top: MediaQuery.of(context).padding.top + 80,
-            bottom: 160,
-            right: 30,
-          ),
-          itemCount: _displayedSongs.length,
-          itemBuilder: (context, index) {
-            final song = _displayedSongs[index];
-            final isFav = _favorites.any((f) => f.id == song.id);
+        StreamBuilder<MediaItem?>(
+          stream: audioHandler.mediaItem,
+          builder: (context, snapshot) {
+            // Ambil data lagu yang sedang aktif SEKALI SAJA di sini
+            final currentMediaItem = snapshot.data;
 
-            return StreamBuilder<MediaItem?>(
-              stream: audioHandler.mediaItem,
-              builder: (context, snapshot) {
-                final isPlaying = snapshot.data?.id == song.path;
+            return ListView.builder(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 80,
+                bottom: 160,
+                right: 30,
+              ),
+              itemCount: _displayedSongs.length,
+              itemBuilder: (context, index) {
+                final song = _displayedSongs[index];
+                final isFav = _favorites.any((f) => f.id == song.id);
+
+                // Cek apakah lagu ini yang sedang diputar
+                final isPlaying = currentMediaItem?.id == song.path;
+
                 return ListTile(
                   contentPadding: const EdgeInsets.only(left: 16, right: 8),
                   leading: Container(
@@ -420,6 +622,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       _displayedSongs
                           .map(
                             (s) => Song(
+                              // Ini model database
                               id: s.id,
                               title: s.title,
                               artist: s.artist,
