@@ -83,7 +83,7 @@ class _HomePageState extends State<HomePage> {
     if (_currentTab == 3 && !_isLibraryRoot) hideHeader = true;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light, // Memaksa ikon jadi hitam
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: const Color(0xFFF2F2F7),
         body: Stack(
@@ -273,38 +273,38 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 )
-              else if (_currentTab == 2)
-                // HEADER PLAYLIST
+              else if (_currentTab == 2) // HEADER PLAYLIST
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 12,
                   left: 16,
                   right: 16,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: const Text(
-                          'Playlist',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                      GestureDetector(
+                        onTap: () => playlistPageKey.currentState
+                            ?.showCreatePlaylistDialog(),
+                        child: Container(
+                          height: 48,
+                          width: 48,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            color: Colors.black,
+                            size: 20,
                           ),
                         ),
                       ),
-                      const Spacer(),
                       Container(
                         height: 48,
                         decoration: BoxDecoration(
@@ -321,29 +321,29 @@ class _HomePageState extends State<HomePage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            GestureDetector(
-                              onTap: () => playlistPageKey.currentState
-                                  ?.showCreatePlaylistDialog(),
-                              child: const Padding(
-                                padding: EdgeInsets.only(left: 16, right: 12),
-                                child: Icon(
-                                  Icons.add,
-                                  color: Colors.black,
-                                  size: 22,
-                                ),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => playlistPageKey.currentState
-                                  ?.showFilterDialog(),
-                              child: const Padding(
-                                padding: EdgeInsets.only(left: 12, right: 16),
-                                child: Icon(
-                                  Icons.sort,
-                                  color: Colors.black,
-                                  size: 22,
-                                ),
-                              ),
+                            ValueListenableBuilder<bool>(
+                              valueListenable: playlistEditModeNotifier,
+                              builder: (context, isEditing, child) {
+                                return GestureDetector(
+                                  onTap: () => playlistPageKey.currentState
+                                      ?.toggleEditMode(),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 16,
+                                      right: 12,
+                                    ),
+                                    child: Icon(
+                                      isEditing
+                                          ? Icons.check
+                                          : Icons.edit_outlined,
+                                      color: isEditing
+                                          ? Colors.green
+                                          : Colors.black,
+                                      size: 20,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -392,7 +392,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 child: Icon(
                                   _currentTab == 3
-                                      ? Icons.more_horiz
+                                      ? Icons.more_vert
                                       : Icons.search,
                                   color: Colors.black,
                                   size: 20,

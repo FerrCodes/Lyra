@@ -33,6 +33,7 @@ class Playlists extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
   TextColumn get imagePath => text().nullable()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -52,17 +53,15 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
-      // JANGAN HAPUS TABEL.
-      // Untuk saat ini, kita hanya print pesan di console.
-      // Nanti, jika kamu benar-benar mengubah skema (misal dari versi 1 ke 2),
-      // kamu harus menulis kode migrasi manual di sini (misal: m.addColumn(...)).
-      print('Database di-upgrade dari versi $from ke $to. Data aman.');
+      if (from < 2) {
+        await m.addColumn(playlists, playlists.sortOrder); // Migrasi aman
+      }
     },
   );
 
