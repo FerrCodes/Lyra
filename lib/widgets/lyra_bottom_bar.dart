@@ -194,7 +194,7 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                         }
                       },
                       child: const Icon(
-                        Icons.home_filled,
+                        Icons.arrow_upward,
                         color: Colors.red,
                         size: 28,
                       ),

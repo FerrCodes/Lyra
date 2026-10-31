@@ -6,7 +6,9 @@ import '../database/database.dart';
 import '../providers/database_provider.dart';
 import 'playlist_detail_page.dart';
 import 'dart:ui';
+import 'dart:io';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 // Kabel untuk dipanggil dari home_page.dart
 final GlobalKey<PlaylistPageState> playlistPageKey =
@@ -67,41 +69,174 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     }
   }
 
-  void showCreatePlaylistDialog() async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Buat Playlist Baru'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Nama Playlist',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
+  void showCreatePlaylistDialog() {
+    final TextEditingController nameController = TextEditingController();
+    String? tempImagePath;
 
-    if (name != null && name.trim().isNotEmpty) {
-      final db = ref.read(databaseProvider);
-      await db
-          .into(db.playlists)
-          .insert(PlaylistsCompanion.insert(name: name.trim()));
-      _loadPlaylists();
-    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useRootNavigator: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                top: 16,
+                left: 24,
+                right: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 1. HEADER & TOMBOL CENTANG
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const SizedBox(
+                        width: 48,
+                      ), // Spacer untuk menyeimbangkan judul
+                      const Text(
+                        'Buat Playlist Baru',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.check,
+                          color: Colors.black,
+                          size: 28,
+                        ),
+                        onPressed: () async {
+                          final name = nameController.text.trim();
+                          if (name.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Nama playlist tidak boleh kosong',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final db = ref.read(databaseProvider);
+                          await db
+                              .into(db.playlists)
+                              .insert(
+                                PlaylistsCompanion.insert(
+                                  name: name,
+                                  imagePath: drift.Value(tempImagePath),
+                                ),
+                              );
+
+                          if (context.mounted) {
+                            Navigator.pop(context); // Tutup bottom sheet
+                          }
+                          _loadPlaylists(); // Refresh list
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 2. AREA FOTO & TOMBOL PENSIL
+                  GestureDetector(
+                    onTap: () async {
+                      final ImagePicker picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(
+                        source: ImageSource.gallery,
+                      );
+                      if (image != null) {
+                        setModalState(() => tempImagePath = image.path);
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          height: 220, // Ukuran gambar cukup besar
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: tempImagePath != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Image.file(
+                                    File(tempImagePath!),
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.image,
+                                  size: 60,
+                                  color: Colors.grey,
+                                ),
+                        ),
+                        // Ikon Pensil Kecil
+                        Positioned(
+                          bottom: 12,
+                          right: 12,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.add_photo_alternate,
+                              size: 20,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // 3. INPUT NAMA PLAYLIST
+                  TextField(
+                    controller: nameController,
+                    autofocus: false, // Biarkan user lihat fotonya dulu
+                    decoration: InputDecoration(
+                      labelText: 'Nama Playlist',
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.queue_music,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void showMoreMenu(BuildContext buttonContext) {
@@ -399,23 +534,26 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     );
   }
 
+  // ==========================================
+  // BAGIAN INI YANG KITA UBAH
+  // ==========================================
   Widget _buildPlaylistCard(
     Playlist playlist, {
     required bool isEditMode,
     required Key key,
   }) {
     final GlobalKey cardKey = GlobalKey();
-    // Kita butuh StatefulBuilder atau Timer untuk menangani delay tap vs long press
-    // Tapi cara paling simpel adalah menggunakan InkWell bawaan
+
+    // Cek apakah playlist punya gambar
+    final bool hasImage =
+        playlist.imagePath != null && playlist.imagePath!.isNotEmpty;
+
     return InkWell(
       key: key,
-      borderRadius: BorderRadius.circular(
-        20,
-      ), // Agar efek ripple mengikuti sudut card
+      borderRadius: BorderRadius.circular(20),
       onTap: isEditMode || _isMenuOpen
           ? null
           : () {
-              // JIKA KLIK BIASA: Masuk ke detail
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -426,7 +564,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
       onLongPress: isEditMode
           ? null
           : () {
-              // JIKA TEKAN LAMA: Munculkan menu
               _showInstagramMenu(Offset.zero, playlist, cardKey);
             },
       child: Container(
@@ -452,40 +589,68 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Colors.red.shade400, Colors.red.shade800],
-                  ),
+                  // Jika ada gambar, gradient merah dihilangkan
+                  gradient: hasImage
+                      ? null
+                      : LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Colors.red.shade400, Colors.red.shade800],
+                        ),
                 ),
-                child: Stack(
-                  children: [
-                    const Center(
-                      child: Icon(
-                        Icons.queue_music,
-                        size: 50,
-                        color: Colors.white54,
-                      ),
-                    ),
-                    // Ikon Drag khusus mode edit
-                    if (isEditMode)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.drag_indicator,
-                            color: Colors.white,
-                            size: 20,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand, // Memaksa isi stack memenuhi area
+                    children: [
+                      // 1. TAMPILKAN GAMBAR GALERI JIKA ADA
+                      if (hasImage)
+                        Image.file(
+                          File(playlist.imagePath!),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Jika file terhapus, tampilkan ikon
+                            return const Center(
+                              child: Icon(
+                                Icons.queue_music,
+                                size: 50,
+                                color: Colors.white54,
+                              ),
+                            );
+                          },
+                        )
+                      else
+                        // 2. JIKA TIDAK ADA GAMBAR, TAMPILKAN IKON DEFAULT
+                        const Center(
+                          child: Icon(
+                            Icons.queue_music,
+                            size: 50,
+                            color: Colors.white54,
                           ),
                         ),
-                      ),
-                  ],
+
+                      // 3. IKON DRAG (Hanya mode edit)
+                      if (isEditMode)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.drag_indicator,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
