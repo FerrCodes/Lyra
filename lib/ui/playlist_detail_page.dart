@@ -304,6 +304,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -311,7 +312,12 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.only(
+                left: 24.0,
+                right: 24.0,
+                top: 24.0,
+                bottom: 80.0,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -382,6 +388,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      useSafeArea: true,
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
@@ -396,7 +403,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               child: SafeArea(
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 80.0),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -976,7 +983,10 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                       onPressed: () {
                                         showModalBottomSheet(
                                           context: context,
+                                          useRootNavigator: true,
                                           backgroundColor: Colors.white,
+                                          isScrollControlled: true,
+                                          useSafeArea: true,
                                           shape: const RoundedRectangleBorder(
                                             borderRadius: BorderRadius.vertical(
                                               top: Radius.circular(24),

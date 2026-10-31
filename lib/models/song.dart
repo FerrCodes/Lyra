@@ -17,12 +17,15 @@ class Song {
 
   factory Song.fromMap(Map<String, dynamic> map) {
     return Song(
-      id: map['id'] as String,
-      title: map['title'] as String,
-      artist: map['artist'] as String,
-      album: map['album'] as String,
-      durationMs: map['duration'] as int,
-      path: map['path'] as String,
+      // Amankan String: Jika null, beri nilai default
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? 'Unknown Title',
+      artist: map['artist']?.toString() ?? 'Unknown Artist',
+      album: map['album']?.toString() ?? 'Unknown Album',
+      path: map['path']?.toString() ?? '',
+
+      // Amankan Angka: Konversi ke num dulu, baru ke int. Jika null, jadikan 0
+      durationMs: (map['duration'] as num?)?.toInt() ?? 0,
     );
   }
 

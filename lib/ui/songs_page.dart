@@ -229,6 +229,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
   void _showSongOptions(local.Song song, bool isFav) {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -450,62 +451,79 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      useSafeArea: true, // <--- 1. TAMBAHKAN INI
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  'Pilih Playlist',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ),
-              const Divider(height: 1),
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: playlists.length,
-                  itemBuilder: (context, index) {
-                    final pl = playlists[index];
-                    return ListTile(
-                      leading: const Icon(
-                        Icons.queue_music,
-                        color: Colors.black54,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                // <--- 2. TAMBAHKAN PADDING BAWAH AGAR TIDAK TERTUTUP BOTTOM BAR
+                padding: const EdgeInsets.only(bottom: 80),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'Pilih Playlist',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
-                      title: Text(pl.name),
-                      onTap: () async {
-                        final dbSong = Song(
-                          id: song.id,
-                          title: song.title,
-                          artist: song.artist,
-                          album: song.album,
-                          path: song.path,
-                          durationMs: song.durationMs,
-                          addedAt: DateTime.now(),
-                        );
-                        await db.addSongToPlaylist(pl.id, dbSong);
-
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${song.title} ditambahkan ke ${pl.name}',
-                              ),
+                    ),
+                    const Divider(height: 1),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: playlists.length,
+                        itemBuilder: (context, index) {
+                          final pl = playlists[index];
+                          return ListTile(
+                            leading: const Icon(
+                              Icons.queue_music,
+                              color: Colors.black54,
                             ),
+                            title: Text(pl.name),
+                            onTap: () async {
+                              final dbSong = Song(
+                                id: song.id,
+                                title: song.title,
+                                artist: song.artist,
+                                album: song.album,
+                                path: song.path,
+                                durationMs: song.durationMs,
+                                addedAt: DateTime.now(),
+                              );
+                              await db.addSongToPlaylist(pl.id, dbSong);
+
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '${song.title} ditambahkan ke ${pl.name}',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
                           );
-                        }
-                      },
-                    );
-                  },
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         );
       },

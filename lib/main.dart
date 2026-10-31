@@ -2,7 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'audio/lyra_audio_handler.dart';
-import 'ui/home_page.dart';
+import 'ui/permission_gate.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,8 +27,11 @@ Future<void> main() async {
   );
 
   if (Platform.isAndroid) {
+    // Minta izin audio (berlaku untuk Android 13+)
     await Permission.audio.request();
-    // Untuk Android 12 ke bawah, biasanya butuh storage
+    // Minta izin storage (untuk Android 12 ke bawah / fallback)
+    // Di Android 13+, ini akan otomatis diabaikan (denied) oleh sistem,
+    // tapi tidak akan membuat aplikasi crash.
     await Permission.storage.request();
   }
 
@@ -57,7 +60,7 @@ class LyraApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const PermissionGate(),
     );
   }
 }

@@ -9,13 +9,17 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   LyraAudioHandler() {
     // Sinkronkan state just_audio ke audio_service.
     _player.playbackEventStream.listen(_broadcastState);
+
     _player.currentIndexStream.listen((index) {
-      if (index != null && index < queue.value.length) {
+      // Pastikan index tidak null, tidak negatif, dan queue tidak kosong
+      if (index != null && index >= 0 && index < queue.value.length) {
         mediaItem.add(queue.value[index]);
       }
     });
+
     _player.durationStream.listen((duration) {
       final current = mediaItem.value;
+      // Pastikan data lagu dan durasi valid
       if (current != null && duration != null) {
         mediaItem.add(current.copyWith(duration: duration));
       }
@@ -55,7 +59,19 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   /// Memutar daftar lagu secara berurutan (Queue)
   Future<void> playQueue(List<Song> songs, int initialIndex) async {
-    // 1. Ubah list lagu dari database menjadi MediaItem
+    // ========================================================
+    // TAMBAHKAN PENGECEKAN KEAMANAN DI SINI
+    // ========================================================
+    if (songs.isEmpty) {
+      return; // Jangan lakukan apa-apa jika list kosong
+    }
+    // Jika index tidak valid (misal lagu terakhir dihapus), paksa putar lagu pertama
+    if (initialIndex < 0 || initialIndex >= songs.length) {
+      initialIndex = 0;
+    }
+    // ========================================================
+
+    // Ubah list lagu dari database menjadi MediaItem
     final mediaItems = songs
         .map(
           (s) => MediaItem(
@@ -68,20 +84,17 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
         )
         .toList();
 
-    // 2. Masukkan ke antrean audio_service
+    // Masukkan ke antrean audio_service
     queue.add(mediaItems);
 
-    // ========================================================
-    // 3. TAMBAHKAN BARIS INI (Ini yang tadi hilang!)
     // Memberitahu Mini Player lagu mana yang sedang diputar
     mediaItem.add(mediaItems[initialIndex]);
-    // ========================================================
 
-    // 4. Masukkan ke antrean just_audio
+    // Masukkan ke antrean just_audio
     final audioSources = songs.map((s) => AudioSource.file(s.path)).toList();
     await _player.setAudioSources(audioSources, initialIndex: initialIndex);
 
-    // 5. Putar
+    // Putar
     play();
   }
 

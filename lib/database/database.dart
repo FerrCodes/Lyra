@@ -58,11 +58,11 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
-      // Selama masa pengembangan, jika tabel berubah, kita hapus semua dan buat baru
-      for (final table in allTables) {
-        await m.deleteTable(table.actualTableName);
-      }
-      await m.createAll();
+      // JANGAN HAPUS TABEL.
+      // Untuk saat ini, kita hanya print pesan di console.
+      // Nanti, jika kamu benar-benar mengubah skema (misal dari versi 1 ke 2),
+      // kamu harus menulis kode migrasi manual di sini (misal: m.addColumn(...)).
+      print('Database di-upgrade dari versi $from ke $to. Data aman.');
     },
   );
 
