@@ -91,7 +91,18 @@ class _HomePageState extends State<HomePage> {
     if (_currentTab == 4) hideHeader = true;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark, // Ikon status bar hitam
+        statusBarBrightness: Brightness.light,
+        // Tambahkan ini untuk Navigation Bar HP:
+        systemNavigationBarColor: Color(
+          0xFFF2F2F7,
+        ), // Sesuaikan dengan warna background aplikasimu
+        systemNavigationBarIconBrightness:
+            Brightness.dark, // Ikon navigasi hitam
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF2F2F7),
         body: Stack(
@@ -160,25 +171,28 @@ class _HomePageState extends State<HomePage> {
             // =========================================================
             // HEADER (Hanya muncul jika bukan di halaman detail)
             // =========================================================
-            if (!hideHeader) // Hanya tampil jika header sedang muncul
+            if (!hideHeader)
               Positioned(
                 top: 0,
                 left: 0,
                 right: 0,
                 child: IgnorePointer(
-                  // Agar tidak menghalangi klik pada konten
                   child: Container(
-                    // Tinggi mencakup status bar + area tombol pill
                     height: MediaQuery.of(context).padding.top + 90,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.4),
-                          // Lebih pekat di paling bawah layar
-                          Colors.transparent,
+                          // Putih semi-transparan di paling atas (menutupi status bar)
+                          Colors.white.withValues(alpha: 0.9),
+                          // Memudar sepenuhnya tepat sebelum area tombol
+                          Colors.white.withValues(alpha: 0.0),
                         ],
+                        stops: const [
+                          0.0,
+                          0.8,
+                        ], // Memudar lebih cepat (di 80% tinggi overlay)
                       ),
                     ),
                   ),
@@ -423,21 +437,20 @@ class _HomePageState extends State<HomePage> {
               bottom: 0,
               child: IgnorePointer(
                 child: Container(
-                  // Tinggi mencakup Bottom Bar, Mini Player, dan area aman HP
                   height: MediaQuery.of(context).padding.bottom + 170,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        // Transparan di atas agar list lagu masih terlihat samar
-                        Colors.black.withValues(alpha: 0),
-                        // Berubah menjadi hitam transparan di area Bottom Bar
-                        Colors.black.withValues(alpha: 0.1),
-                        // Lebih pekat di paling bawah layar
-                        Colors.black.withValues(alpha: 0.4),
+                        // Transparan di atas
+                        Colors.white.withValues(alpha: 0.0),
+                        // Mulai memutih di tengah
+                        Colors.white.withValues(alpha: 0.5),
+                        // Putih solid (samakan dengan warna background aplikasi) di paling bawah
+                        const Color(0xFFF2F2F7).withValues(alpha: 1.0),
                       ],
-                      stops: const [0.0, 0.6, 1.0], // Titik transisi gradasi
+                      stops: const [0.0, 0.5, 1.0],
                     ),
                   ),
                 ),

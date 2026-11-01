@@ -6,6 +6,7 @@ import '../models/song.dart' as local;
 import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
+import 'package:flutter/services.dart';
 
 class SearchQueryNotifier extends Notifier<String> {
   @override
@@ -74,42 +75,52 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               .where((p) => p.name.toLowerCase().contains(queryLower))
               .toList();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
-      body: Stack(
-        children: [
-          // KONTEN UTAMA
-          SafeArea(
-            child: query.isEmpty
-                ? _buildInitialState()
-                : _buildSearchResults(filteredSongs, filteredPlaylists),
-          ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFFF2F2F7), // Background terang
+        systemNavigationBarIconBrightness: Brightness.dark, // Ikon hitam
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2F2F7),
+        body: Stack(
+          children: [
+            // KONTEN UTAMA
+            SafeArea(
+              child: query.isEmpty
+                  ? _buildInitialState()
+                  : _buildSearchResults(filteredSongs, filteredPlaylists),
+            ),
 
-          // === OVERLAY GRADASI UNTUK STATUS BAR ===
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Container(
-                height:
-                    MediaQuery.of(context).padding.top +
-                    40, // Menutupi area status bar
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      // Gunakan warna gelap transparan agar ikon putih terlihat
-                      Colors.black.withValues(alpha: 0.4),
-                      Colors.transparent,
-                    ],
+            // === OVERLAY GRADASI UNTUK STATUS BAR ===
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Container(
+                  height:
+                      MediaQuery.of(context).padding.top +
+                      40, // Menutupi area status bar
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        // Gunakan warna gelap transparan agar ikon putih terlihat
+                        Colors.black.withValues(alpha: 0.4),
+                        Colors.transparent,
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

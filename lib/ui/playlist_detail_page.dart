@@ -10,6 +10,7 @@ import '../main.dart';
 import '../providers/database_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../providers/songs_provider.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 class PlaylistDetailPage extends ConsumerStatefulWidget {
   final Playlist playlist;
@@ -27,7 +28,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   late String _currentPlaylistName;
   String? _currentImagePath;
   String? _currentDescription;
-
+  static const MethodChannel _platform = MethodChannel('com.lyra/pick_image');
   String _currentSort = 'Custom order';
   bool _addToBottom = true;
 
@@ -63,6 +64,139 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       _applySort();
       _isLoading = false;
     });
+  }
+
+  Future<void> _pickImageSource(Function(String) onImagePicked) async {
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // --- OPSI GALERI ---
+                GestureDetector(
+                  onTap: () async {
+                    Navigator.pop(context); // Tutup bottom sheet
+                    try {
+                      // 1. Panggil Kotlin untuk buka Samsung Gallery
+                      final String? imagePath = await _platform.invokeMethod(
+                        'pickImage',
+                      );
+
+                      if (imagePath != null) {
+                        // 2. LANGSUNG CROP SETELAH FOTO DIPILIH
+                        final croppedFile = await ImageCropper().cropImage(
+                          sourcePath: imagePath,
+                          aspectRatio: const CropAspectRatio(
+                            ratioX: 1,
+                            ratioY: 1,
+                          ), // Paksa jadi kotak
+                          uiSettings: [
+                            AndroidUiSettings(
+                              toolbarTitle: 'Potong Foto',
+                              toolbarColor: Colors.black,
+                              toolbarWidgetColor: Colors.white,
+                              initAspectRatio: CropAspectRatioPreset.square,
+                              lockAspectRatio: true,
+                              hideBottomControls:
+                                  true, // <--- SEMBUNYIKAN SLIDER & TOMBOL BAWAH
+                            ),
+                          ],
+                        );
+
+                        // 3. Jika user tidak menekan Cancel
+                        if (croppedFile != null) {
+                          onImagePicked(croppedFile.path);
+                        }
+                      }
+                    } on PlatformException catch (e) {
+                      print("Gagal mengambil gambar: ${e.message}");
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: Colors.pink.shade700,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.local_florist,
+                          color: Colors.white,
+                          size: 35,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Gallery',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // --- OPSI KAMERA ---
+                GestureDetector(
+                  onTap: () async {
+                    Navigator.pop(context);
+
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 80,
+                    );
+
+                    if (image != null) {
+                      onImagePicked(image.path); // <--- Ini juga
+                    }
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          color: Colors.pinkAccent.shade200,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 35,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Camera',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _applySort() {
@@ -655,16 +789,13 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             bottom: 12,
                             left: 12,
                             child: GestureDetector(
+                              // INI BAGIAN YANG DIGANTI
                               onTap: () async {
-                                final ImagePicker picker = ImagePicker();
-                                final XFile? image = await picker.pickImage(
-                                  source: ImageSource.gallery,
-                                );
-                                if (image != null) {
-                                  setModalState(
-                                    () => tempImagePath = image.path,
-                                  );
-                                }
+                                await _pickImageSource((path) {
+                                  setModalState(() {
+                                    tempImagePath = path;
+                                  });
+                                });
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(8),
@@ -912,12 +1043,29 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       );
     }
 
-    // BUNGKUS SCAFFOLD DENGAN INI
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _isAppBarExpanded
-          ? SystemUiOverlayStyle
-                .light // Jika cover terlihat, icon jadi PUTIH
-          : SystemUiOverlayStyle.dark, // Jika background putih, icon jadi HITAM
+          ? const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness:
+                  Brightness.light, // Ikon atas putih (di atas gambar)
+              statusBarBrightness: Brightness.dark,
+              // Navigasi bawah dibuat putih transparan/solid agar menyatu dengan daftar lagu
+              systemNavigationBarColor: Color(0xFFF2F2F7),
+              systemNavigationBarIconBrightness:
+                  Brightness.dark, // Ikon navigasi hitam
+              systemNavigationBarDividerColor: Colors.transparent,
+            )
+          : const SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: Brightness.dark, // Ikon atas hitam
+              statusBarBrightness: Brightness.light,
+              // Tetap putih saat di-scroll
+              systemNavigationBarColor: Color(0xFFF2F2F7),
+              systemNavigationBarIconBrightness:
+                  Brightness.dark, // Ikon navigasi hitam
+              systemNavigationBarDividerColor: Colors.transparent,
+            ),
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
@@ -1449,16 +1597,26 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               right: 0,
               child: IgnorePointer(
                 child: Container(
-                  height: MediaQuery.of(context).padding.top + 90,
+                  height:
+                      MediaQuery.of(context).padding.top +
+                      110, // Sedikit lebih tinggi
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        // Gunakan hitam transparan agar kontras dengan ikon hitam
-                        Colors.black.withValues(alpha: 0.7),
+                        // 1. Hitam dengan opacity sedang di paling atas (di belakang jam/baterai)
+                        Colors.black.withValues(alpha: 0.6),
+                        // 2. Transisi halus
+                        Colors.black.withValues(alpha: 0.3),
+                        // 3. Memudar sepenuhnya
                         Colors.transparent,
                       ],
+                      stops: const [
+                        0.0,
+                        0.4,
+                        1.0,
+                      ], // 0% atas, 40% tengah, 100% bawah
                     ),
                   ),
                 ),
@@ -1567,11 +1725,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           GestureDetector(
-                            onTap: () {
-                              // (Ini icon bintang dari step sebelumnya)
-                            },
+                            onTap: () {},
                             child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              padding: EdgeInsets.only(left: 16, right: 8),
                               child: Icon(
                                 Icons.star_border,
                                 color: Colors.black87,
@@ -1582,7 +1738,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                           GestureDetector(
                             onTap: _showAddSongsToPlaylist,
                             child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              padding: EdgeInsets.symmetric(horizontal: 8),
                               child: Icon(
                                 Icons.add,
                                 color: Colors.black87,
@@ -1593,7 +1749,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                           GestureDetector(
                             onTap: _showMoreMenu,
                             child: const Padding(
-                              padding: EdgeInsets.only(left: 12, right: 16),
+                              padding: EdgeInsets.only(left: 8, right: 16),
                               child: Icon(
                                 Icons.more_horiz,
                                 color: Colors.black87,

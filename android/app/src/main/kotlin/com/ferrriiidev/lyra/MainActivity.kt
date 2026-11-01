@@ -1,17 +1,23 @@
 package com.ferrriiidev.lyra
 
 import android.content.ContentUris
+import android.content.Intent
 import android.provider.MediaStore
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AudioServiceActivity() {
     private val CHANNEL = "com.lyra/media_store"
+    private val PICK_IMAGE_CHANNEL = "com.lyra/pick_image"
+    private var pendingImageResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // 1. KANAL ASLI MILIKMU (Jangan diubah)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "getSongs") {
                 try {
@@ -24,8 +30,54 @@ class MainActivity : AudioServiceActivity() {
                 result.notImplemented()
             }
         }
+
+        // 2. KANAL BARU: Memaksa buka Samsung Gallery Layar Penuh
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PICK_IMAGE_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "pickImage") {
+                pendingImageResult = result
+                // Intent ini memaksa aplikasi Galeri bawaan HP (Samsung Gallery) terbuka
+                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                intent.type = "image/*"
+                startActivityForResult(intent, 1001)
+            } else {
+                result.notImplemented()
+            }
+        }
     }
 
+    // Menangkap hasil dari Galeri Samsung
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 1001) {
+            if (resultCode == RESULT_OK && data != null) {
+                val uri = data.data
+                if (uri != null) {
+                    try {
+                        // 1. GANTI cacheDir MENJADI filesDir (Agar permanen)
+                        val file = File(filesDir, "playlist_cover_${System.currentTimeMillis()}.jpg")
+                        
+                        // 2. GUNAKAN .use {} (Otomatis menutup stream meskipun error)
+                        contentResolver.openInputStream(uri)?.use { inputStream ->
+                            FileOutputStream(file).use { outputStream ->
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+                        
+                        pendingImageResult?.success(file.absolutePath)
+                    } catch (e: Exception) {
+                        pendingImageResult?.error("PICK_ERROR", e.message, null)
+                    }
+                } else {
+                    pendingImageResult?.success(null)
+                }
+            } else {
+                pendingImageResult?.success(null) // User membatalkan
+            }
+            pendingImageResult = null
+        }
+    }
+
+    // 3. FUNGSI PEMINDAI LAGU MILIKMU (Tetap utuh)
     private fun getSongsFromMediaStore(): List<Map<String, Any>> {
         val songs = mutableListOf<Map<String, Any>>()
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
@@ -38,7 +90,6 @@ class MainActivity : AudioServiceActivity() {
             MediaStore.Audio.Media.DATA
         )
         
-        // Filter hanya file audio yang berdurasi > 0 (bukan nada dering sistem)
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} > 0"
         val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
 

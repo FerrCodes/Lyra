@@ -18,9 +18,6 @@ Future<void> main() async {
       statusBarIconBrightness:
           Brightness.dark, // Ikon jadi hitam (untuk background terang)
       statusBarBrightness: Brightness.light, // Untuk iOS
-      systemNavigationBarColor: Color(
-        0xFFF2F2F7,
-      ), // Warna navigasi bawah Android
       systemNavigationBarIconBrightness:
           Brightness.dark, // Ikon navigasi bawah hitam
     ),
