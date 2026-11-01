@@ -5,6 +5,7 @@ import '../widgets/lyra_header.dart';
 import 'songs_page.dart';
 import 'playlist_page.dart';
 import 'library_page.dart';
+import 'search_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -52,7 +53,13 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _mainScrollController = ScrollController();
   double _currentScrollOffset = 0;
 
-  final List<String> _titles = ['Beranda', 'Songs', 'Playlist', 'Library'];
+  final List<String> _titles = [
+    'Beranda',
+    'Songs',
+    'Playlist',
+    'Library',
+    'Search',
+  ];
 
   // === STATE UNTUK NAVIGASI BERTINGKAT ===
   final GlobalKey<NavigatorState> _songsNavKey = GlobalKey<NavigatorState>();
@@ -81,6 +88,7 @@ class _HomePageState extends State<HomePage> {
     if (_currentTab == 1 && !_isSongsRoot) hideHeader = true;
     if (_currentTab == 2 && !_isPlaylistRoot) hideHeader = true;
     if (_currentTab == 3 && !_isLibraryRoot) hideHeader = true;
+    if (_currentTab == 4) hideHeader = true;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -143,6 +151,7 @@ class _HomePageState extends State<HomePage> {
                         builder: (_) => LibraryPage(key: libraryPageKey),
                       ),
                     ),
+                    const SearchPage(),
                   ],
                 ),
               ),
@@ -335,7 +344,7 @@ class _HomePageState extends State<HomePage> {
                                     child: Icon(
                                       isEditing
                                           ? Icons.check
-                                          : Icons.edit_outlined,
+                                          : Icons.drag_indicator,
                                       color: isEditing
                                           ? Colors.green
                                           : Colors.black,

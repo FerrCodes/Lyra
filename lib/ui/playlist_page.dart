@@ -655,7 +655,10 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 16.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -667,11 +670,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Playlist Pribadi',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
               ),

@@ -713,6 +713,17 @@ class $PlaylistsTable extends Playlists
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -731,6 +742,7 @@ class $PlaylistsTable extends Playlists
     name,
     imagePath,
     sortOrder,
+    description,
     createdAt,
   ];
   @override
@@ -768,6 +780,15 @@ class $PlaylistsTable extends Playlists
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -799,6 +820,10 @@ class $PlaylistsTable extends Playlists
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -817,12 +842,14 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   final String name;
   final String? imagePath;
   final int sortOrder;
+  final String? description;
   final DateTime createdAt;
   const Playlist({
     required this.id,
     required this.name,
     this.imagePath,
     required this.sortOrder,
+    this.description,
     required this.createdAt,
   });
   @override
@@ -834,6 +861,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       map['image_path'] = Variable<String>(imagePath);
     }
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -846,6 +876,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           ? const Value.absent()
           : Value(imagePath),
       sortOrder: Value(sortOrder),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       createdAt: Value(createdAt),
     );
   }
@@ -860,6 +893,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       name: serializer.fromJson<String>(json['name']),
       imagePath: serializer.fromJson<String?>(json['imagePath']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      description: serializer.fromJson<String?>(json['description']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -871,6 +905,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       'name': serializer.toJson<String>(name),
       'imagePath': serializer.toJson<String?>(imagePath),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'description': serializer.toJson<String?>(description),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -880,12 +915,14 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     String? name,
     Value<String?> imagePath = const Value.absent(),
     int? sortOrder,
+    Value<String?> description = const Value.absent(),
     DateTime? createdAt,
   }) => Playlist(
     id: id ?? this.id,
     name: name ?? this.name,
     imagePath: imagePath.present ? imagePath.value : this.imagePath,
     sortOrder: sortOrder ?? this.sortOrder,
+    description: description.present ? description.value : this.description,
     createdAt: createdAt ?? this.createdAt,
   );
   Playlist copyWithCompanion(PlaylistsCompanion data) {
@@ -894,6 +931,9 @@ class Playlist extends DataClass implements Insertable<Playlist> {
       name: data.name.present ? data.name.value : this.name,
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -905,13 +945,15 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           ..write('name: $name, ')
           ..write('imagePath: $imagePath, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('description: $description, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, imagePath, sortOrder, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, imagePath, sortOrder, description, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -920,6 +962,7 @@ class Playlist extends DataClass implements Insertable<Playlist> {
           other.name == this.name &&
           other.imagePath == this.imagePath &&
           other.sortOrder == this.sortOrder &&
+          other.description == this.description &&
           other.createdAt == this.createdAt);
 }
 
@@ -928,12 +971,14 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   final Value<String> name;
   final Value<String?> imagePath;
   final Value<int> sortOrder;
+  final Value<String?> description;
   final Value<DateTime> createdAt;
   const PlaylistsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.imagePath = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   PlaylistsCompanion.insert({
@@ -941,6 +986,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     required String name,
     this.imagePath = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.description = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Playlist> custom({
@@ -948,6 +994,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Expression<String>? name,
     Expression<String>? imagePath,
     Expression<int>? sortOrder,
+    Expression<String>? description,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -955,6 +1002,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       if (name != null) 'name': name,
       if (imagePath != null) 'image_path': imagePath,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (description != null) 'description': description,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -964,6 +1012,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     Value<String>? name,
     Value<String?>? imagePath,
     Value<int>? sortOrder,
+    Value<String?>? description,
     Value<DateTime>? createdAt,
   }) {
     return PlaylistsCompanion(
@@ -971,6 +1020,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
       name: name ?? this.name,
       imagePath: imagePath ?? this.imagePath,
       sortOrder: sortOrder ?? this.sortOrder,
+      description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -990,6 +1040,9 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1003,6 +1056,7 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
           ..write('name: $name, ')
           ..write('imagePath: $imagePath, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('description: $description, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1974,6 +2028,7 @@ typedef $$PlaylistsTableCreateCompanionBuilder =
       required String name,
       Value<String?> imagePath,
       Value<int> sortOrder,
+      Value<String?> description,
       Value<DateTime> createdAt,
     });
 typedef $$PlaylistsTableUpdateCompanionBuilder =
@@ -1982,6 +2037,7 @@ typedef $$PlaylistsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String?> imagePath,
       Value<int> sortOrder,
+      Value<String?> description,
       Value<DateTime> createdAt,
     });
 
@@ -2034,6 +2090,11 @@ class $$PlaylistsTableFilterComposer
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2097,6 +2158,11 @@ class $$PlaylistsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2123,6 +2189,11 @@ class $$PlaylistsTableAnnotationComposer
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2185,12 +2256,14 @@ class $$PlaylistsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String?> imagePath = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => PlaylistsCompanion(
                 id: id,
                 name: name,
                 imagePath: imagePath,
                 sortOrder: sortOrder,
+                description: description,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -2199,12 +2272,14 @@ class $$PlaylistsTableTableManager
                 required String name,
                 Value<String?> imagePath = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => PlaylistsCompanion.insert(
                 id: id,
                 name: name,
                 imagePath: imagePath,
                 sortOrder: sortOrder,
+                description: description,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

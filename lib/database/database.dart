@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 
 part 'database.g.dart';
 
-// 1. Tabel Master untuk semua lagu yang diketahui aplikasi
+// Tabel Master untuk semua lagu yang diketahui aplikasi
 class Songs extends Table {
   TextColumn get id => text()(); // ID dari MediaStore
   TextColumn get title => text()();
@@ -18,7 +18,7 @@ class Songs extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-// 2. Tabel Favorit (Hanya menyimpan relasi ke Songs)
+// Tabel Favorit (Hanya menyimpan relasi ke Songs)
 class Favorites extends Table {
   TextColumn get songId =>
       text().references(Songs, #id, onDelete: KeyAction.cascade)();
@@ -28,16 +28,17 @@ class Favorites extends Table {
   Set<Column> get primaryKey => {songId};
 }
 
-// 3. Tabel Playlist
+// Tabel Playlist
 class Playlists extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
   TextColumn get imagePath => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  TextColumn get description => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-// 4. Tabel Relasi Playlist dan Lagu
+// Tabel Relasi Playlist dan Lagu
 class PlaylistSongs extends Table {
   IntColumn get playlistId =>
       integer().references(Playlists, #id, onDelete: KeyAction.cascade)();
@@ -60,13 +61,12 @@ class AppDatabase extends _$AppDatabase {
     onCreate: (m) => m.createAll(),
     onUpgrade: (m, from, to) async {
       if (from < 2) {
-        await m.addColumn(playlists, playlists.sortOrder); // Migrasi aman
+        await m.addColumn(playlists, playlists.sortOrder);
       }
     },
   );
 
   // --- FUNGSI BANTUAN ---
-
   // Tambah/update lagu ke tabel master
   Future<void> saveSong(SongsCompanion song) =>
       into(songs).insertOnConflictUpdate(song);

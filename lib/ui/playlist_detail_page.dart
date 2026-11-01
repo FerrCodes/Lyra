@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import '../database/database.dart';
 import '../main.dart';
 import '../providers/database_provider.dart';
 import '../audio/lyra_audio_handler.dart';
+import '../providers/songs_provider.dart';
 
 class PlaylistDetailPage extends ConsumerStatefulWidget {
   final Playlist playlist;
@@ -24,6 +26,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   final GlobalKey _filterButtonKey = GlobalKey();
   late String _currentPlaylistName;
   String? _currentImagePath;
+  String? _currentDescription;
 
   String _currentSort = 'Custom order';
   bool _addToBottom = true;
@@ -40,6 +43,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     super.initState();
     _currentPlaylistName = widget.playlist.name;
     _currentImagePath = widget.playlist.imagePath;
+    _currentDescription = widget.playlist.description;
     _loadSongs();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
@@ -303,6 +307,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   void _showAddTracksBottomSheet() {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
@@ -378,17 +383,216 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
+  void _showAddSongsToPlaylist() {
+    // Kita ambil semua lagu dari Provider
+    final allSongsAsync = ref.read(allSongsProvider);
+
+    allSongsAsync.whenData((songs) {
+      if (songs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Belum ada lagu di perangkatmu.')),
+        );
+        return;
+      }
+
+      showModalBottomSheet(
+        context: context,
+        useRootNavigator: true,
+        backgroundColor: Colors.white,
+        isScrollControlled: true,
+        useSafeArea: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (context) {
+          return DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.7, // Muncul setinggi 70% layar
+            maxChildSize: 0.9,
+            minChildSize: 0.5,
+            builder: (context, scrollController) {
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Pilih Lagu',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: songs.length,
+                      itemBuilder: (context, index) {
+                        final song = songs[index];
+                        // Cek apakah lagu sudah ada di playlist ini
+                        final isAlreadyAdded = _songsInPlaylist.any(
+                          (s) => s.id == song.id,
+                        );
+
+                        return ListTile(
+                          leading: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.music_note,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          title: Text(
+                            song.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            song.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: isAlreadyAdded
+                              ? const Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                )
+                              : const Icon(
+                                  Icons.add_circle_outline,
+                                  color: Colors.grey,
+                                ),
+                          onTap: isAlreadyAdded
+                              ? null
+                              : () async {
+                                  final db = ref.read(databaseProvider);
+
+                                  // Konversi ke DB Song
+                                  final dbSong = Song(
+                                    id: song.id,
+                                    title: song.title,
+                                    artist: song.artist,
+                                    album: song.album,
+                                    path: song.path,
+                                    durationMs: song.durationMs,
+                                    addedAt: DateTime.now(),
+                                  );
+
+                                  // Simpan ke database playlist
+                                  await db.addSongToPlaylist(
+                                    widget.playlist.id,
+                                    dbSong,
+                                  );
+
+                                  if (context.mounted) {
+                                    Navigator.pop(
+                                      context,
+                                    ); // Tutup bottom sheet
+                                    _loadSongs(); // Refresh daftar lagu di halaman
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${song.title} ditambahkan ke playlist',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    });
+  }
+
+  void _showPlaylistImage() {
+    if (_currentImagePath == null || _currentImagePath!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Playlist ini belum memiliki foto.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent, // Kita atur warnanya manual di dalam
+      builder: (context) {
+        return GestureDetector(
+          onTap: () => Navigator.pop(context), // Tap di mana saja untuk menutup
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // Efek Blur
+            child: Container(
+              color: Colors.black.withValues(
+                alpha: 0.4,
+              ), // Overlay gelap transparan
+              child: Center(
+                child: Hero(
+                  // Efek transisi (opsional, tapi keren)
+                  tag: 'playlist_image_${widget.playlist.id}',
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    height: MediaQuery.of(context).size.width * 0.85,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 30,
+                          offset: const Offset(0, 15),
+                        ),
+                      ],
+                      image: DecorationImage(
+                        image: FileImage(File(_currentImagePath!)),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showEditPlaylistBottomSheet() {
     final TextEditingController nameController = TextEditingController(
       text: _currentPlaylistName,
+    );
+    final TextEditingController descController = TextEditingController(
+      text: _currentDescription ?? '', // Pakai _currentDescription yang baru
     );
     String? tempImagePath = _currentImagePath;
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      useSafeArea: true,
+      useSafeArea:
+          true, // useSafeArea sudah ada di sini, tidak perlu SafeArea di dalam
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
@@ -397,153 +601,182 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
+              // Padding bawah menyesuaikan keyboard, ditambah sedikit margin (32.0)
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 32.0,
               ),
-              child: SafeArea(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 80.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Edit Playlist',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
+              // Langsung pakai SingleChildScrollView tanpa SafeArea
+              child: SingleChildScrollView(
+                child: Padding(
+                  // Padding kiri, atas, kanan. Bawah sudah diurus oleh Container di atas
+                  padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 0.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Edit Playlist',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.grey),
-                              onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // --- AREA GAMBAR ---
+                      Stack(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            height: 200,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Stack(
-                          children: [
-                            Container(
-                              width: double.infinity,
-                              height: 200,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: tempImagePath != null
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: Image.file(
-                                        File(tempImagePath!),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
-                                  : const Icon(
-                                      Icons.image,
-                                      size: 60,
-                                      color: Colors.grey,
+                            child: tempImagePath != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Image.file(
+                                      File(tempImagePath!),
+                                      fit: BoxFit.cover,
                                     ),
-                            ),
-                            Positioned(
-                              bottom: 12,
-                              left: 12,
-                              child: GestureDetector(
-                                onTap: () async {
-                                  final ImagePicker picker = ImagePicker();
-                                  final XFile? image = await picker.pickImage(
-                                    source: ImageSource.gallery,
+                                  )
+                                : const Icon(
+                                    Icons.image,
+                                    size: 60,
+                                    color: Colors.grey,
+                                  ),
+                          ),
+                          Positioned(
+                            bottom: 12,
+                            left: 12,
+                            child: GestureDetector(
+                              onTap: () async {
+                                final ImagePicker picker = ImagePicker();
+                                final XFile? image = await picker.pickImage(
+                                  source: ImageSource.gallery,
+                                );
+                                if (image != null) {
+                                  setModalState(
+                                    () => tempImagePath = image.path,
                                   );
-                                  if (image != null) {
-                                    setModalState(
-                                      () => tempImagePath = image.path,
-                                    );
-                                  }
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        blurRadius: 8,
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
                                       ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                    Icons.edit,
-                                    size: 20,
-                                    color: Colors.black87,
-                                  ),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  size: 20,
+                                  color: Colors.black87,
                                 ),
                               ),
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- INPUT NAMA ---
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          labelText: 'Nama Playlist',
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        const SizedBox(height: 24),
-                        TextField(
-                          controller: nameController,
-                          decoration: InputDecoration(
-                            labelText: 'Nama Playlist',
-                            filled: true,
-                            fillColor: Colors.grey.shade100,
-                            border: OutlineInputBorder(
+                      ),
+                      const SizedBox(height: 16),
+
+                      // --- INPUT DESKRIPSI ---
+                      TextField(
+                        controller: descController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          labelText: 'Deskripsi (Opsional)',
+                          alignLabelWithHint: true,
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // --- TOMBOL SIMPAN ---
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide.none,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: () async {
-                              if (nameController.text.trim().isEmpty) return;
-                              final db = ref.read(databaseProvider);
-                              await (db.update(db.playlists)..where(
-                                    (t) => t.id.equals(widget.playlist.id),
-                                  ))
-                                  .write(
-                                    PlaylistsCompanion(
-                                      name: drift.Value(
-                                        nameController.text.trim(),
-                                      ),
-                                      imagePath: drift.Value(tempImagePath),
+                          onPressed: () async {
+                            if (nameController.text.trim().isEmpty) return;
+                            final db = ref.read(databaseProvider);
+
+                            final newDescription =
+                                descController.text.trim().isEmpty
+                                ? null
+                                : descController.text.trim();
+
+                            await (db.update(db.playlists)..where(
+                                  (t) => t.id.equals(widget.playlist.id),
+                                ))
+                                .write(
+                                  PlaylistsCompanion(
+                                    name: drift.Value(
+                                      nameController.text.trim(),
                                     ),
-                                  );
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                setState(() {
-                                  _currentPlaylistName = nameController.text
-                                      .trim();
-                                  _currentImagePath = tempImagePath;
-                                });
-                              }
-                            },
-                            child: const Text(
-                              'Simpan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                    imagePath: drift.Value(tempImagePath),
+                                    description: drift.Value(newDescription),
+                                  ),
+                                );
+
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              setState(() {
+                                _currentPlaylistName = nameController.text
+                                    .trim();
+                                _currentImagePath = tempImagePath;
+                                _currentDescription = newDescription;
+                              });
+                            }
+                          },
+                          child: const Text(
+                            'Simpan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -569,7 +802,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             child: Material(
               color: Colors.transparent,
               child: Container(
-                width: 260,
+                width: 210,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -586,18 +819,16 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
+                        horizontal: 32,
                         vertical: 20,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildTopAction(
-                            Icons.add_circle_outline,
-                            'Add',
-                            () {},
-                          ),
-                          _buildTopAction(Icons.star_border, 'Favorite', () {}),
+                          _buildTopAction(Icons.crop_free, 'Lihat Foto', () {
+                            Navigator.pop(context);
+                            _showPlaylistImage();
+                          }),
                           _buildTopAction(Icons.edit, 'Edit', () {
                             Navigator.pop(context);
                             _showEditPlaylistBottomSheet();
@@ -606,17 +837,14 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       ),
                     ),
                     const Divider(height: 1, thickness: 0.5),
-                    _buildListTile(
-                      Icons.playlist_add,
-                      'Add to Playlist',
-                      () {},
-                    ),
                     _buildListTile(Icons.playlist_play, 'Play Next', () {}),
-                    _buildListTile(
-                      Icons.thumb_down_alt_outlined,
-                      'Suggest Less',
-                      () {},
-                    ),
+                    _buildListTile(Icons.settings_outlined, 'Pengaturan ', () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fitur Pengaturan segera hadir'),
+                        ),
+                      );
+                    }),
                     const SizedBox(height: 8),
                   ],
                 ),
@@ -634,18 +862,22 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       child: Column(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 22, color: Colors.grey.shade800),
+            child: Icon(icon, size: 20, color: Colors.grey.shade800),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -704,9 +936,12 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       fit: StackFit.expand,
                       children: [
                         _currentImagePath != null
-                            ? Image.file(
-                                File(_currentImagePath!),
-                                fit: BoxFit.cover,
+                            ? Hero(
+                                tag: 'playlist_image_${widget.playlist.id}',
+                                child: Image.file(
+                                  File(_currentImagePath!),
+                                  fit: BoxFit.cover,
+                                ),
                               )
                             : Container(
                                 color: Colors.grey.shade300,
@@ -754,6 +989,23 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
+
+                              // Ubah kondisi if ke _currentDescription
+                              if (_currentDescription != null &&
+                                  _currentDescription!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  _currentDescription!,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1315,22 +1567,24 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           GestureDetector(
-                            onTap: () {},
+                            onTap: () {
+                              // (Ini icon bintang dari step sebelumnya)
+                            },
                             child: const Padding(
-                              padding: EdgeInsets.only(left: 16, right: 12),
+                              padding: EdgeInsets.symmetric(horizontal: 12),
                               child: Icon(
-                                Icons.person_add_alt_1,
+                                Icons.star_border,
                                 color: Colors.black87,
                                 size: 20,
                               ),
                             ),
                           ),
                           GestureDetector(
-                            onTap: () {},
+                            onTap: _showAddSongsToPlaylist,
                             child: const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 12),
                               child: Icon(
-                                Icons.ios_share,
+                                Icons.add,
                                 color: Colors.black87,
                                 size: 20,
                               ),

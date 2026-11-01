@@ -1,11 +1,13 @@
 import 'dart:ui';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../main.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../ui/player_page.dart';
+import '../ui/search_page.dart';
 
-class LyraBottomBar extends StatefulWidget {
+class LyraBottomBar extends ConsumerStatefulWidget {
   final int currentIndex;
   final Function(int) onTabChanged;
   final bool isScrolled;
@@ -20,12 +22,42 @@ class LyraBottomBar extends StatefulWidget {
   });
 
   @override
-  State<LyraBottomBar> createState() => _LyraBottomBarState();
+  ConsumerState<LyraBottomBar> createState() => _LyraBottomBarState();
 }
 
-class _LyraBottomBarState extends State<LyraBottomBar> {
+class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  bool _isSearchFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Memantau kapan keyboard muncul/hilang untuk menyembunyikan tombol Home
+    _searchFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isSearchFocused = _searchFocusNode.hasFocus;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // JIKA DI TAB SEARCH (INDEX 4), TAMPILKAN SEARCH BAR KHUSUS
+    if (widget.currentIndex == 4) {
+      return _buildAppleMusicSearchBar();
+    }
+
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 350),
       switchInCurve: Curves.easeOutCubic,
@@ -34,8 +66,132 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
     );
   }
 
+  // ==========================================
+  // DESAIN KHUSUS TAB SEARCH (APPLE MUSIC STYLE)
+  // ==========================================
+  Widget _buildAppleMusicSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          // 1. Tombol Home (Disembunyikan dengan animasi jika keyboard muncul)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: _isSearchFocused
+                ? const SizedBox.shrink() // Hilang saat mengetik
+                : Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(32),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          child: Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(32),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.home_filled,
+                                color: Colors.black,
+                              ),
+                              onPressed: () => widget.onTabChanged(0),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+          ),
+
+          // 2. Kolom Input Pencarian
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    textInputAction: TextInputAction.search,
+                    onChanged: (val) {
+                      ref.read(searchQueryProvider.notifier).setQuery(val);
+                      setState(() {});
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Artists, Songs, Lyrics, and More',
+                      hintStyle: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      prefixIcon: const Icon(Icons.search, color: Colors.black),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.cancel,
+                                color: Colors.grey,
+                                size: 20,
+                              ),
+                              onPressed: () {
+                                _searchController.clear();
+                                ref
+                                    .read(searchQueryProvider.notifier)
+                                    .setQuery('');
+                                setState(() {});
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // 3. Tombol Close (Keluar Pencarian)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(32),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.black),
+                  onPressed: () {
+                    _searchController.clear();
+                    ref.read(searchQueryProvider.notifier).setQuery('');
+                    _searchFocusNode.unfocus();
+                    widget.onTabChanged(0);
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // =========================================================================
-  // DESAIN SAAT DI ATAS (3 KAPSUL)
+  // DESAIN SAAT DI ATAS (3 KAPSUL BAWAAN)
   // =========================================================================
   Widget _buildDefaultState() {
     return StreamBuilder<MediaItem?>(
@@ -73,9 +229,7 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                         ),
                         child: Row(
                           children: [
-                            // Panggil widget helper yang baru kita buat
                             Expanded(child: MiniPlayerContent(item: item)),
-                            // Tombol Next tetap ditaruh di sini (khusus untuk state default)
                             IconButton(
                               icon: const Icon(
                                 Icons.skip_next,
@@ -94,7 +248,6 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                 ),
                 const SizedBox(height: 12),
               ],
-
               Row(
                 children: [
                   Expanded(
@@ -125,24 +278,27 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          borderRadius: BorderRadius.circular(32),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.5),
+                  GestureDetector(
+                    onTap: () => widget.onTabChanged(4), // Pindah ke Tab 4
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.5),
+                            ),
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.search,
-                          color: Colors.black,
-                          size: 28,
+                          child: const Icon(
+                            Icons.search,
+                            color: Colors.black,
+                            size: 28,
+                          ),
                         ),
                       ),
                     ),
@@ -170,7 +326,6 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              // 1. Tombol Home
               ClipRRect(
                 borderRadius: BorderRadius.circular(32),
                 child: BackdropFilter(
@@ -203,8 +358,6 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                 ),
               ),
               const SizedBox(width: 8),
-
-              // 2. Mini Player (Dibungkus Expanded)
               Expanded(
                 child: GestureDetector(
                   onTap: () {
@@ -248,28 +401,28 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
                   ),
                 ),
               ),
-
               const SizedBox(width: 8),
-
-              // 3. Tombol Search
-              ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.5),
+              GestureDetector(
+                onTap: () => widget.onTabChanged(4), // Pindah ke Tab 4
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      width: 54,
+                      height: 54,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
                       ),
-                    ),
-                    child: const Icon(
-                      Icons.search,
-                      color: Colors.black,
-                      size: 28,
+                      child: const Icon(
+                        Icons.search,
+                        color: Colors.black,
+                        size: 28,
+                      ),
                     ),
                   ),
                 ),
@@ -287,7 +440,7 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
     return GestureDetector(
       onTap: () {
         if (index == 0 && widget.onHomeTap != null) {
-          widget.onHomeTap!(); // Jika tombol Home, jalankan logika Home
+          widget.onHomeTap!();
         } else {
           widget.onTabChanged(index);
         }
@@ -314,7 +467,7 @@ class _LyraBottomBarState extends State<LyraBottomBar> {
 // Widget Khusus untuk Isi Mini Player (Cover, Teks, Tombol Play)
 class MiniPlayerContent extends StatelessWidget {
   final MediaItem item;
-  final bool isCompact; // Untuk membedakan ukuran di state default vs scrolled
+  final bool isCompact;
 
   const MiniPlayerContent({
     super.key,
@@ -327,7 +480,6 @@ class MiniPlayerContent extends StatelessWidget {
     return Row(
       children: [
         const SizedBox(width: 4),
-        // 1. Cover Album
         Container(
           width: isCompact ? 38 : 44,
           height: isCompact ? 38 : 44,
@@ -338,8 +490,6 @@ class MiniPlayerContent extends StatelessWidget {
           child: const Icon(Icons.music_note, color: Colors.white, size: 20),
         ),
         const SizedBox(width: 12),
-
-        // 2. Judul & Artis
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,8 +517,6 @@ class MiniPlayerContent extends StatelessWidget {
             ],
           ),
         ),
-
-        // 3. Tombol Play/Pause (Menggunakan StreamBuilder)
         StreamBuilder<PlaybackState>(
           stream: audioHandler.playbackState,
           builder: (context, snapshot) {
