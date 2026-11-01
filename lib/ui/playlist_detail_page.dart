@@ -11,6 +11,7 @@ import '../providers/database_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../providers/songs_provider.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:path_provider/path_provider.dart';
 
 class PlaylistDetailPage extends ConsumerStatefulWidget {
   final Playlist playlist;
@@ -30,12 +31,8 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   String? _currentDescription;
   static const MethodChannel _platform = MethodChannel('com.lyra/pick_image');
   String _currentSort = 'Custom order';
-  bool _addToBottom = true;
-
   final ScrollController _scrollController = ScrollController();
-  final _isAppBarExpanded = true;
-
-  // === STATE UNTUK MULTI-SELECT & REORDER ===
+  bool _isAppBarExpanded = true;
   bool _isSelectionMode = false;
   Set<String> _selectedSongIds = {};
 
@@ -47,6 +44,19 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     _currentDescription = widget.playlist.description;
     _loadSongs();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+
+    _scrollController.addListener(() {
+      // Jika scroll melewati tinggi gambar (kurang lebih lebar layar),
+      // berarti AppBar sedang mengecil.
+      final isExpanded =
+          _scrollController.offset < (MediaQuery.of(context).size.width - 100);
+
+      if (_isAppBarExpanded != isExpanded) {
+        setState(() {
+          _isAppBarExpanded = isExpanded;
+        });
+      }
+    });
   }
 
   @override
@@ -56,14 +66,41 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   }
 
   Future<void> _loadSongs() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
-    final db = ref.read(databaseProvider);
-    final data = await db.getSongsInPlaylist(widget.playlist.id);
-    setState(() {
-      _songsInPlaylist = data;
-      _applySort();
-      _isLoading = false;
-    });
+
+    try {
+      final db = ref.read(databaseProvider);
+      final data = await db.getSongsInPlaylist(widget.playlist.id);
+
+      // PENTING: Cek apakah widget masih hidup sebelum setState
+      if (!mounted) return;
+
+      setState(() {
+        _songsInPlaylist = data;
+        _applySort();
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      // Beri tahu user kalau database gagal dimuat
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal memuat lagu: $e')));
+    }
+  }
+
+  Future<String> _saveImagePermanently(String tempPath) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final fileName =
+        'playlist_cover_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final permanentFile = File('${directory.path}/$fileName');
+
+    // Salin dari cache ke folder dokumen aplikasi
+    final savedFile = await File(tempPath).copy(permanentFile.path);
+    return savedFile.path;
   }
 
   Future<void> _saveNewSongOrder() async {
@@ -139,8 +176,14 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                 ),
                               ],
                             );
-                            if (croppedFile != null)
-                              onImagePicked(croppedFile.path);
+                            if (croppedFile != null) {
+                              // Salin foto ke folder permanen
+                              final permanentPath = await _saveImagePermanently(
+                                croppedFile.path,
+                              );
+                              // Kirim path yang sudah permanen ke UI
+                              onImagePicked(permanentPath);
+                            }
                           }
                         } catch (e) {
                           print("Error: $e");
@@ -218,8 +261,12 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                               ),
                             ],
                           );
-                          if (croppedFile != null)
-                            onImagePicked(croppedFile.path);
+                          if (croppedFile != null) {
+                            final permanentPath = await _saveImagePermanently(
+                              croppedFile.path,
+                            );
+                            onImagePicked(permanentPath);
+                          }
                         }
                       },
                       child: Column(
@@ -344,16 +391,26 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
   void _removeSelectedSongs() async {
     final db = ref.read(databaseProvider);
-    await (db.delete(db.playlistSongs)..where(
-          (t) =>
-              t.playlistId.equals(widget.playlist.id) &
-              t.songId.isIn(_selectedSongIds),
-        ))
-        .go();
+    try {
+      await (db.delete(db.playlistSongs)..where(
+            (t) =>
+                t.playlistId.equals(widget.playlist.id) &
+                t.songId.isIn(_selectedSongIds),
+          ))
+          .go();
 
-    _isSelectionMode = false;
-    _selectedSongIds.clear();
-    _loadSongs();
+      if (!mounted) return;
+      setState(() {
+        _isSelectionMode = false;
+        _selectedSongIds.clear();
+      });
+      _loadSongs();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menghapus lagu: $e')));
+    }
   }
 
   // === FUNGSI TRACK DETAILS ===
@@ -395,6 +452,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   // UI DIALOG FILTER
   // ==========================================
   void _showFilterMenu() {
+    if (_filterButtonKey.currentContext == null) return;
     final RenderBox renderBox =
         _filterButtonKey.currentContext!.findRenderObject() as RenderBox;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
@@ -446,18 +504,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                               color: Colors.blue.shade700,
                               size: 18,
                             ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.settings,
-                                color: Colors.grey,
-                                size: 20,
-                              ),
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showAddTracksBottomSheet();
-                              },
-                            ),
                           ],
                         ),
                       ),
@@ -494,91 +540,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             _currentSort = title;
             _applySort();
           });
-          Navigator.pop(context);
+          Navigator.of(context, rootNavigator: true).pop();
         },
       ),
-    );
-  }
-
-  // ==========================================
-  // UI BOTTOM SHEET & EDIT PLAYLIST
-  // ==========================================
-  void _showAddTracksBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      useRootNavigator: true,
-      backgroundColor: Colors.white,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.only(
-                left: 24.0,
-                right: 24.0,
-                top: 24.0,
-                bottom: 80.0,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Add tracks to',
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.grey),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      !_addToBottom
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: !_addToBottom ? Colors.blue.shade700 : Colors.grey,
-                    ),
-                    title: const Text(
-                      'Top of playlist',
-                      style: TextStyle(color: Colors.black87, fontSize: 16),
-                    ),
-                    onTap: () => setModalState(() => _addToBottom = false),
-                  ),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      _addToBottom
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color: _addToBottom ? Colors.blue.shade700 : Colors.grey,
-                    ),
-                    title: const Text(
-                      'Bottom of playlist',
-                      style: TextStyle(color: Colors.black87, fontSize: 16),
-                    ),
-                    onTap: () => setModalState(() => _addToBottom = true),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -983,7 +947,11 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           },
         );
       },
-    );
+    ).then((_) {
+      // KETIKA BOTTOM SHEET DITUTUP, HAPUS CONTROLLER DARI MEMORI
+      nameController.dispose();
+      descController.dispose();
+    });
   }
 
   void _showMoreMenu() {
@@ -1025,11 +993,11 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildTopAction(Icons.crop_free, 'Lihat Foto', () {
-                            Navigator.pop(context);
+                            Navigator.of(context, rootNavigator: true).pop();
                             _showPlaylistImage();
                           }),
                           _buildTopAction(Icons.edit, 'Edit', () {
-                            Navigator.pop(context);
+                            Navigator.of(context, rootNavigator: true).pop();
                             _showEditPlaylistBottomSheet();
                           }),
                         ],
@@ -1092,7 +1060,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         leading: Icon(icon, color: Colors.black87, size: 22),
         title: Text(title, style: const TextStyle(fontSize: 14)),
         onTap: () {
-          Navigator.pop(context);
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
           onTap();
         },
       ),
@@ -1143,8 +1113,10 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               slivers: [
                 SliverAppBar(
                   expandedHeight: MediaQuery.of(context).size.width,
-                  pinned: false,
-                  backgroundColor: Colors.transparent,
+                  pinned: true,
+                  backgroundColor: _isAppBarExpanded
+                      ? Colors.transparent
+                      : Colors.white,
                   elevation: 0,
                   automaticallyImplyLeading: false,
                   flexibleSpace: FlexibleSpaceBar(
@@ -1334,6 +1306,19 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             buildDefaultDragHandles: false,
                             itemCount: _displayedSongs.length,
                             onReorderItem: (oldIndex, newIndex) {
+                              // JIKA SORTING BUKAN CUSTOM, JANGAN IZINKAN REORDER
+                              if (_currentSort != 'Custom order') {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Ubah ke "Custom order" untuk menggeser lagu',
+                                    ),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                                return;
+                              }
+
                               setState(() {
                                 if (newIndex > oldIndex) newIndex -= 1;
                                 final song = _displayedSongs.removeAt(oldIndex);
@@ -1767,7 +1752,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         height: 48,
                         width: 48,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: _isAppBarExpanded
+                              ? Colors.white
+                              : Colors.grey.shade200,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
@@ -1777,7 +1764,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             ),
                           ],
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.arrow_back_ios_new,
                           color: Colors.black,
                           size: 20,

@@ -123,8 +123,6 @@ class AppDatabase extends _$AppDatabase {
     return rows.map((row) => row.readTable(songs)).toList();
   }
 
-  // Tambah lagu ke playlist
-  // Tambah lagu ke playlist
   Future<void> addSongToPlaylist(int playlistId, Song song) async {
     // Pastikan lagu ada di master
     await saveSong(
@@ -138,7 +136,7 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
 
-    // Cari tahu urutan terakhir saat ini (agar lagu baru ditaruh di bawah)
+    // Cari urutan terakhir
     final query = selectOnly(playlistSongs)
       ..addColumns([playlistSongs.orderIndex.max()])
       ..where(playlistSongs.playlistId.equals(playlistId));
@@ -148,7 +146,7 @@ class AppDatabase extends _$AppDatabase {
             .getSingleOrNull() ??
         -1;
 
-    // Masukkan ke playlist dengan orderIndex terbaru
+    // Masukkan ke playlist dengan urutan baru
     await into(playlistSongs).insert(
       PlaylistSongsCompanion.insert(
         playlistId: playlistId,

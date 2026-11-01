@@ -171,7 +171,9 @@ class SongsPageState extends ConsumerState<SongsPage> {
             _applySort();
             widget.onSortChanged?.call(title);
           });
-          Navigator.pop(context);
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
         },
       ),
     );
