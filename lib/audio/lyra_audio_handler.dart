@@ -7,14 +7,16 @@ import 'package:audio_session/audio_session.dart';
 class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
 
-  // 1. Simpan Subscription untuk mencegah Memory Leak
+  // Tambahkan variabel Future ini
+  late final Future<void> _sessionInitFuture;
+
   late final StreamSubscription<PlaybackEvent> _playbackSub;
   late final StreamSubscription<int?> _indexSub;
   late final StreamSubscription<Duration?> _durationSub;
 
   LyraAudioHandler() {
-    // 2. Inisialisasi Audio Session (Agar musik berhenti saat ada telepon)
-    _initAudioSession();
+    // Simpan Future-nya, tapi tidak perlu di-await di constructor
+    _sessionInitFuture = _initAudioSession();
 
     // Sinkronkan state just_audio ke audio_service
     _playbackSub = _player.playbackEventStream.listen(_broadcastState);
@@ -70,6 +72,9 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
       initialIndex = 0;
     }
 
+    // Tunggu AudioSession siap
+    await _sessionInitFuture;
+
     final mediaItems = songs
         .map(
           (s) => MediaItem(
@@ -82,26 +87,48 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
         )
         .toList();
 
-    queue.add(mediaItems);
-    mediaItem.add(mediaItems[initialIndex]);
-
     final audioSources = songs.map((s) => AudioSource.file(s.path)).toList();
-    await _player.setAudioSources(audioSources, initialIndex: initialIndex);
 
-    play();
+    try {
+      // LOAD AUDIO TERLEBIH DAHULU
+      await _player.setAudioSources(audioSources, initialIndex: initialIndex);
+
+      // JIKA BERHASIL, BARU UPDATE QUEUE & UI
+      queue.add(mediaItems);
+      mediaItem.add(mediaItems[initialIndex]);
+
+      // Gunakan unawaited agar tidak menggantung
+      unawaited(play());
+    } catch (e) {
+      // Jika gagal (file rusak/hilang), state UI tidak akan berubah
+      playbackState.add(
+        playbackState.value.copyWith(
+          processingState: AudioProcessingState.error,
+        ),
+      );
+      print("Gagal memutar antrean: $e");
+      // Opsional: Kamu bisa memunculkan SnackBar di sini lewat global key/event
+    }
   }
 
   Future<void> loadFile(String path, {String? title}) async {
-    final item = MediaItem(
-      id: path,
-      title: title ?? path.split('/').last,
-      album: 'Lyra',
-      artist: 'Unknown',
-    );
-    mediaItem.add(item);
-    queue.add([item]);
+    await _sessionInitFuture;
 
-    await _player.setFilePath(path);
+    try {
+      await _player.setFilePath(path);
+
+      // Jika berhasil, baru update UI
+      final item = MediaItem(
+        id: path,
+        title: title ?? path.split('/').last,
+        album: 'Lyra',
+        artist: 'Unknown',
+      );
+      mediaItem.add(item);
+      queue.add([item]);
+    } catch (e) {
+      print("Gagal memuat file: $e");
+    }
   }
 
   @override

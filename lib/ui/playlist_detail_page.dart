@@ -66,6 +66,23 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     });
   }
 
+  Future<void> _saveNewSongOrder() async {
+    final db = ref.read(databaseProvider);
+    // Looping semua lagu di tampilan, lalu update orderIndex-nya ke database
+    for (int i = 0; i < _displayedSongs.length; i++) {
+      await (db.update(db.playlistSongs)..where(
+            (t) =>
+                t.playlistId.equals(widget.playlist.id) &
+                t.songId.equals(_displayedSongs[i].id),
+          ))
+          .write(
+            PlaylistSongsCompanion(
+              orderIndex: drift.Value(i), // Simpan index barunya
+            ),
+          );
+    }
+  }
+
   Future<void> _pickImageSource(Function(String) onImagePicked) async {
     showModalBottomSheet(
       context: context,
@@ -77,119 +94,167 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       builder: (BuildContext context) {
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // --- OPSI GALERI ---
-                GestureDetector(
-                  onTap: () async {
-                    Navigator.pop(context); // Tutup bottom sheet
-                    try {
-                      // 1. Panggil Kotlin untuk buka Samsung Gallery
-                      final String? imagePath = await _platform.invokeMethod(
-                        'pickImage',
-                      );
-
-                      if (imagePath != null) {
-                        // 2. LANGSUNG CROP SETELAH FOTO DIPILIH
-                        final croppedFile = await ImageCropper().cropImage(
-                          sourcePath: imagePath,
-                          aspectRatio: const CropAspectRatio(
-                            ratioX: 1,
-                            ratioY: 1,
-                          ), // Paksa jadi kotak
-                          uiSettings: [
-                            AndroidUiSettings(
-                              toolbarTitle: 'Potong Foto',
-                              toolbarColor: Colors.black,
-                              toolbarWidgetColor: Colors.white,
-                              initAspectRatio: CropAspectRatioPreset.square,
-                              lockAspectRatio: true,
-                              hideBottomControls:
-                                  true, // <--- SEMBUNYIKAN SLIDER & TOMBOL BAWAH
-                            ),
-                          ],
-                        );
-
-                        // 3. Jika user tidak menekan Cancel
-                        if (croppedFile != null) {
-                          onImagePicked(croppedFile.path);
-                        }
-                      }
-                    } on PlatformException catch (e) {
-                      print("Gagal mengambil gambar: ${e.message}");
-                    }
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: Colors.pink.shade700,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.local_florist,
-                          color: Colors.white,
-                          size: 35,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Gallery',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                // Judul Bottom Sheet
+                const Text(
+                  'Ganti Foto Playlist',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
+                const SizedBox(height: 24),
 
-                // --- OPSI KAMERA ---
-                GestureDetector(
-                  onTap: () async {
-                    Navigator.pop(context);
-
-                    final ImagePicker picker = ImagePicker();
-                    final XFile? image = await picker.pickImage(
-                      source: ImageSource.camera,
-                      imageQuality: 80,
-                    );
-
-                    if (image != null) {
-                      onImagePicked(image.path); // <--- Ini juga
-                    }
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          color: Colors.pinkAccent.shade200,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 35,
-                        ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // --- OPSI GALERI ---
+                    GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(context);
+                        try {
+                          final String? imagePath = await _platform
+                              .invokeMethod('pickImage');
+                          if (imagePath != null) {
+                            final croppedFile = await ImageCropper().cropImage(
+                              sourcePath: imagePath,
+                              aspectRatio: const CropAspectRatio(
+                                ratioX: 1,
+                                ratioY: 1,
+                              ),
+                              uiSettings: [
+                                AndroidUiSettings(
+                                  toolbarTitle: 'Potong Foto',
+                                  toolbarColor: const Color(
+                                    0xFF673AB7,
+                                  ), // Warna Deep Purple Lyra
+                                  toolbarWidgetColor: Colors.white,
+                                  initAspectRatio: CropAspectRatioPreset.square,
+                                  lockAspectRatio: true,
+                                  hideBottomControls: true,
+                                ),
+                              ],
+                            );
+                            if (croppedFile != null)
+                              onImagePicked(croppedFile.path);
+                          }
+                        } catch (e) {
+                          print("Error: $e");
+                        }
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              // Gradient Khas Lyra
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFF9C27B0), Color(0xFF673AB7)],
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFF673AB7,
+                                  ).withValues(alpha: 0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            // Ikon Wallpaper/Gambar
+                            child: const Icon(
+                              Icons.wallpaper_rounded,
+                              color: Colors.white,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Galeri',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Camera',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+
+                    // --- OPSI KAMERA ---
+                    GestureDetector(
+                      onTap: () async {
+                        Navigator.pop(context);
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? image = await picker.pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 80,
+                        );
+                        if (image != null) {
+                          // Langsung panggil Crop setelah ambil foto
+                          final croppedFile = await ImageCropper().cropImage(
+                            sourcePath: image.path,
+                            aspectRatio: const CropAspectRatio(
+                              ratioX: 1,
+                              ratioY: 1,
+                            ),
+                            uiSettings: [
+                              AndroidUiSettings(
+                                toolbarTitle: 'Potong Foto',
+                                toolbarColor: const Color(0xFF673AB7),
+                                toolbarWidgetColor: Colors.white,
+                                initAspectRatio: CropAspectRatioPreset.square,
+                                lockAspectRatio: true,
+                                hideBottomControls: true,
+                              ),
+                            ],
+                          );
+                          if (croppedFile != null)
+                            onImagePicked(croppedFile.path);
+                        }
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: Colors
+                                  .grey
+                                  .shade100, // Warna abu lembut untuk membedakan
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            // Ikon Kamera
+                            child: const Icon(
+                              Icons.photo_camera_rounded,
+                              color: Colors.black54,
+                              size: 32,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Kamera',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -539,6 +604,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         builder: (context) {
+          final Set<String> existingSongIds = _songsInPlaylist
+              .map((s) => s.id)
+              .toSet();
           return DraggableScrollableSheet(
             expand: false,
             initialChildSize: 0.7, // Muncul setinggi 70% layar
@@ -574,8 +642,8 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       itemBuilder: (context, index) {
                         final song = songs[index];
                         // Cek apakah lagu sudah ada di playlist ini
-                        final isAlreadyAdded = _songsInPlaylist.any(
-                          (s) => s.id == song.id,
+                        final isAlreadyAdded = existingSongIds.contains(
+                          song.id,
                         );
 
                         return ListTile(
@@ -1180,23 +1248,30 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                 builder: (buttonContext) {
                                   return GestureDetector(
                                     key: _filterButtonKey,
+                                    behavior: HitTestBehavior.opaque,
                                     onTap: _showFilterMenu,
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.sort,
-                                          color: Colors.black87,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _currentSort,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 4,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.sort,
+                                            color: Colors.black87,
+                                            size: 24,
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _currentSort,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   );
                                 },
@@ -1264,13 +1339,14 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                 final song = _displayedSongs.removeAt(oldIndex);
                                 _displayedSongs.insert(newIndex, song);
                               });
+                              _saveNewSongOrder();
                             },
                             itemBuilder: (context, index) {
                               final song = _displayedSongs[index];
                               final isSelected = _selectedSongIds.contains(
                                 song.id,
                               );
-                              return ReorderableDelayedDragStartListener(
+                              return ReorderableDragStartListener(
                                 key: ValueKey(song.id),
                                 index: index,
                                 child: Material(
@@ -1767,15 +1843,20 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             // BOTTOM BAR (Saat Mode Select)
             if (_isSelectionMode)
               Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
+                // Naikkan 90 pixel agar tidak tertutup Mini Player (yang tingginya 54 + margin)
+                bottom: MediaQuery.of(context).padding.bottom + 90,
+                left: 16,
+                right: 16,
                 child: Container(
-                  padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).padding.bottom + 8,
-                    top: 8,
+                  // Tambahkan border radius agar terlihat seperti melayang (opsional tapi bagus)
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  color: Colors.black87,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [

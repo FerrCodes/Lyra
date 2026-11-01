@@ -1095,8 +1095,20 @@ class $PlaylistSongsTable extends PlaylistSongs
       'REFERENCES songs (id) ON DELETE CASCADE',
     ),
   );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
   @override
-  List<GeneratedColumn> get $columns => [playlistId, songId];
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [playlistId, songId, orderIndex];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1125,6 +1137,12 @@ class $PlaylistSongsTable extends PlaylistSongs
     } else if (isInserting) {
       context.missing(_songIdMeta);
     }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    }
     return context;
   }
 
@@ -1142,6 +1160,10 @@ class $PlaylistSongsTable extends PlaylistSongs
         DriftSqlType.string,
         data['${effectivePrefix}song_id'],
       )!,
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
     );
   }
 
@@ -1154,12 +1176,18 @@ class $PlaylistSongsTable extends PlaylistSongs
 class PlaylistSong extends DataClass implements Insertable<PlaylistSong> {
   final int playlistId;
   final String songId;
-  const PlaylistSong({required this.playlistId, required this.songId});
+  final int orderIndex;
+  const PlaylistSong({
+    required this.playlistId,
+    required this.songId,
+    required this.orderIndex,
+  });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['playlist_id'] = Variable<int>(playlistId);
     map['song_id'] = Variable<String>(songId);
+    map['order_index'] = Variable<int>(orderIndex);
     return map;
   }
 
@@ -1167,6 +1195,7 @@ class PlaylistSong extends DataClass implements Insertable<PlaylistSong> {
     return PlaylistSongsCompanion(
       playlistId: Value(playlistId),
       songId: Value(songId),
+      orderIndex: Value(orderIndex),
     );
   }
 
@@ -1178,6 +1207,7 @@ class PlaylistSong extends DataClass implements Insertable<PlaylistSong> {
     return PlaylistSong(
       playlistId: serializer.fromJson<int>(json['playlistId']),
       songId: serializer.fromJson<String>(json['songId']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
     );
   }
   @override
@@ -1186,19 +1216,25 @@ class PlaylistSong extends DataClass implements Insertable<PlaylistSong> {
     return <String, dynamic>{
       'playlistId': serializer.toJson<int>(playlistId),
       'songId': serializer.toJson<String>(songId),
+      'orderIndex': serializer.toJson<int>(orderIndex),
     };
   }
 
-  PlaylistSong copyWith({int? playlistId, String? songId}) => PlaylistSong(
-    playlistId: playlistId ?? this.playlistId,
-    songId: songId ?? this.songId,
-  );
+  PlaylistSong copyWith({int? playlistId, String? songId, int? orderIndex}) =>
+      PlaylistSong(
+        playlistId: playlistId ?? this.playlistId,
+        songId: songId ?? this.songId,
+        orderIndex: orderIndex ?? this.orderIndex,
+      );
   PlaylistSong copyWithCompanion(PlaylistSongsCompanion data) {
     return PlaylistSong(
       playlistId: data.playlistId.present
           ? data.playlistId.value
           : this.playlistId,
       songId: data.songId.present ? data.songId.value : this.songId,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
     );
   }
 
@@ -1206,44 +1242,51 @@ class PlaylistSong extends DataClass implements Insertable<PlaylistSong> {
   String toString() {
     return (StringBuffer('PlaylistSong(')
           ..write('playlistId: $playlistId, ')
-          ..write('songId: $songId')
+          ..write('songId: $songId, ')
+          ..write('orderIndex: $orderIndex')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(playlistId, songId);
+  int get hashCode => Object.hash(playlistId, songId, orderIndex);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PlaylistSong &&
           other.playlistId == this.playlistId &&
-          other.songId == this.songId);
+          other.songId == this.songId &&
+          other.orderIndex == this.orderIndex);
 }
 
 class PlaylistSongsCompanion extends UpdateCompanion<PlaylistSong> {
   final Value<int> playlistId;
   final Value<String> songId;
+  final Value<int> orderIndex;
   final Value<int> rowid;
   const PlaylistSongsCompanion({
     this.playlistId = const Value.absent(),
     this.songId = const Value.absent(),
+    this.orderIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PlaylistSongsCompanion.insert({
     required int playlistId,
     required String songId,
+    this.orderIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : playlistId = Value(playlistId),
        songId = Value(songId);
   static Insertable<PlaylistSong> custom({
     Expression<int>? playlistId,
     Expression<String>? songId,
+    Expression<int>? orderIndex,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (playlistId != null) 'playlist_id': playlistId,
       if (songId != null) 'song_id': songId,
+      if (orderIndex != null) 'order_index': orderIndex,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1251,11 +1294,13 @@ class PlaylistSongsCompanion extends UpdateCompanion<PlaylistSong> {
   PlaylistSongsCompanion copyWith({
     Value<int>? playlistId,
     Value<String>? songId,
+    Value<int>? orderIndex,
     Value<int>? rowid,
   }) {
     return PlaylistSongsCompanion(
       playlistId: playlistId ?? this.playlistId,
       songId: songId ?? this.songId,
+      orderIndex: orderIndex ?? this.orderIndex,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1269,6 +1314,9 @@ class PlaylistSongsCompanion extends UpdateCompanion<PlaylistSong> {
     if (songId.present) {
       map['song_id'] = Variable<String>(songId.value);
     }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1280,6 +1328,7 @@ class PlaylistSongsCompanion extends UpdateCompanion<PlaylistSong> {
     return (StringBuffer('PlaylistSongsCompanion(')
           ..write('playlistId: $playlistId, ')
           ..write('songId: $songId, ')
+          ..write('orderIndex: $orderIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2345,12 +2394,14 @@ typedef $$PlaylistSongsTableCreateCompanionBuilder =
     PlaylistSongsCompanion Function({
       required int playlistId,
       required String songId,
+      Value<int> orderIndex,
       Value<int> rowid,
     });
 typedef $$PlaylistSongsTableUpdateCompanionBuilder =
     PlaylistSongsCompanion Function({
       Value<int> playlistId,
       Value<String> songId,
+      Value<int> orderIndex,
       Value<int> rowid,
     });
 
@@ -2406,6 +2457,11 @@ class $$PlaylistSongsTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$PlaylistsTableFilterComposer get playlistId {
     final $$PlaylistsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -2462,6 +2518,11 @@ class $$PlaylistSongsTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$PlaylistsTableOrderingComposer get playlistId {
     final $$PlaylistsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -2518,6 +2579,11 @@ class $$PlaylistSongsTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
   $$PlaylistsTableAnnotationComposer get playlistId {
     final $$PlaylistsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -2595,20 +2661,24 @@ class $$PlaylistSongsTableTableManager
               ({
                 Value<int> playlistId = const Value.absent(),
                 Value<String> songId = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistSongsCompanion(
                 playlistId: playlistId,
                 songId: songId,
+                orderIndex: orderIndex,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required int playlistId,
                 required String songId,
+                Value<int> orderIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PlaylistSongsCompanion.insert(
                 playlistId: playlistId,
                 songId: songId,
+                orderIndex: orderIndex,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

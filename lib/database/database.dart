@@ -44,6 +44,7 @@ class PlaylistSongs extends Table {
       integer().references(Playlists, #id, onDelete: KeyAction.cascade)();
   TextColumn get songId =>
       text().references(Songs, #id, onDelete: KeyAction.cascade)();
+  IntColumn get orderIndex => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {playlistId, songId};
@@ -62,6 +63,8 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.addColumn(playlists, playlists.sortOrder);
+        await m.addColumn(playlists, playlists.description);
+        await m.addColumn(playlistSongs, playlistSongs.orderIndex);
       }
     },
   );
@@ -114,10 +117,13 @@ class AppDatabase extends _$AppDatabase {
       innerJoin(songs, songs.id.equalsExp(playlistSongs.songId)),
     ])..where(playlistSongs.playlistId.equals(playlistId));
 
+    query.orderBy([OrderingTerm(expression: playlistSongs.orderIndex)]);
+
     final rows = await query.get();
     return rows.map((row) => row.readTable(songs)).toList();
   }
 
+  // Tambah lagu ke playlist
   // Tambah lagu ke playlist
   Future<void> addSongToPlaylist(int playlistId, Song song) async {
     // Pastikan lagu ada di master
@@ -131,11 +137,25 @@ class AppDatabase extends _$AppDatabase {
         durationMs: song.durationMs,
       ),
     );
-    // Masukkan ke playlist
+
+    // Cari tahu urutan terakhir saat ini (agar lagu baru ditaruh di bawah)
+    final query = selectOnly(playlistSongs)
+      ..addColumns([playlistSongs.orderIndex.max()])
+      ..where(playlistSongs.playlistId.equals(playlistId));
+    final maxOrder =
+        await query
+            .map((row) => row.read(playlistSongs.orderIndex.max()))
+            .getSingleOrNull() ??
+        -1;
+
+    // Masukkan ke playlist dengan orderIndex terbaru
     await into(playlistSongs).insert(
-      PlaylistSongsCompanion.insert(playlistId: playlistId, songId: song.id),
-      mode:
-          InsertMode.insertOrIgnore, // Abaikan jika lagu sudah ada di playlist
+      PlaylistSongsCompanion.insert(
+        playlistId: playlistId,
+        songId: song.id,
+        orderIndex: Value(maxOrder + 1),
+      ),
+      mode: InsertMode.insertOrIgnore,
     );
   }
 }
