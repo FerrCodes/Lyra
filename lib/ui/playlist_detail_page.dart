@@ -681,6 +681,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             CustomScrollView(
               controller: _scrollController,
               slivers: [
+                // HEADER GAMBAR
                 SliverAppBar(
                   expandedHeight: MediaQuery.of(context).size.width,
                   pinned: true,
@@ -699,6 +700,8 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     ),
                   ),
                 ),
+
+                // TOOLBAR (FILTER & TOMBOL PLAY)
                 SliverToBoxAdapter(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -707,124 +710,118 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         top: Radius.circular(32),
                       ),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Row(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: Row(
-                            children: [
-                              Builder(
-                                builder: (buttonContext) {
-                                  return GestureDetector(
-                                    key: _filterButtonKey,
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: _showFilterMenu,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                        horizontal: 4,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.sort,
-                                            color: Colors.black87,
-                                            size: 24,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            _currentSort,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ],
+                        Builder(
+                          builder: (buttonContext) {
+                            return GestureDetector(
+                              key: _filterButtonKey,
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _showFilterMenu,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                  horizontal: 4,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.sort,
+                                      color: Colors.black87,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _currentSort,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                              const Spacer(),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.shuffle,
-                                    color: Colors.black,
-                                    size: 20,
-                                  ),
-                                  onPressed: () => _playPlaylist(shuffle: true),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.black,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.play_arrow,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                  onPressed: () => _playPlaylist(),
-                                ),
-                              ),
-                            ],
+                            );
+                          },
+                        ),
+                        const Spacer(),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.shuffle,
+                              color: Colors.black,
+                              size: 20,
+                            ),
+                            onPressed: () => _playPlaylist(shuffle: true),
                           ),
                         ),
-                        PlaylistTrackList(
-                          displayedSongs: _displayedSongs,
-                          isSelectionMode: _isSelectionMode,
-                          selectedSongIds: _selectedSongIds,
-                          currentSort: _currentSort,
-                          onReorder: (oldIndex, newIndex) {
-                            setState(() {
-                              final song = _displayedSongs.removeAt(oldIndex);
-                              _displayedSongs.insert(newIndex, song);
-                              _songsInPlaylist = List<Song>.from(
-                                _displayedSongs,
-                              );
-                            });
-                            _saveNewSongOrder();
-                          },
-                          onToggleSelection: (song) {
-                            setState(() {
-                              if (_selectedSongIds.contains(song.id)) {
-                                _selectedSongIds.remove(song.id);
-                              } else {
-                                _selectedSongIds.add(song.id);
-                              }
-                              if (_selectedSongIds.isEmpty) {
-                                _isSelectionMode = false;
-                              }
-                            });
-                          },
-                          onPlaySong: (song) {
-                            final index = _displayedSongs.indexOf(song);
-                            _playPlaylist(startIndex: index);
-                          },
-                          onLongPress: (song) {
-                            if (!_isSelectionMode) {
-                              setState(() {
-                                _isSelectionMode = true;
-                                _selectedSongIds.add(song.id);
-                              });
-                            }
-                          },
-                          onShowOptions: (song) => _showSongOptions(song),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.play_arrow,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            onPressed: () => _playPlaylist(),
+                          ),
                         ),
-                        const SizedBox(height: 100),
                       ],
                     ),
                   ),
                 ),
+
+                // DAFTAR LAGU (SLIVER)
+                PlaylistTrackList(
+                  displayedSongs: _displayedSongs,
+                  isSelectionMode: _isSelectionMode,
+                  selectedSongIds: _selectedSongIds,
+                  currentSort: _currentSort,
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      final song = _displayedSongs.removeAt(oldIndex);
+                      _displayedSongs.insert(newIndex, song);
+                      // Sinkronisasi agar filter tidak merusak urutan
+                      _songsInPlaylist = List<Song>.from(_displayedSongs);
+                    });
+                    _saveNewSongOrder();
+                  },
+                  onToggleSelection: (song) {
+                    setState(() {
+                      if (_selectedSongIds.contains(song.id)) {
+                        _selectedSongIds.remove(song.id);
+                      } else {
+                        _selectedSongIds.add(song.id);
+                      }
+                      if (_selectedSongIds.isEmpty) {
+                        _isSelectionMode = false;
+                      }
+                    });
+                  },
+                  onPlaySong: (song) {
+                    final index = _displayedSongs.indexOf(song);
+                    _playPlaylist(startIndex: index);
+                  },
+                  onLongPress: (song) {
+                    if (!_isSelectionMode) {
+                      setState(() {
+                        _isSelectionMode = true;
+                        _selectedSongIds.add(song.id);
+                      });
+                    }
+                  },
+                  onShowOptions: (song) => _showSongOptions(song),
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
 

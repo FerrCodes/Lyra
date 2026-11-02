@@ -1,3 +1,4 @@
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import '../../../database/database.dart';
 
@@ -7,7 +8,6 @@ class PlaylistTrackList extends StatelessWidget {
   final Set<String> selectedSongIds;
   final String currentSort;
 
-  // Callback ke halaman utama
   final Function(int oldIndex, int newIndex) onReorder;
   final Function(Song song) onToggleSelection;
   final Function(Song song) onPlaySong;
@@ -29,28 +29,28 @@ class PlaylistTrackList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. JIKA KOSONG (SliverToBoxAdapter)
     if (displayedSongs.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(40.0),
-        child: Column(
-          children: [
-            Icon(Icons.music_note, size: 60, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            const Text('Belum ada lagu.', style: TextStyle(color: Colors.grey)),
-          ],
+      return SliverToBoxAdapter(
+        child: Container(
+          color: Colors.white, // Penting agar background tetap putih
+          padding: EdgeInsets.all(40.0),
+          child: Column(
+            children: [
+              Icon(Icons.music_note, size: 60, color: Colors.grey),
+              SizedBox(height: 16),
+              Text('Belum ada lagu.', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
         ),
       );
     }
 
-    // TAMPILAN MODE SELECT (Bisa Drag & Drop)
+    // 2. MODE SELEKSI (SliverReorderableList)
     if (isSelectionMode) {
-      return ReorderableListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        buildDefaultDragHandles: false,
+      return SliverReorderableList(
         itemCount: displayedSongs.length,
         onReorderItem: (oldIndex, newIndex) {
-          // Validasi: Hanya boleh reorder jika Custom order
           if (currentSort != 'Custom order') {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -62,15 +62,35 @@ class PlaylistTrackList extends StatelessWidget {
           }
           onReorder(oldIndex, newIndex);
         },
+        autoScrollerVelocityScalar: 25, // Kecepatan auto-scroll saat drag
+        // Efek visual saat lagu diangkat
+        proxyDecorator: (child, index, animation) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (BuildContext context, Widget? child) {
+              final double animValue = Curves.easeInOut.transform(
+                animation.value,
+              );
+              final double elevation = lerpDouble(0, 8, animValue)!;
+              return Material(
+                elevation: elevation,
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                child: child,
+              );
+            },
+            child: child,
+          );
+        },
         itemBuilder: (context, index) {
           final song = displayedSongs[index];
           final isSelected = selectedSongIds.contains(song.id);
 
           return Material(
-            key: ValueKey(song.id), // Key tetap di Material
+            key: ValueKey(song.id),
             color: isSelected
                 ? Colors.blue.withValues(alpha: 0.1)
-                : Colors.transparent,
+                : Colors.white,
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -96,7 +116,7 @@ class PlaylistTrackList extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Colors.grey),
               ),
-              // BUNGKUS TRAILING DENGAN LISTENER
+              // Drag Handle hanya di area ikon
               trailing: ReorderableDragStartListener(
                 index: index,
                 child: const Column(
@@ -118,56 +138,48 @@ class PlaylistTrackList extends StatelessWidget {
       );
     }
 
-    // TAMPILAN NORMAL (Tanpa Drag & Drop)
-    return Material(
-      color: Colors.transparent,
-      child: ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: displayedSongs.length,
-        itemBuilder: (context, index) {
-          final song = displayedSongs[index];
-          return Material(
-            color: Colors.transparent,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
-              leading: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.music_note, color: Colors.grey),
-              ),
-              title: Text(
-                song.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              subtitle: Text(
-                song.artist,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.grey),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.more_vert, color: Colors.grey),
-                onPressed: () => onShowOptions(song),
-              ),
-              onTap: () => onPlaySong(song),
-              onLongPress: () => onLongPress(song),
+    // 3. MODE NORMAL (SliverList)
+    return SliverList.builder(
+      itemCount: displayedSongs.length,
+      itemBuilder: (context, index) {
+        final song = displayedSongs[index];
+        return Material(
+          color: Colors.white, // Wajib agar background tidak transparan
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
             ),
-          );
-        },
-      ),
+            leading: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.music_note, color: Colors.grey),
+            ),
+            title: Text(
+              song.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            subtitle: Text(
+              song.artist,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.more_vert, color: Colors.grey),
+              onPressed: () => onShowOptions(song),
+            ),
+            onTap: () => onPlaySong(song),
+            onLongPress: () => onLongPress(song),
+          ),
+        );
+      },
     );
   }
 }
