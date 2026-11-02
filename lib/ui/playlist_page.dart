@@ -28,6 +28,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
   final ScrollController _scrollController = ScrollController();
   bool isEditMode = false;
   bool _isMenuOpen = false;
+  final Map<int, GlobalKey> _cardKeys = {};
 
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
@@ -298,12 +299,17 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     Playlist playlist,
     GlobalKey cardKey,
   ) {
+    // Guard: pastikan context & render object valid sebelum lanjut
+    final ctx = cardKey.currentContext;
+    if (ctx == null) return;
+    final renderObject = ctx.findRenderObject();
+    if (renderObject is! RenderBox) return;
+
     HapticFeedback.mediumImpact();
     setState(() => _isMenuOpen = true);
 
     // Dapatkan posisi card asli di layar
-    final RenderBox renderBox =
-        cardKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox renderBox = renderObject;
     final position = renderBox.localToGlobal(Offset.zero);
     final size = renderBox.size;
 
@@ -542,7 +548,11 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     required bool isEditMode,
     required Key key,
   }) {
-    final GlobalKey cardKey = GlobalKey();
+    // Pakai key yang stabil per playlist (tidak dibuat ulang tiap build)
+    final GlobalKey cardKey = _cardKeys.putIfAbsent(
+      playlist.id,
+      () => GlobalKey(),
+    );
 
     // Cek apakah playlist punya gambar
     final bool hasImage =

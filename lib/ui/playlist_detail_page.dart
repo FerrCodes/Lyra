@@ -832,26 +832,17 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               right: 0,
               child: IgnorePointer(
                 child: Container(
-                  height:
-                      MediaQuery.of(context).padding.top +
-                      110, // Sedikit lebih tinggi
+                  height: MediaQuery.of(context).padding.top + 110,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        // 1. Hitam dengan opacity sedang di paling atas (di belakang jam/baterai)
                         Colors.black.withValues(alpha: 0.6),
-                        // 2. Transisi halus
                         Colors.black.withValues(alpha: 0.3),
-                        // 3. Memudar sepenuhnya
                         Colors.transparent,
                       ],
-                      stops: const [
-                        0.0,
-                        0.4,
-                        1.0,
-                      ], // 0% atas, 40% tengah, 100% bawah
+                      stops: const [0.0, 0.4, 1.0],
                     ),
                   ),
                 ),
@@ -1001,19 +992,20 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 ),
               ),
 
-            // BOTTOM BAR (Saat Mode Select)
-            if (_isSelectionMode)
-              Positioned(
-                // Naikkan 90 pixel agar tidak tertutup Mini Player (yang tingginya 54 + margin)
-                bottom: MediaQuery.of(context).padding.bottom + 90,
-                left: 16,
-                right: 16,
-                child: Container(
-                  // Tambahkan border radius agar terlihat seperti melayang (opsional tapi bagus)
-                  decoration: BoxDecoration(
-                    color: Colors.black87,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+            // ANIMATED BOTTOM BAR (Muncul dari atas)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              top: _isSelectionMode
+                  ? MediaQuery.of(context).padding.top + 70
+                  : -100,
+              left: 16,
+              right: 16,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.black.withValues(alpha: 0.9),
+                child: Padding(
                   padding: const EdgeInsets.symmetric(
                     vertical: 8,
                     horizontal: 16,
@@ -1033,6 +1025,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),

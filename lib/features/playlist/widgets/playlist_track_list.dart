@@ -88,9 +88,7 @@ class PlaylistTrackList extends StatelessWidget {
 
           return Material(
             key: ValueKey(song.id),
-            color: isSelected
-                ? Colors.blue.withValues(alpha: 0.1)
-                : Colors.white,
+            color: isSelected ? Colors.blue.shade50 : Colors.white,
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,

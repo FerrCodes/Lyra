@@ -61,24 +61,31 @@ class SongsPageState extends ConsumerState<SongsPage> {
     _loadFavorites(); // Cukup update daftar favorit
   }
 
-  // Tidak ada setState di sini agar aman dipanggil di dalam build
-  void _applySort() {
-    _displayedSongs = List.from(_allSongs);
-    if (_sortBy == 'Name') {
-      _displayedSongs.sort(
-        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-      );
-    } else if (_sortBy == 'Artist') {
-      _displayedSongs.sort(
-        (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
-      );
-    } else if (_sortBy == 'Date Added') {
-      _displayedSongs.sort((a, b) => b.id.compareTo(a.id));
+  // ✅ Mengembalikan salinan ter-sort tanpa memutasi field state
+  List<local.Song> _sortedCopy(List<local.Song> source) {
+    final list = List<local.Song>.from(source);
+    switch (_sortBy) {
+      case 'Artist':
+        list.sort(
+          (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
+        );
+      case 'Date Added':
+        list.sort((a, b) => b.id.compareTo(a.id));
+      case 'Name':
+      default:
+        list.sort(
+          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
     }
+    return list;
   }
 
   void _showFilterMenu(BuildContext buttonContext) {
-    final RenderBox renderBox = buttonContext.findRenderObject() as RenderBox;
+    // Guard: pastikan RenderBox valid sebelum dipakai
+    final renderObject = buttonContext.findRenderObject();
+    if (renderObject is! RenderBox) return;
+
+    final RenderBox renderBox = renderObject;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
 
     final double topPosition = (offset.dy - renderBox.size.height) + 25;
@@ -165,15 +172,11 @@ class SongsPageState extends ConsumerState<SongsPage> {
           style: const TextStyle(fontSize: 15, color: Colors.black87),
         ),
         onTap: () {
-          // setState dipindahkan ke sini agar UI terupdate saat filter diganti
+          Navigator.of(context, rootNavigator: true).pop();
           setState(() {
             _sortBy = title;
-            _applySort();
             widget.onSortChanged?.call(title);
           });
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
         },
       ),
     );
@@ -544,18 +547,16 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ambil data lagu dari Provider
+    // Ambil data lagu dari Provider
     final songsAsyncValue = ref.watch(allSongsProvider);
 
     return songsAsyncValue.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Gagal memuat lagu: $err')),
       data: (songs) {
-        // 2. Sinkronkan data provider ke variabel lokal
+        // 2Sinkronkan data provider ke variabel lokal
         _allSongs = songs;
-
-        // 3. Panggil _applySort secara aman (tanpa setState)
-        _applySort();
+        _displayedSongs = _sortedCopy(songs);
 
         if (_allSongs.isEmpty) {
           return const Center(child: Text('Tidak ada lagu ditemukan.'));
@@ -563,13 +564,13 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
         return Stack(
           children: [
-            // 1. BUNGKUS DENGAN STREAMBUILDER DI SINI (Hanya 1 untuk semua lagu)
+            // BUNGKUS DENGAN STREAMBUILDER DI SINI (Hanya 1 untuk semua lagu)
             StreamBuilder<MediaItem?>(
               stream: audioHandler.mediaItem,
               builder: (context, snapshot) {
                 final currentMediaItem = snapshot.data;
 
-                // 2. LISTVIEW BUILDER MASUK KE DALAM SINI
+                // LISTVIEW BUILDER MASUK KE DALAM SINI
                 return ListView.builder(
                   controller: _scrollController,
                   padding: EdgeInsets.only(
@@ -582,7 +583,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     final song = _displayedSongs[index];
                     final isFav = _favorites.any((f) => f.id == song.id);
 
-                    // 3. CEK LAGU AKTIF MENGGUNAKAN DATA DARI STREAMBUILDER DI ATAS
+                    // CEK LAGU AKTIF MENGGUNAKAN DATA DARI STREAMBUILDER DI ATAS
                     final isPlaying = currentMediaItem?.id == song.path;
 
                     return ListTile(
