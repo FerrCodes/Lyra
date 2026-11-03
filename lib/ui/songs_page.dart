@@ -61,7 +61,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
     _loadFavorites(); // Cukup update daftar favorit
   }
 
-  // ✅ Mengembalikan salinan ter-sort tanpa memutasi field state
+  // Mengembalikan salinan ter-sort tanpa memutasi field state
   List<local.Song> _sortedCopy(List<local.Song> source) {
     final list = List<local.Song>.from(source);
     switch (_sortBy) {
@@ -458,7 +458,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
       context: context,
       backgroundColor: Colors.white,
       isScrollControlled: true,
-      useSafeArea: true, // <--- 1. TAMBAHKAN INI
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),

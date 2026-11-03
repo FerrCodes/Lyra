@@ -655,23 +655,18 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       value: _isAppBarExpanded
           ? const SystemUiOverlayStyle(
               statusBarColor: Colors.transparent,
-              statusBarIconBrightness:
-                  Brightness.light, // Ikon atas putih (di atas gambar)
+              statusBarIconBrightness: Brightness.light,
               statusBarBrightness: Brightness.dark,
-              // Navigasi bawah dibuat putih transparan/solid agar menyatu dengan daftar lagu
               systemNavigationBarColor: Color(0xFFF2F2F7),
-              systemNavigationBarIconBrightness:
-                  Brightness.dark, // Ikon navigasi hitam
+              systemNavigationBarIconBrightness: Brightness.dark,
               systemNavigationBarDividerColor: Colors.transparent,
             )
           : const SystemUiOverlayStyle(
               statusBarColor: Colors.transparent,
-              statusBarIconBrightness: Brightness.dark, // Ikon atas hitam
+              statusBarIconBrightness: Brightness.dark,
               statusBarBrightness: Brightness.light,
-              // Tetap putih saat di-scroll
               systemNavigationBarColor: Color(0xFFF2F2F7),
-              systemNavigationBarIconBrightness:
-                  Brightness.dark, // Ikon navigasi hitam
+              systemNavigationBarIconBrightness: Brightness.dark,
               systemNavigationBarDividerColor: Colors.transparent,
             ),
       child: Scaffold(
@@ -685,10 +680,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 SliverAppBar(
                   expandedHeight: MediaQuery.of(context).size.width,
                   pinned: true,
-                  backgroundColor: _isAppBarExpanded
-                      ? Colors.transparent
-                      : Colors.white,
+                  backgroundColor: Colors.transparent,
                   elevation: 0,
+                  scrolledUnderElevation: 0,
                   automaticallyImplyLeading: false,
                   flexibleSpace: FlexibleSpaceBar(
                     background: PlaylistHeader(
