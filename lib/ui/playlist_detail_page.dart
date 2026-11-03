@@ -651,6 +651,10 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       );
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final headerImageHeight =
+        screenWidth + MediaQuery.of(context).padding.top + 32;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: _isAppBarExpanded
           ? const SystemUiOverlayStyle(
@@ -693,84 +697,142 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       playlistId: widget.playlist.id,
                     ),
                   ),
+                  bottom: const PreferredSize(
+                    preferredSize: Size.fromHeight(32),
+                    child: SizedBox(),
+                  ),
                 ),
 
                 // TOOLBAR (FILTER & TOMBOL PLAY)
                 SliverToBoxAdapter(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(32),
+                  child: Stack(
+                    children: [
+                      // 1. LAPISAN GAMBAR (Hanya muncul di ujung lengkungan)
+                      // Kita beri tinggi 32 (sesuai radius lengkungan)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 32,
+                        child: ClipRect(
+                          child: OverflowBox(
+                            alignment: Alignment.bottomCenter,
+                            minHeight: headerImageHeight,
+                            maxHeight: headerImageHeight,
+                            child: SizedBox(
+                              width: screenWidth,
+                              height: headerImageHeight,
+                              child: _currentImagePath == null
+                                  ? const ColoredBox(color: Colors.grey)
+                                  : Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        Image.file(
+                                          File(_currentImagePath!),
+                                          fit: BoxFit.cover,
+                                        ),
+                                        DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.black.withValues(
+                                                  alpha: 0.2,
+                                                ),
+                                                Colors.black.withValues(
+                                                  alpha: 0.8,
+                                                ),
+                                              ],
+                                              stops: const [0.0, 0.5, 1.0],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Row(
-                      children: [
-                        Builder(
-                          builder: (buttonContext) {
-                            return GestureDetector(
-                              key: _filterButtonKey,
-                              behavior: HitTestBehavior.opaque,
-                              onTap: _showFilterMenu,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 4,
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.sort,
-                                      color: Colors.black87,
-                                      size: 24,
+
+                      // 2. KOTAK PUTIH UTAMA (Dengan lengkungan)
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(32),
+                          ),
+                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                        child: Row(
+                          children: [
+                            Builder(
+                              builder: (buttonContext) {
+                                return GestureDetector(
+                                  key: _filterButtonKey,
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: _showFilterMenu,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 4,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _currentSort,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.sort,
+                                          color: Colors.black87,
+                                          size: 24,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _currentSort,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const Spacer(),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                shape: BoxShape.circle,
                               ),
-                            );
-                          },
-                        ),
-                        const Spacer(),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.shuffle,
-                              color: Colors.black,
-                              size: 20,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.shuffle,
+                                  color: Colors.black,
+                                  size: 20,
+                                ),
+                                onPressed: () => _playPlaylist(shuffle: true),
+                              ),
                             ),
-                            onPressed: () => _playPlaylist(shuffle: true),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                              size: 24,
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.black,
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.play_arrow,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                onPressed: () => _playPlaylist(),
+                              ),
                             ),
-                            onPressed: () => _playPlaylist(),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
 
