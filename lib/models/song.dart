@@ -4,6 +4,7 @@ class Song {
   final String artist;
   final String album;
   final int durationMs;
+  final String albumId;
   final String path;
 
   Song({
@@ -12,6 +13,7 @@ class Song {
     required this.artist,
     required this.album,
     required this.durationMs,
+    required this.albumId,
     required this.path,
   });
 
@@ -23,7 +25,7 @@ class Song {
       artist: map['artist']?.toString() ?? 'Unknown Artist',
       album: map['album']?.toString() ?? 'Unknown Album',
       path: map['path']?.toString() ?? '',
-
+      albumId: map['albumId'] ?? '0',
       // Amankan Angka: Konversi ke num dulu, baru ke int. Jika null, jadikan 0
       durationMs: (map['duration'] as num?)?.toInt() ?? 0,
     );

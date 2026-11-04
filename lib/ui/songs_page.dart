@@ -7,6 +7,7 @@ import '../models/song.dart' as local;
 import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 
 final GlobalKey<SongsPageState> songsPageKey = GlobalKey<SongsPageState>();
 
@@ -588,14 +589,31 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
                     return ListTile(
                       contentPadding: const EdgeInsets.only(left: 16, right: 8),
-                      leading: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(8),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: QueryArtworkWidget(
+                          id: int.parse(
+                            song.albumId,
+                          ), // Konversi kembali ke integer
+                          type: ArtworkType.ALBUM,
+                          size: 200, // Resolusi gambar yang diambil
+                          artworkHeight: 50,
+                          artworkWidth: 50,
+                          artworkBorder: BorderRadius.circular(8),
+                          nullArtworkWidget: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            // Ini adalah ikon default jika lagu tidak punya foto album
+                            child: const Icon(
+                              Icons.music_note,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ),
-                        child: const Icon(Icons.music_note, color: Colors.grey),
                       ),
                       title: Text(
                         song.title,

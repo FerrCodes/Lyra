@@ -87,7 +87,8 @@ class MainActivity : AudioServiceActivity() {
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.ALBUM_ID
         )
         
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} > 0"
@@ -100,6 +101,7 @@ class MainActivity : AudioServiceActivity() {
             val albumColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            val albumIdColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
 
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
@@ -108,6 +110,7 @@ class MainActivity : AudioServiceActivity() {
                 val album = cursor.getString(albumColumn) ?: "Unknown Album"
                 val duration = cursor.getLong(durationColumn)
                 val data = cursor.getString(dataColumn)
+                val albumId = cursor.getLong(albumIdColumn)
 
                 songs.add(mapOf(
                     "id" to id.toString(),
@@ -115,7 +118,8 @@ class MainActivity : AudioServiceActivity() {
                     "artist" to artist,
                     "album" to album,
                     "duration" to duration,
-                    "path" to data
+                    "path" to data,
+                    "albumId" to albumId.toString()
                 ))
             }
         }

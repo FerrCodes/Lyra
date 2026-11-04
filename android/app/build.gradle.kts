@@ -43,3 +43,19 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+subprojects {
+    afterEvaluate {
+        if (project.extensions.findByName("android") != null) {
+            val android = project.extensions.findByName("android")!!
+            val getNamespace = android.javaClass.methods.find { it.name == "getNamespace" }
+            val setNamespace = android.javaClass.methods.find { it.name == "setNamespace" }
+            if (getNamespace != null && setNamespace != null) {
+                val namespace = getNamespace.invoke(android)
+                if (namespace == null) {
+                    setNamespace.invoke(android, project.group.toString())
+                }
+            }
+        }
+    }
+}
