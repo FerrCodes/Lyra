@@ -31,7 +31,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   String? _currentDescription;
   String _currentSort = 'Custom order';
   final ScrollController _scrollController = ScrollController();
-  bool _isAppBarExpanded = true;
   bool _isSelectionMode = false;
   Set<String> _selectedSongIds = {};
 
@@ -43,19 +42,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     _currentDescription = widget.playlist.description;
     _loadSongs();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
-
-    _scrollController.addListener(() {
-      // Jika scroll melewati tinggi gambar (kurang lebih lebar layar),
-      // berarti AppBar sedang mengecil.
-      final isExpanded =
-          _scrollController.offset < (MediaQuery.of(context).size.width - 100);
-
-      if (_isAppBarExpanded != isExpanded) {
-        setState(() {
-          _isAppBarExpanded = isExpanded;
-        });
-      }
-    });
   }
 
   @override
@@ -118,7 +104,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
       );
     }
-    setState(() {});
   }
 
   void _playPlaylist({bool shuffle = false, int startIndex = 0}) {
@@ -644,324 +629,322 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   // ==========================================
   @override
   Widget build(BuildContext context) {
+    const pageColor = Color(0xFFF6F5F1);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final topPadding = MediaQuery.of(context).padding.top;
+    final headerHeight = screenWidth + topPadding + 32;
+
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF2F2F7),
+        backgroundColor: pageColor,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final headerImageHeight =
-        screenWidth + MediaQuery.of(context).padding.top + 32;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: _isAppBarExpanded
-          ? const SystemUiOverlayStyle(
-              statusBarColor: Colors.transparent,
-              statusBarIconBrightness: Brightness.light,
-              statusBarBrightness: Brightness.dark,
-              systemNavigationBarColor: Color(0xFFF2F2F7),
-              systemNavigationBarIconBrightness: Brightness.dark,
-              systemNavigationBarDividerColor: Colors.transparent,
-            )
-          : const SystemUiOverlayStyle(
-              statusBarColor: Colors.transparent,
-              statusBarIconBrightness: Brightness.dark,
-              statusBarBrightness: Brightness.light,
-              systemNavigationBarColor: Color(0xFFF2F2F7),
-              systemNavigationBarIconBrightness: Brightness.dark,
-              systemNavigationBarDividerColor: Colors.transparent,
-            ),
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: pageColor,
+        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: pageColor,
         body: Stack(
           children: [
-            CustomScrollView(
-              controller: _scrollController,
-              slivers: [
-                // HEADER GAMBAR
-                SliverAppBar(
-                  expandedHeight: MediaQuery.of(context).size.width,
-                  pinned: true,
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  automaticallyImplyLeading: false,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: PlaylistHeader(
-                      imagePath: _currentImagePath,
-                      playlistName: _currentPlaylistName,
-                      songCount: _songsInPlaylist.length,
-                      description: _currentDescription,
-                      playlistId: widget.playlist.id,
+            // Semua konten scroll memakai sliver. PlaylistTrackList memang
+            // mengembalikan SliverList / SliverReorderableList, jadi ia harus
+            // menjadi anak langsung dari CustomScrollView.slivers.
+            Positioned.fill(
+              child: CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: headerHeight,
+                      child: PlaylistHeader(
+                        imagePath: _currentImagePath,
+                        playlistName: _currentPlaylistName,
+                        songCount: _songsInPlaylist.length,
+                        description: _currentDescription,
+                        playlistId: widget.playlist.id,
+                      ),
                     ),
                   ),
-                  bottom: const PreferredSize(
-                    preferredSize: Size.fromHeight(32),
-                    child: SizedBox(),
-                  ),
-                ),
 
-                // TOOLBAR (FILTER & TOMBOL PLAY)
-                SliverToBoxAdapter(
-                  child: Stack(
-                    children: [
-                      // 1. LAPISAN GAMBAR (Hanya muncul di ujung lengkungan)
-                      // Kita beri tinggi 32 (sesuai radius lengkungan)
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: 32,
-                        child: ClipRect(
-                          child: OverflowBox(
-                            alignment: Alignment.bottomCenter,
-                            minHeight: headerImageHeight,
-                            maxHeight: headerImageHeight,
-                            child: SizedBox(
-                              width: screenWidth,
-                              height: headerImageHeight,
-                              child: _currentImagePath == null
-                                  ? const ColoredBox(color: Colors.grey)
-                                  : Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        Image.file(
-                                          File(_currentImagePath!),
-                                          fit: BoxFit.cover,
-                                        ),
-                                        DecoratedBox(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                Colors.transparent,
-                                                Colors.black.withValues(
-                                                  alpha: 0.2,
-                                                ),
-                                                Colors.black.withValues(
-                                                  alpha: 0.8,
-                                                ),
-                                              ],
-                                              stops: const [0.0, 0.5, 1.0],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                  // Kontrol playlist: ringan, tanpa panel putih besar.
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+                      child: Row(
+                        children: [
+                          Material(
+                            color: const Color(0xFFECE9E2),
+                            borderRadius: BorderRadius.circular(24),
+                            child: InkWell(
+                              key: _filterButtonKey,
+                              borderRadius: BorderRadius.circular(24),
+                              onTap: _showFilterMenu,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 11,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.filter_list,
+                                      size: 20,
+                                      color: Color(0xFF282722),
                                     ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _currentSort,
+                                      style: const TextStyle(
+                                        color: Color(0xFF282722),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-
-                      // 2. KOTAK PUTIH UTAMA (Dengan lengkungan)
-                      Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(32),
+                          const Spacer(),
+                          Material(
+                            color: const Color(0xFFECE9E2),
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              tooltip: 'Shuffle',
+                              onPressed: _displayedSongs.isEmpty
+                                  ? null
+                                  : () => _playPlaylist(shuffle: true),
+                              icon: const Icon(
+                                Icons.shuffle_rounded,
+                                color: Color(0xFF282722),
+                                size: 21,
+                              ),
+                            ),
                           ),
-                        ),
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                        child: Row(
-                          children: [
-                            Builder(
-                              builder: (buttonContext) {
-                                return GestureDetector(
-                                  key: _filterButtonKey,
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap: _showFilterMenu,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 4,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.sort,
-                                          color: Colors.black87,
-                                          size: 24,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          _currentSort,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                          const SizedBox(width: 12),
+                          Material(
+                            color: const Color(0xFF24231F),
+                            shape: const CircleBorder(),
+                            elevation: 3,
+                            shadowColor: Colors.black.withValues(alpha: 0.18),
+                            child: IconButton(
+                              tooltip: 'Play',
+                              onPressed: _displayedSongs.isEmpty
+                                  ? null
+                                  : () => _playPlaylist(),
+                              icon: const Icon(
+                                Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'YOUR COLLECTION',
+                                  style: TextStyle(
+                                    color: Color(0xFF8A857B),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.8,
                                   ),
-                                );
-                              },
-                            ),
-                            const Spacer(),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.shuffle,
-                                  color: Colors.black,
-                                  size: 20,
                                 ),
-                                onPressed: () => _playPlaylist(shuffle: true),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.black,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.play_arrow,
-                                  color: Colors.white,
-                                  size: 24,
+                                SizedBox(height: 5),
+                                Text(
+                                  'Tracks',
+                                  style: TextStyle(
+                                    color: Color(0xFF26251F),
+                                    fontSize: 23,
+                                    height: 1.05,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
                                 ),
-                                onPressed: () => _playPlaylist(),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 11,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECE9E2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${_displayedSongs.length} songs',
+                              style: const TextStyle(
+                                color: Color(0xFF69655D),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
 
-                // DAFTAR LAGU (SLIVER)
-                PlaylistTrackList(
-                  displayedSongs: _displayedSongs,
-                  isSelectionMode: _isSelectionMode,
-                  selectedSongIds: _selectedSongIds,
-                  currentSort: _currentSort,
-                  onReorder: (oldIndex, newIndex) {
-                    setState(() {
-                      final song = _displayedSongs.removeAt(oldIndex);
-                      _displayedSongs.insert(newIndex, song);
-                      // Sinkronisasi agar filter tidak merusak urutan
-                      _songsInPlaylist = List<Song>.from(_displayedSongs);
-                    });
-                    _saveNewSongOrder();
-                  },
-                  onToggleSelection: (song) {
-                    setState(() {
-                      if (_selectedSongIds.contains(song.id)) {
-                        _selectedSongIds.remove(song.id);
-                      } else {
-                        _selectedSongIds.add(song.id);
-                      }
-                      if (_selectedSongIds.isEmpty) {
-                        _isSelectionMode = false;
-                      }
-                    });
-                  },
-                  onPlaySong: (song) {
-                    final index = _displayedSongs.indexOf(song);
-                    _playPlaylist(startIndex: index);
-                  },
-                  onLongPress: (song) {
-                    if (!_isSelectionMode) {
+                  // PENTING: jangan bungkus PlaylistTrackList dengan
+                  // Container, Column, atau SliverToBoxAdapter.
+                  PlaylistTrackList(
+                    displayedSongs: _displayedSongs,
+                    isSelectionMode: _isSelectionMode,
+                    selectedSongIds: _selectedSongIds,
+                    currentSort: _currentSort,
+                    onReorder: (oldIndex, newIndex) {
                       setState(() {
-                        _isSelectionMode = true;
-                        _selectedSongIds.add(song.id);
+                        final song = _displayedSongs.removeAt(oldIndex);
+                        _displayedSongs.insert(newIndex, song);
+                        _songsInPlaylist = List<Song>.from(_displayedSongs);
                       });
-                    }
-                  },
-                  onShowOptions: (song) => _showSongOptions(song),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 100)),
-              ],
+                      _saveNewSongOrder();
+                    },
+                    onToggleSelection: (song) {
+                      setState(() {
+                        if (_selectedSongIds.contains(song.id)) {
+                          _selectedSongIds.remove(song.id);
+                        } else {
+                          _selectedSongIds.add(song.id);
+                        }
+                        if (_selectedSongIds.isEmpty) {
+                          _isSelectionMode = false;
+                        }
+                      });
+                    },
+                    onPlaySong: (song) {
+                      final index = _displayedSongs.indexOf(song);
+                      _playPlaylist(startIndex: index);
+                    },
+                    onLongPress: (song) {
+                      if (!_isSelectionMode) {
+                        setState(() {
+                          _isSelectionMode = true;
+                          _selectedSongIds.add(song.id);
+                        });
+                      }
+                    },
+                    onShowOptions: (song) => _showSongOptions(song),
+                  ),
+
+                  const SliverToBoxAdapter(child: SizedBox(height: 110)),
+                ],
+              ),
             ),
 
-            // === OVERLAY UNTUK BAR HP ===
+            // Gradient transparan berada di atas konten, bukan bidang putih.
+            // Saat halaman discroll, bagian atas berubah gelap di belakang
+            // tombol; saat header terlihat, gradient membaur dengan foto.
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: IgnorePointer(
                 child: Container(
-                  height: MediaQuery.of(context).padding.top + 110,
+                  height: topPadding + 120,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.6),
-                        Colors.black.withValues(alpha: 0.3),
+                        Colors.black.withValues(alpha: 0.68),
+                        Colors.black.withValues(alpha: 0.32),
                         Colors.transparent,
                       ],
-                      stops: const [0.0, 0.4, 1.0],
+                      stops: const [0.0, 0.48, 1.0],
                     ),
                   ),
                 ),
               ),
             ),
 
-            // TOP BAR (Tombol Back & Menu)
+            // TOP BAR tetap fixed sebagai overlay. Hanya tombolnya yang putih;
+            // tidak ada panel putih full-width di belakangnya.
             if (_isSelectionMode)
               Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 12,
-                    left: 16,
-                    right: 16,
-                    bottom: 12,
-                  ),
-                  color: Colors.white,
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _selectAll,
-                        child: Row(
-                          children: [
-                            Icon(
-                              _selectedSongIds.length ==
-                                          _displayedSongs.length &&
-                                      _displayedSongs.isNotEmpty
-                                  ? Icons.check_circle
-                                  : Icons.radio_button_unchecked,
-                              color: Colors.grey,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${_selectedSongIds.length} selected',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                top: topPadding + 12,
+                left: 16,
+                right: 16,
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.82),
+                  borderRadius: BorderRadius.circular(28),
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16,
+                      right: 8,
+                      top: 4,
+                      bottom: 4,
+                    ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _selectAll,
+                          child: Row(
+                            children: [
+                              Icon(
+                                _selectedSongIds.length ==
+                                            _displayedSongs.length &&
+                                        _displayedSongs.isNotEmpty
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                color: Colors.white,
+                                size: 22,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Text(
+                                '${_selectedSongIds.length} selected',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.black),
-                        onPressed: () {
-                          setState(() {
-                            _isSelectionMode = false;
-                            _selectedSongIds.clear();
-                          });
-                        },
-                      ),
-                    ],
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () {
+                            setState(() {
+                              _isSelectionMode = false;
+                              _selectedSongIds.clear();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               )
             else
               Positioned(
-                top: MediaQuery.of(context).padding.top + 12,
+                top: topPadding + 12,
                 left: 16,
                 right: 16,
                 child: Row(
@@ -973,19 +956,17 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         height: 48,
                         width: 48,
                         decoration: BoxDecoration(
-                          color: _isAppBarExpanded
-                              ? Colors.white
-                              : Colors.grey.shade200,
+                          color: Colors.white,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
+                              color: Colors.black.withValues(alpha: 0.18),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.arrow_back_ios_new,
                           color: Colors.black,
                           size: 20,
@@ -999,9 +980,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
@@ -1048,13 +1029,11 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 ),
               ),
 
-            // ANIMATED BOTTOM BAR (Muncul dari atas)
+            // Action bar untuk mode seleksi.
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOutCubic,
-              top: _isSelectionMode
-                  ? MediaQuery.of(context).padding.top + 70
-                  : -100,
+              top: _isSelectionMode ? topPadding + 72 : -100,
               left: 16,
               right: 16,
               child: Material(

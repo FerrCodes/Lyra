@@ -27,26 +27,59 @@ class PlaylistTrackList extends StatelessWidget {
     required this.onShowOptions,
   });
 
+  static const List<List<Color>> _artworkPalettes = [
+    [Color(0xFF625A73), Color(0xFFB4A6C1)],
+    [Color(0xFF536A69), Color(0xFFA5B9A8)],
+    [Color(0xFF8A6654), Color(0xFFD0B49A)],
+    [Color(0xFF555F83), Color(0xFFAAB4D1)],
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // 1. JIKA KOSONG (SliverToBoxAdapter)
     if (displayedSongs.isEmpty) {
       return SliverToBoxAdapter(
-        child: Container(
-          color: Colors.white, // Penting agar background tetap putih
-          padding: EdgeInsets.all(40.0),
-          child: Column(
-            children: [
-              Icon(Icons.music_note, size: 60, color: Colors.grey),
-              SizedBox(height: 16),
-              Text('Belum ada lagu.', style: TextStyle(color: Colors.grey)),
-            ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDEAE3),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: const Column(
+              children: [
+                Icon(
+                  Icons.queue_music_rounded,
+                  size: 42,
+                  color: Color(0xFF9A958B),
+                ),
+                SizedBox(height: 13),
+                Text(
+                  'Belum ada lagu',
+                  style: TextStyle(
+                    color: Color(0xFF34322D),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Text(
+                  'Tambahkan beberapa lagu untuk mengisi playlist ini.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF817C73),
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
-    // 2. MODE SELEKSI (SliverReorderableList)
     if (isSelectionMode) {
       return SliverReorderableList(
         itemCount: displayedSongs.length,
@@ -62,20 +95,17 @@ class PlaylistTrackList extends StatelessWidget {
           }
           onReorder(oldIndex, newIndex);
         },
-        autoScrollerVelocityScalar: 25, // Kecepatan auto-scroll saat drag
-        // Efek visual saat lagu diangkat
+        autoScrollerVelocityScalar: 25,
         proxyDecorator: (child, index, animation) {
           return AnimatedBuilder(
             animation: animation,
             builder: (BuildContext context, Widget? child) {
-              final double animValue = Curves.easeInOut.transform(
-                animation.value,
-              );
-              final double elevation = lerpDouble(0, 8, animValue)!;
+              final animValue = Curves.easeInOut.transform(animation.value);
+              final elevation = lerpDouble(0, 9, animValue)!;
               return Material(
                 elevation: elevation,
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFF6F5F1),
+                borderRadius: BorderRadius.circular(18),
                 child: child,
               );
             },
@@ -84,48 +114,51 @@ class PlaylistTrackList extends StatelessWidget {
         },
         itemBuilder: (context, index) {
           final song = displayedSongs[index];
-          final isSelected = selectedSongIds.contains(song.id);
+          final selected = selectedSongIds.contains(song.id);
 
-          return Material(
+          return Container(
             key: ValueKey(song.id),
-            color: isSelected ? Colors.blue.shade50 : Colors.white,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 4,
-              ),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: selected
+                  ? const Color(0xFFE6EAF2)
+                  : const Color(0xFFEFEDE7),
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(17),
               onTap: () => onToggleSelection(song),
-              leading: Icon(
-                isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: isSelected ? Colors.blue.shade700 : Colors.grey,
-              ),
-              title: Text(
-                song.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 9,
                 ),
-              ),
-              subtitle: Text(
-                song.artist,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.grey),
-              ),
-              // Drag Handle hanya di area ikon
-              trailing: ReorderableDragStartListener(
-                index: index,
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
                   children: [
-                    Icon(Icons.keyboard_arrow_up, color: Colors.grey, size: 18),
                     Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.grey,
-                      size: 18,
+                      selected
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: selected
+                          ? const Color(0xFF4D648F)
+                          : const Color(0xFFA29D93),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 11),
+                    _buildArtwork(index),
+                    const SizedBox(width: 12),
+                    _buildSongLabels(song),
+                    const SizedBox(width: 8),
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: const Padding(
+                        padding: EdgeInsets.all(7),
+                        child: Icon(
+                          Icons.drag_indicator_rounded,
+                          color: Color(0xFF8F8A81),
+                          size: 22,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -136,48 +169,104 @@ class PlaylistTrackList extends StatelessWidget {
       );
     }
 
-    // 3. MODE NORMAL (SliverList)
     return SliverList.builder(
       itemCount: displayedSongs.length,
       itemBuilder: (context, index) {
         final song = displayedSongs[index];
-        return Material(
-          color: Colors.white, // Wajib agar background tidak transparan
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            leading: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(8),
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(17),
+              onTap: () => onPlaySong(song),
+              onLongPress: () => onLongPress(song),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 8, 5, 8),
+                child: Row(
+                  children: [
+                    _buildArtwork(index),
+                    const SizedBox(width: 13),
+                    _buildSongLabels(song),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: 'More options',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => onShowOptions(song),
+                      icon: const Icon(
+                        Icons.more_vert,
+                        color: Color(0xFF858077),
+                        size: 23,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: const Icon(Icons.music_note, color: Colors.grey),
             ),
-            title: Text(
-              song.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            subtitle: Text(
-              song.artist,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.grey),
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.grey),
-              onPressed: () => onShowOptions(song),
-            ),
-            onTap: () => onPlaySong(song),
-            onLongPress: () => onLongPress(song),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildArtwork(int index) {
+    final palette = _artworkPalettes[index % _artworkPalettes.length];
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(13),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: palette,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 7,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.graphic_eq_rounded,
+        color: Color(0xE6FFFFFF),
+        size: 25,
+      ),
+    );
+  }
+
+  Widget _buildSongLabels(Song song) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            song.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF292822),
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.1,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            song.artist,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF8A857C),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

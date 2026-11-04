@@ -19,72 +19,82 @@ class PlaylistHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imagePath != null && imagePath!.trim().isNotEmpty;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. FOTO / GAMBAR PLAYLIST
-        imagePath != null
-            ? Hero(
-                tag: 'playlist_image_$playlistId',
-                child: Image.file(File(imagePath!), fit: BoxFit.cover),
-              )
-            : Container(
-                color: Colors.grey.shade300,
-                child: const Icon(Icons.image, size: 80, color: Colors.grey),
-              ),
+        if (hasImage)
+          Hero(
+            tag: 'playlist_image_$playlistId',
+            child: Image.file(
+              File(imagePath!),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  _buildFallbackBackground(),
+            ),
+          )
+        else
+          _buildFallbackBackground(),
 
-        // 2. GRADIENT OVERLAY
-        Container(
+        // Menjaga judul dan deskripsi tetap terbaca di atas foto.
+        DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.2),
-                Colors.black.withValues(alpha: 0.8),
+                Colors.black.withValues(alpha: 0.05),
+                Colors.black.withValues(alpha: 0.12),
+                Colors.black.withValues(alpha: 0.48),
+                Colors.black.withValues(alpha: 0.88),
               ],
-              stops: const [0.0, 0.5, 1.0],
+              stops: const [0.0, 0.38, 0.68, 1.0],
             ),
           ),
         ),
 
-        // 3. TEKS (NAMA, JUMLAH LAGU, DESKRIPSI)
         Positioned(
-          bottom: 24,
-          left: 16,
-          right: 16,
+          left: 24,
+          right: 24,
+          bottom: 30,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 playlistName,
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.left,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
                   color: Colors.white,
+                  fontSize: 34,
+                  height: 1.04,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.9,
+                  shadows: [
+                    Shadow(
+                      color: Color(0x55000000),
+                      blurRadius: 16,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '$songCount tracks',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              if (description != null && description!.isNotEmpty) ...[
-                const SizedBox(height: 8),
+              const SizedBox(height: 6),
+              if (description != null && description!.trim().isNotEmpty) ...[
+                const SizedBox(height: 9),
                 Text(
                   description!,
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.left,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: const TextStyle(
+                    color: Color(0xD9FFFFFF),
                     fontSize: 13,
-                    color: Colors.white.withValues(alpha: 0.8),
-                    height: 1.3,
+                    height: 1.35,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -92,6 +102,21 @@ class PlaylistHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFallbackBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF77736C), Color(0xFF292824)],
+        ),
+      ),
+      child: const Center(
+        child: Icon(Icons.album_rounded, size: 86, color: Color(0x66FFFFFF)),
+      ),
     );
   }
 }
