@@ -6,6 +6,10 @@ import 'songs_page.dart';
 import 'playlist_page.dart';
 import 'library_page.dart';
 import 'search_page.dart';
+import 'settings_page.dart';
+import 'profile_page.dart';
+import 'dart:io';
+import '../providers/profile_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -374,58 +378,162 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 )
-              else
-                // HEADER BERANDA & LIBRARY
+              else if (_currentTab == 0)
+                // HEADER BERANDA (Tombol Kiri & Avatar Profil Kanan)
                 LyraHeader(
-                  title: _titles[_currentTab],
-                  rightWidget: _currentTab != 0
-                      ? Builder(
-                          builder: (buttonContext) {
-                            return GestureDetector(
-                              onTap: () {
-                                if (_currentTab == 3) {
-                                  libraryPageKey.currentState?.showMoreMenu(
-                                    buttonContext,
-                                  );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Fitur pencarian segera hadir',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: Container(
-                                height: 48,
+                  title: '',
+                  leftWidget: GestureDetector(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fitur Notifikasi segera hadir'),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      height: 48,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.notifications_none,
+                        color: Colors.black,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                  rightWidget: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProfilePage()),
+                      );
+                    },
+                    child: Container(
+                      height: 48,
+                      width: 48,
+                      padding: const EdgeInsets.all(
+                        2,
+                      ), // Jarak antara foto dan border
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      // Menggunakan ValueListenableBuilder agar otomatis berubah
+                      child: ValueListenableBuilder<String?>(
+                        valueListenable: profileImageNotifier,
+                        builder: (context, imagePath, child) {
+                          if (imagePath != null && imagePath.isNotEmpty) {
+                            return ClipOval(
+                              child: Image.file(
+                                File(imagePath),
+                                fit: BoxFit.cover,
                                 width: 48,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.1,
-                                      ),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
-                                ),
+                                height: 48,
+                              ),
+                            );
+                          }
+                          return const Icon(
+                            Icons.person_outline,
+                            color: Colors.black,
+                            size: 24,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                )
+              else if (_currentTab == 3)
+                // HEADER LIBRARY (Gaya Kapsul gabungan seperti Songs)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 12,
+                  left: 16,
+                  right: 16,
+                  child: Row(
+                    children: [
+                      // Kapsul Putih berisi 2 Ikon (Settings & Menu)
+                      const Spacer(),
+                      Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SettingsPage(),
+                                  ),
+                                );
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.only(left: 16, right: 12),
                                 child: Icon(
-                                  _currentTab == 3
-                                      ? Icons.more_vert
-                                      : Icons.search,
+                                  Icons.settings_outlined,
                                   color: Colors.black,
                                   size: 20,
                                 ),
                               ),
-                            );
-                          },
-                        )
-                      : null,
-                ),
+                            ),
+                            Builder(
+                              builder: (buttonContext) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    libraryPageKey.currentState?.showMoreMenu(
+                                      buttonContext,
+                                    );
+                                  },
+                                  child: const Padding(
+                                    padding: EdgeInsets.only(
+                                      left: 12,
+                                      right: 16,
+                                    ),
+                                    child: Icon(
+                                      Icons.more_vert,
+                                      color: Colors.black,
+                                      size: 20,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                // Fallback (jika ada tab lain)
+                LyraHeader(title: _titles[_currentTab]),
             ],
 
             // =========================================================

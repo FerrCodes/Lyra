@@ -6,11 +6,13 @@ import 'ui/permission_gate.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/profile_provider.dart';
 
 late final AudioHandler audioHandler;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await loadProfileData();
 
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

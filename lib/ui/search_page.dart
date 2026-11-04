@@ -95,25 +95,23 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   : _buildSearchResults(filteredSongs, filteredPlaylists),
             ),
 
-            // === OVERLAY GRADASI UNTUK STATUS BAR ===
+            // === OVERLAY GRADASI PUTIH UNTUK STATUS BAR ===
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: IgnorePointer(
                 child: Container(
-                  height:
-                      MediaQuery.of(context).padding.top +
-                      40, // Menutupi area status bar
+                  height: MediaQuery.of(context).padding.top + 90,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        // Gunakan warna gelap transparan agar ikon putih terlihat
-                        Colors.black.withValues(alpha: 0.4),
-                        Colors.transparent,
+                        Colors.white.withValues(alpha: 0.9),
+                        Colors.white.withValues(alpha: 0.0),
                       ],
+                      stops: const [0.0, 0.8],
                     ),
                   ),
                 ),

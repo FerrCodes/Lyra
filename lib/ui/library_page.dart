@@ -21,8 +21,9 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
   bool _isLoading = true;
   int _totalFavorites = 0;
   final ScrollController _scrollController = ScrollController();
-  bool get isScrolledDown => _scrollController.hasClients && _scrollController.offset > 10;
-  
+  bool get isScrolledDown =>
+      _scrollController.hasClients && _scrollController.offset > 10;
+
   @override
   void initState() {
     super.initState();
@@ -73,12 +74,15 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildPopoverItem(Icons.refresh, 'Refresh', () {
-                      Navigator.pop(context);
-                      _loadStats();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Data diperbarui')),
-                      );
+                    _buildPopoverItem(Icons.refresh, 'Refresh', () async {
+                      Navigator.pop(context); // Tutup popover
+                      await _loadStats(); // Tunggu loading selesai
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Data diperbarui')),
+                        );
+                      }
                     }),
                     const Divider(height: 1, thickness: 0.5),
                     _buildPopoverItem(
@@ -138,17 +142,11 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Ambil semua lagu dari provider (otomatis update jika ada lagu baru)
     final allSongsAsync = ref.watch(allSongsProvider);
-
-    // 2. Ambil daftar lagunya (jika masih loading, gunakan list kosong)
     final allSongs = allSongsAsync.value ?? [];
 
-    // 3. Hitung jumlah masing-masing kategori
     final int totalAlbums = allSongs.map((s) => s.album).toSet().length;
     final int totalArtists = allSongs.map((s) => s.artist).toSet().length;
-
-    // 4. Hitung jumlah folder dari path file
     final int totalFolders = allSongs
         .map((s) {
           final parts = s.path.split('/');
@@ -157,72 +155,84 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
         .toSet()
         .length;
 
-    return ListView(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 80,
-        bottom: 160,
-        left: 16,
-        right: 16,
-      ),
+    return Stack(
       children: [
-        const Text(
-          'Semua Koleksi',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        // 1. KONTEN UTAMA (Selalu ada di belakang)
+        ListView(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 80,
+            bottom: 160,
+            left: 16,
+            right: 16,
+          ),
+          children: [
+            const Text(
+              'Semua Koleksi',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildCategoryCard(
+              'Favorit',
+              Icons.favorite,
+              Colors.redAccent,
+              _isLoading ? 0 : _totalFavorites,
+              () {},
+            ),
+            const SizedBox(height: 12),
+            _buildCategoryCard(
+              'Album',
+              Icons.album,
+              Colors.blueAccent,
+              totalAlbums,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AlbumsPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildCategoryCard(
+              'Artis',
+              Icons.person,
+              Colors.greenAccent.shade700,
+              totalArtists,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ArtistsPage()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            _buildCategoryCard(
+              'Folder',
+              Icons.folder,
+              Colors.orangeAccent.shade700,
+              totalFolders,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FoldersPage()),
+                );
+              },
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
 
-        // === 4 CARD LIST VERTIKAL ===
-        _buildCategoryCard(
-          'Favorit',
-          Icons.favorite,
-          Colors.redAccent,
-          _isLoading ? 0 : _totalFavorites,
-          () {
-            /* Nanti arahkan ke halaman Favorit */
-          },
-        ),
-        const SizedBox(height: 12), // Jarak antar card
-
-        _buildCategoryCard(
-          'Album',
-          Icons.album,
-          Colors.blueAccent,
-          totalAlbums,
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AlbumsPage()),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-
-        _buildCategoryCard(
-          'Artis',
-          Icons.person,
-          Colors.greenAccent.shade700, // Warna hijau yang lebih pekat
-          totalArtists,
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ArtistsPage()),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-
-        _buildCategoryCard(
-          'Folder',
-          Icons.folder,
-          Colors.orangeAccent.shade700, // Warna oranye yang lebih pekat
-          totalFolders,
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const FoldersPage()),
-            );
-          },
-        ),
+        // 2. LAPISAN SPINNER (Hanya muncul saat loading)
+        if (_isLoading)
+          Positioned.fill(
+            child: IgnorePointer(
+              // Mencegah user klik kartu saat loading
+              child: Container(
+                color: Colors.black.withValues(
+                  alpha: 0.1,
+                ), // Sedikit digelapkan
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+            ),
+          ),
       ],
     );
   }

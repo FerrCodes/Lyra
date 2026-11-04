@@ -551,7 +551,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             Navigator.of(context, rootNavigator: true).pop();
                             _showPlaylistImage();
                           }),
-                          _buildTopAction(Icons.edit, 'Edit', () {
+                          _buildTopAction(Icons.edit, 'Edit Playlist', () {
                             Navigator.of(context, rootNavigator: true).pop();
                             _showEditPlaylistBottomSheet();
                           }),
@@ -560,13 +560,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     ),
                     const Divider(height: 1, thickness: 0.5),
                     _buildListTile(Icons.playlist_play, 'Play Next', () {}),
-                    _buildListTile(Icons.settings_outlined, 'Pengaturan ', () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fitur Pengaturan segera hadir'),
-                        ),
-                      );
-                    }),
                     const SizedBox(height: 8),
                   ],
                 ),
