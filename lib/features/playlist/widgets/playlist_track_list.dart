@@ -49,12 +49,6 @@ class PlaylistTrackList extends StatelessWidget {
             ),
             child: const Column(
               children: [
-                Icon(
-                  Icons.queue_music_rounded,
-                  size: 42,
-                  color: Color(0xFF9A958B),
-                ),
-                SizedBox(height: 13),
                 Text(
                   'Belum ada lagu',
                   style: TextStyle(

@@ -319,7 +319,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     final RenderBox renderBox =
         _filterButtonKey.currentContext!.findRenderObject() as RenderBox;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
-    final double topPosition = offset.dy - renderBox.size.height;
+    final double topPosition = offset.dy + renderBox.size.height - 70;
     final double leftPosition = offset.dx - 1;
 
     showDialog(
@@ -680,41 +680,50 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
                       child: Row(
                         children: [
-                          Material(
-                            color: const Color(0xFFECE9E2),
-                            borderRadius: BorderRadius.circular(24),
-                            child: InkWell(
+                          // 👇 TOMBOL FILTER BARU (Gaya SongsPage)
+                          GestureDetector(
+                            onTap: _showFilterMenu,
+                            child: Container(
                               key: _filterButtonKey,
-                              borderRadius: BorderRadius.circular(24),
-                              onTap: _showFilterMenu,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 11,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.filter_list,
-                                      size: 20,
-                                      color: Color(0xFF282722),
+                              height: 48,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.sort,
+                                    color: Colors.black87,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _currentSort,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                      fontSize: 14,
                                     ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _currentSort,
-                                      style: const TextStyle(
-                                        color: Color(0xFF282722),
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                           const Spacer(),
+                          // 👇 TOMBOL SHUFFLE (Tetap seperti desain baru)
                           Material(
                             color: const Color(0xFFECE9E2),
                             shape: const CircleBorder(),
@@ -731,6 +740,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             ),
                           ),
                           const SizedBox(width: 12),
+                          // 👇 TOMBOL PLAY (Tetap seperti desain baru)
                           Material(
                             color: const Color(0xFF24231F),
                             shape: const CircleBorder(),
@@ -1050,7 +1060,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     children: [
                       _buildBottomAction(Icons.play_arrow, 'Play', () {}),
                       _buildBottomAction(Icons.add, 'Add', () {}),
-                      _buildBottomAction(Icons.share, 'Share', () {}),
                       _buildBottomAction(
                         Icons.remove_circle_outline,
                         'Remove',

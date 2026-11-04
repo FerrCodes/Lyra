@@ -92,8 +92,8 @@ class PlaylistHeader extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xD9FFFFFF),
-                    fontSize: 13,
-                    height: 1.35,
+                    fontSize: 15,
+                    height: 1,
                     fontWeight: FontWeight.w400,
                   ),
                 ),

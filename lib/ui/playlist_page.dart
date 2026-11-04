@@ -5,9 +5,7 @@ import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import '../database/database.dart';
 import '../providers/database_provider.dart';
 import 'playlist_detail_page.dart';
-import 'dart:ui';
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 // Kabel untuk dipanggil dari home_page.dart
@@ -29,6 +27,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
   bool isEditMode = false;
   bool _isMenuOpen = false;
   final Map<int, GlobalKey> _cardKeys = {};
+  final Map<int, GlobalKey> _moreButtonKeys = {};
 
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
@@ -294,92 +293,59 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     );
   }
 
-  void _showInstagramMenu(
-    Offset globalPosition,
-    Playlist playlist,
-    GlobalKey cardKey,
-  ) {
-    // Guard: pastikan context & render object valid sebelum lanjut
-    final ctx = cardKey.currentContext;
-    if (ctx == null) return;
-    final renderObject = ctx.findRenderObject();
+  void _showCardPopover(BuildContext buttonContext, Playlist playlist) {
+    final renderObject = buttonContext.findRenderObject();
     if (renderObject is! RenderBox) return;
 
-    HapticFeedback.mediumImpact();
-    setState(() => _isMenuOpen = true);
-
-    // Dapatkan posisi card asli di layar
     final RenderBox renderBox = renderObject;
-    final position = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final screenWidth = MediaQuery.of(context).size.width;
 
-    late OverlayEntry overlayEntry;
-    overlayEntry = OverlayEntry(
+    const double popoverWidth = 180.0; // Lebar popover
+
+    // 👇 LOGIKA PINTAR UNTUK POSISI HORIZONTAL (KIRI/KANAN)
+    // Kita asumsikan titik tengah tombol adalah patokan kita.
+    final double buttonCenter = offset.dx + (renderBox.size.width / 2);
+
+    // Posisi awal: kita taruh popover tepat di tengah bawah tombol
+    double leftPosition = buttonCenter - (popoverWidth / 2);
+
+    // Cek apakah popover keluar batas KIRI layar
+    if (leftPosition < 16.0) {
+      leftPosition = 16.0; // Paksa mentok 16px dari kiri layar
+    }
+    // Cek apakah popover keluar batas KANAN layar
+    else if (leftPosition + popoverWidth > screenWidth - 16.0) {
+      leftPosition =
+          screenWidth -
+          popoverWidth -
+          16.0; // Paksa mentok 16px dari kanan layar
+    }
+
+    // Posisi Vertikal (Tepat di bawah tombol)
+    final double topPosition = offset.dy + renderBox.size.height - 27;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.1),
       builder: (context) {
-        // Lebar menu dibuat tetap (tidak ikut lebar card)
-        const double menuWidth = 220;
-
-        // Cek apakah menu muat di bawah card, jika tidak taruh di atas card
-        final bool isBottomHalf =
-            position.dy > MediaQuery.of(context).size.height / 2;
-
         return Stack(
           children: [
-            // Background Gelap + Blur
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() => _isMenuOpen = false);
-                  overlayEntry.remove();
-                },
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(color: Colors.black.withValues(alpha: 0.5)),
-                ),
-              ),
-            ),
-
-            // Card Palsu (Melayang)
             Positioned(
-              top: position.dy,
-              left: position.dx,
-              width: size.width,
-              height: size.height,
-              child: Transform.scale(
-                scale: 1.05,
-                child: Material(
-                  color: Colors.transparent,
-                  child: _buildPlaylistCard(
-                    playlist,
-                    isEditMode: false,
-                    key: UniqueKey(),
-                  ),
-                ),
-              ),
-            ),
-
-            // Menu Opsi
-            Positioned(
-              // Jika card di bawah layar, taruh menu di atas card. Jika di atas, taruh di bawah.
-              top: isBottomHalf
-                  ? position.dy - 230
-                  : position.dy + size.height + 10,
-              left: ((position.dx + (size.width / 2)) - (menuWidth / 2)).clamp(
-                14.0,
-                MediaQuery.of(context).size.width - menuWidth - 14.0,
-              ),
-              width: menuWidth,
+              top: topPosition,
+              left: leftPosition,
               child: Material(
                 color: Colors.transparent,
                 child: Container(
+                  width: popoverWidth,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
+                        color: Colors.black.withValues(alpha: 0.15),
                         blurRadius: 15,
-                        spreadRadius: 2,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
@@ -387,20 +353,13 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildMenuOption(Icons.play_arrow_rounded, 'Play', () {
-                        setState(() => _isMenuOpen = false);
-                        overlayEntry.remove();
+                        Navigator.pop(context);
                       }),
                       _buildMenuOption(Icons.edit_outlined, 'Edit', () {
-                        setState(() => _isMenuOpen = false);
-                        overlayEntry.remove();
-                      }),
-                      _buildMenuOption(Icons.share_outlined, 'Share', () {
-                        setState(() => _isMenuOpen = false);
-                        overlayEntry.remove();
+                        Navigator.pop(context);
                       }),
                       _buildMenuOption(Icons.delete_outline, 'Delete', () {
-                        setState(() => _isMenuOpen = false);
-                        overlayEntry.remove();
+                        Navigator.pop(context);
                       }, isDestructive: true),
                     ],
                   ),
@@ -410,43 +369,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
           ],
         );
       },
-    );
-
-    Overlay.of(context).insert(overlayEntry);
-  }
-
-  // Widget Helper untuk baris menu ala Instagram
-  Widget _buildMenuOption(
-    IconData icon,
-    String title,
-    VoidCallback onTap, {
-    bool isDestructive = false,
-  }) {
-    final color = isDestructive ? Colors.redAccent : Colors.black87;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -540,9 +462,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     );
   }
 
-  // ==========================================
-  // BAGIAN INI YANG KITA UBAH
-  // ==========================================
   Widget _buildPlaylistCard(
     Playlist playlist, {
     required bool isEditMode,
@@ -570,11 +489,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   builder: (_) => PlaylistDetailPage(playlist: playlist),
                 ),
               ).then((_) => _loadPlaylists());
-            },
-      onLongPress: isEditMode
-          ? null
-          : () {
-              _showInstagramMenu(Offset.zero, playlist, cardKey);
             },
       child: Container(
         key: cardKey,
@@ -665,23 +579,81 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12.0,
-                vertical: 16.0,
+              padding: const EdgeInsets.only(
+                left: 12.0,
+                right: 4.0, // Kurangi padding kanan agar tombol mepet
+                top: 8.0,
+                bottom: 8.0,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    playlist.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                  Expanded(
+                    child: Text(
+                      playlist.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
+                  Builder(
+                    builder: (buttonContext) {
+                      final moreKey = _moreButtonKeys.putIfAbsent(
+                        playlist.id,
+                        () => GlobalKey(),
+                      );
+                      return IconButton(
+                        key: moreKey,
+                        icon: const Icon(
+                          Icons.more_vert,
+                          color: Colors.black54,
+                          size: 20,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          _showCardPopover(buttonContext, playlist);
+                        },
+                      );
+                    },
+                  ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget Helper untuk baris menu popover
+  Widget _buildMenuOption(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? Colors.redAccent : Colors.black87;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
