@@ -97,6 +97,9 @@ class _AlbumsPageState extends ConsumerState<AlbumsPage> {
                     )
                     .toList(),
                 0,
+                albumIds: {
+                  for (var s in albumSongs) s.path: s.albumId.toString(),
+                },
               );
             },
             child: Container(

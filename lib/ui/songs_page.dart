@@ -206,6 +206,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
           )
           .toList(),
       0,
+      albumIds: {for (var s in shuffled) s.path: s.albumId.toString()},
     );
     widget.onPlayTriggered?.call();
   }
@@ -228,6 +229,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
           )
           .toList(),
       0,
+      albumIds: {for (var s in _displayedSongs) s.path: s.albumId.toString()},
     );
     widget.onPlayTriggered?.call();
   }
@@ -651,6 +653,10 @@ class SongsPageState extends ConsumerState<SongsPage> {
                               )
                               .toList(),
                           index,
+                          albumIds: {
+                            for (var s in _displayedSongs)
+                              s.path: s.albumId.toString(),
+                          },
                         );
                         widget.onPlayTriggered?.call();
                       },

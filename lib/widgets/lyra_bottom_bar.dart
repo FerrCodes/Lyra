@@ -6,6 +6,7 @@ import '../main.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../ui/player_page.dart';
 import '../ui/search_page.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 
 class LyraBottomBar extends ConsumerStatefulWidget {
   final int currentIndex;
@@ -480,14 +481,26 @@ class MiniPlayerContent extends StatelessWidget {
     return Row(
       children: [
         const SizedBox(width: 4),
-        Container(
-          width: isCompact ? 38 : 44,
-          height: isCompact ? 38 : 44,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: QueryArtworkWidget(
+            id: int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0,
+            type: ArtworkType.ALBUM,
+            size: 200,
+            artworkHeight: isCompact ? 38 : 44,
+            artworkWidth: isCompact ? 38 : 44,
+            artworkBorder: BorderRadius.circular(8),
+            nullArtworkWidget: Container(
+              width: isCompact ? 38 : 44,
+              height: isCompact ? 38 : 44,
+              color: Colors.grey.shade300,
+              child: const Icon(
+                Icons.music_note,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
           ),
-          child: const Icon(Icons.music_note, color: Colors.white, size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(

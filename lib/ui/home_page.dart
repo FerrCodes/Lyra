@@ -382,35 +382,6 @@ class _HomePageState extends State<HomePage> {
                 // HEADER BERANDA (Tombol Kiri & Avatar Profil Kanan)
                 LyraHeader(
                   title: '',
-                  leftWidget: GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fitur Notifikasi segera hadir'),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      height: 48,
-                      width: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.notifications_none,
-                        color: Colors.black,
-                        size: 24,
-                      ),
-                    ),
-                  ),
                   rightWidget: GestureDetector(
                     onTap: () {
                       Navigator.push(

@@ -183,7 +183,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                                   color: Colors.grey,
                                 ),
                         ),
-                        // Ikon Pensil Kecil
+                        // Ikon Kecil
                         Positioned(
                           bottom: 12,
                           right: 12,
@@ -302,11 +302,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     const double popoverWidth = 180.0; // Lebar popover
-
-    // 👇 LOGIKA PINTAR UNTUK POSISI HORIZONTAL (KIRI/KANAN)
-    // Kita asumsikan titik tengah tombol adalah patokan kita.
     final double buttonCenter = offset.dx + (renderBox.size.width / 2);
-
     // Posisi awal: kita taruh popover tepat di tengah bawah tombol
     double leftPosition = buttonCenter - (popoverWidth / 2);
 

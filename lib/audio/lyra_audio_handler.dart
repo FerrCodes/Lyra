@@ -1,30 +1,38 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 import '../database/database.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:path_provider/path_provider.dart';
 
 class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
-
-  // Tambahkan variabel Future ini
   late final Future<void> _sessionInitFuture;
 
   late final StreamSubscription<PlaybackEvent> _playbackSub;
   late final StreamSubscription<int?> _indexSub;
   late final StreamSubscription<Duration?> _durationSub;
 
+  // Simpan map albumId untuk diakses saat lagu berganti
+  Map<String, String> _currentAlbumIds = {};
+
   LyraAudioHandler() {
-    // Simpan Future-nya, tapi tidak perlu di-await di constructor
     _sessionInitFuture = _initAudioSession();
 
-    // Sinkronkan state just_audio ke audio_service
     _playbackSub = _player.playbackEventStream.listen(_broadcastState);
+
     _indexSub = _player.currentIndexStream.listen((index) {
       if (index != null && index >= 0 && index < queue.value.length) {
-        mediaItem.add(queue.value[index]);
+        final currentItem = queue.value[index];
+        mediaItem.add(currentItem);
+        // Ambil gambar setiap kali lagu berganti
+        _fetchAndUpdateArtwork(currentItem);
       }
     });
+
     _durationSub = _player.durationStream.listen((duration) {
       final current = mediaItem.value;
       if (current != null && duration != null) {
@@ -35,7 +43,6 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   Future<void> _initAudioSession() async {
     final session = await AudioSession.instance;
-    // Konfigurasi standar untuk aplikasi musik
     await session.configure(const AudioSessionConfiguration.music());
   }
 
@@ -66,68 +73,83 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     );
   }
 
-  Future<void> playQueue(List<Song> songs, int initialIndex) async {
+  Future<void> playQueue(
+    List<Song> songs,
+    int initialIndex, {
+    Map<String, String>? albumIds,
+  }) async {
     if (songs.isEmpty) return;
-    if (initialIndex < 0 || initialIndex >= songs.length) {
-      initialIndex = 0;
-    }
+    if (initialIndex < 0 || initialIndex >= songs.length) initialIndex = 0;
 
-    // Tunggu AudioSession siap
     await _sessionInitFuture;
+    _currentAlbumIds = albumIds ?? {};
 
-    final mediaItems = songs
-        .map(
-          (s) => MediaItem(
-            id: s.path,
-            title: s.title,
-            artist: s.artist,
-            album: s.album,
-            duration: Duration(milliseconds: s.durationMs),
-          ),
-        )
-        .toList();
+    // 1. Buat antrean dasar (tanpa gambar) agar pemutaran instan
+    final mediaItems = songs.map((s) {
+      return MediaItem(
+        id: s.path,
+        title: s.title,
+        artist: s.artist,
+        album: s.album,
+        duration: Duration(milliseconds: s.durationMs),
+        extras: {'albumId': _currentAlbumIds[s.path] ?? '0'},
+      );
+    }).toList();
 
     final audioSources = songs.map((s) => AudioSource.file(s.path)).toList();
 
     try {
-      // LOAD AUDIO TERLEBIH DAHULU
       await _player.setAudioSources(audioSources, initialIndex: initialIndex);
-
-      // JIKA BERHASIL, BARU UPDATE QUEUE & UI
       queue.add(mediaItems);
       mediaItem.add(mediaItems[initialIndex]);
-
-      // Gunakan unawaited agar tidak menggantung
       unawaited(play());
+
+      // 2. Ambil gambar untuk lagu pertama secara background
+      _fetchAndUpdateArtwork(mediaItems[initialIndex]);
     } catch (e) {
-      // Jika gagal (file rusak/hilang), state UI tidak akan berubah
       playbackState.add(
         playbackState.value.copyWith(
           processingState: AudioProcessingState.error,
         ),
       );
-      print("Gagal memutar antrean: $e");
-      // Opsional: Kamu bisa memunculkan SnackBar di sini lewat global key/event
     }
   }
 
-  Future<void> loadFile(String path, {String? title}) async {
-    await _sessionInitFuture;
+  // Fungsi baru untuk mengambil gambar secara async dan memperbarui notifikasi
+  Future<void> _fetchAndUpdateArtwork(MediaItem item) async {
+    final albumId = item.extras?['albumId'];
+    if (albumId == null || albumId == '0') return;
 
     try {
-      await _player.setFilePath(path);
-
-      // Jika berhasil, baru update UI
-      final item = MediaItem(
-        id: path,
-        title: title ?? path.split('/').last,
-        album: 'Lyra',
-        artist: 'Unknown',
+      final audioQuery = OnAudioQuery();
+      Uint8List? artBytes = await audioQuery.queryArtwork(
+        int.parse(albumId),
+        ArtworkType.ALBUM,
+        format: ArtworkFormat.JPEG,
+        size: 500,
       );
-      mediaItem.add(item);
-      queue.add([item]);
+
+      if (artBytes != null) {
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/album_art_$albumId.jpg');
+        await file.writeAsBytes(artBytes);
+
+        // Perbarui MediaItem yang sedang diputar dengan gambar
+        if (mediaItem.value?.id == item.id) {
+          final updatedItem = item.copyWith(artUri: Uri.file(file.path));
+          mediaItem.add(updatedItem);
+
+          // Update juga di antrean agar sinkron
+          final newQueue = List<MediaItem>.from(queue.value);
+          final index = newQueue.indexWhere((e) => e.id == item.id);
+          if (index != -1) {
+            newQueue[index] = updatedItem;
+            queue.add(newQueue);
+          }
+        }
+      }
     } catch (e) {
-      print("Gagal memuat file: $e");
+      // Abaikan error gambar
     }
   }
 
@@ -148,31 +170,21 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() async {
-    if (_player.hasNext) {
-      await _player.seekToNext();
-    }
+    if (_player.hasNext) await _player.seekToNext();
   }
 
   @override
   Future<void> skipToPrevious() async {
-    if (_player.hasPrevious) {
-      await _player.seekToPrevious();
-    }
+    if (_player.hasPrevious) await _player.seekToPrevious();
   }
 
-  // 3. Tambahkan ini agar bisa ganti lagu dari notifikasi/headset
   @override
   Future<void> skipToQueueItem(int index) async {
     if (index < 0 || index >= queue.value.length) return;
     await _player.seek(Duration.zero, index: index);
   }
 
-  @override
-  Future<void> onTaskRemoved() async {
-    super.onTaskRemoved();
-  }
-
-  // 4. Bersihkan resource saat aplikasi ditutup
+  // Bersihkan resource saat aplikasi ditutup
   Future<void> disposePlayer() async {
     await _playbackSub.cancel();
     await _indexSub.cancel();

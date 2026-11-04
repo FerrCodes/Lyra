@@ -110,6 +110,9 @@ class _FoldersPageState extends ConsumerState<FoldersPage> {
                     )
                     .toList(),
                 0,
+                albumIds: {
+                  for (var s in folderSongs) s.path: s.albumId.toString(),
+                },
               );
             },
           );

@@ -26,12 +26,12 @@ Future<void> main() async {
   );
 
   if (Platform.isAndroid) {
-    // Minta izin audio (berlaku untuk Android 13+)
     await Permission.audio.request();
-    // Minta izin storage (untuk Android 12 ke bawah / fallback)
-    // Di Android 13+, ini akan otomatis diabaikan (denied) oleh sistem,
-    // tapi tidak akan membuat aplikasi crash.
     await Permission.storage.request();
+
+    if (await Permission.photos.isDenied) {
+      await Permission.photos.request();
+    }
   }
 
   audioHandler = await AudioService.init(
