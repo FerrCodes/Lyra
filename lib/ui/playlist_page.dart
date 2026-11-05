@@ -26,8 +26,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
   final ScrollController _scrollController = ScrollController();
   bool isEditMode = false;
   bool _isMenuOpen = false;
-  final Map<int, GlobalKey> _cardKeys = {};
-  final Map<int, GlobalKey> _moreButtonKeys = {};
 
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
@@ -463,12 +461,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     required bool isEditMode,
     required Key key,
   }) {
-    // Pakai key yang stabil per playlist (tidak dibuat ulang tiap build)
-    final GlobalKey cardKey = _cardKeys.putIfAbsent(
-      playlist.id,
-      () => GlobalKey(),
-    );
-
     // Cek apakah playlist punya gambar
     final bool hasImage =
         playlist.imagePath != null && playlist.imagePath!.isNotEmpty;
@@ -487,7 +479,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
               ).then((_) => _loadPlaylists());
             },
       child: Container(
-        key: cardKey,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -596,12 +587,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   ),
                   Builder(
                     builder: (buttonContext) {
-                      final moreKey = _moreButtonKeys.putIfAbsent(
-                        playlist.id,
-                        () => GlobalKey(),
-                      );
                       return IconButton(
-                        key: moreKey,
                         icon: const Icon(
                           Icons.more_vert,
                           color: Colors.black54,

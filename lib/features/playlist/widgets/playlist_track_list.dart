@@ -2,6 +2,10 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import '../../../database/database.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import '../../../main.dart';
+import 'dart:math' as math;
+import 'package:audio_service/audio_service.dart';
+import 'dart:async';
 
 class PlaylistTrackList extends StatelessWidget {
   final List<Song> displayedSongs;
@@ -143,7 +147,7 @@ class PlaylistTrackList extends StatelessWidget {
                     const SizedBox(width: 11),
                     _buildArtwork(song, index),
                     const SizedBox(width: 12),
-                    _buildSongLabels(song),
+                    _buildSongLabels(song, false),
                     const SizedBox(width: 8),
                     ReorderableDragStartListener(
                       index: index,
@@ -165,41 +169,61 @@ class PlaylistTrackList extends StatelessWidget {
       );
     }
 
-    return SliverList.builder(
-      itemCount: displayedSongs.length,
-      itemBuilder: (context, index) {
-        final song = displayedSongs[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(17),
-              onTap: () => onPlaySong(song),
-              onLongPress: () => onLongPress(song),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 5, 8),
-                child: Row(
-                  children: [
-                    _buildArtwork(song, index),
-                    const SizedBox(width: 13),
-                    _buildSongLabels(song),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'More options',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => onShowOptions(song),
-                      icon: const Icon(
-                        Icons.more_vert,
-                        color: Color(0xFF858077),
-                        size: 23,
-                      ),
+    return StreamBuilder<MediaItem?>(
+      stream: audioHandler.mediaItem,
+      builder: (context, snapshot) {
+        final currentMediaItem = snapshot.data;
+
+        return SliverList.builder(
+          itemCount: displayedSongs.length,
+          itemBuilder: (context, index) {
+            final song = displayedSongs[index];
+            // Cek apakah lagu ini yang sedang diputar
+            final isPlaying = currentMediaItem?.id == song.path;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(17),
+                  onTap: () => onPlaySong(song),
+                  onLongPress: () => onLongPress(song),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 5, 8),
+                    child: Row(
+                      children: [
+                        _buildArtwork(song, index),
+                        const SizedBox(width: 13),
+                        _buildSongLabels(
+                          song,
+                          isPlaying,
+                        ), // <-- Kirim status isPlaying
+                        const SizedBox(width: 8),
+
+                        // TAMPILKAN ANIMASI JIKA SEDANG DIPUTAR
+                        if (isPlaying) ...[
+                          const EqualizerAnimation(),
+                          const SizedBox(width: 8),
+                        ],
+
+                        IconButton(
+                          tooltip: 'More options',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => onShowOptions(song),
+                          icon: const Icon(
+                            Icons.more_vert,
+                            color: Color(0xFF858077),
+                            size: 23,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -248,7 +272,7 @@ class PlaylistTrackList extends StatelessWidget {
     );
   }
 
-  Widget _buildSongLabels(Song song) {
+  Widget _buildSongLabels(Song song, bool isPlaying) {
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,8 +282,9 @@ class PlaylistTrackList extends StatelessWidget {
             song.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFF292822),
+            style: TextStyle(
+              // Ubah warna menjadi biru jika sedang diputar
+              color: isPlaying ? Colors.blue : const Color(0xFF292822),
               fontSize: 14,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.1,
@@ -277,6 +302,82 @@ class PlaylistTrackList extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Widget Animasi Equalizer
+class EqualizerAnimation extends StatefulWidget {
+  const EqualizerAnimation({super.key});
+
+  @override
+  State<EqualizerAnimation> createState() => _EqualizerAnimationState();
+}
+
+class _EqualizerAnimationState extends State<EqualizerAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late StreamSubscription<PlaybackState> _playbackStateSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    // Pantau status putar (playing/paused)
+    _playbackStateSub = audioHandler.playbackState.listen((state) {
+      if (state.playing) {
+        // Jika lagu main, jalankan animasi
+        if (!_controller.isAnimating) {
+          _controller.repeat(reverse: true);
+        }
+      } else {
+        // Jika lagu pause, hentikan animasi tepat di frame terakhir
+        if (_controller.isAnimating) {
+          _controller.stop();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _playbackStateSub.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            _buildBar(math.sin(_controller.value * math.pi * 2).abs(), 12),
+            const SizedBox(width: 2),
+            _buildBar(math.cos(_controller.value * math.pi * 2).abs(), 16),
+            const SizedBox(width: 2),
+            _buildBar(math.sin(_controller.value * math.pi * 3).abs(), 10),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBar(double value, double maxHeight) {
+    return Container(
+      width: 3,
+      height: 4 + (maxHeight * value),
+      decoration: BoxDecoration(
+        color: Colors.blue, // <--- Warna diubah menjadi biru
+        borderRadius: BorderRadius.circular(2),
       ),
     );
   }

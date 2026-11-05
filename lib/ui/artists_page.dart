@@ -105,6 +105,8 @@ class _ArtistsPageState extends ConsumerState<ArtistsPage> {
                 albumIds: {
                   for (var s in artistSongs) s.path: s.albumId.toString(),
                 },
+                sourceType: 'Artist',
+                sourceName: artistName,
               );
             },
           );

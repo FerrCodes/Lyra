@@ -97,9 +97,13 @@ class _AlbumsPageState extends ConsumerState<AlbumsPage> {
                     )
                     .toList(),
                 0,
+                // Kurung kurawal ini HANYA untuk albumIds
                 albumIds: {
                   for (var s in albumSongs) s.path: s.albumId.toString(),
                 },
+                // sourceName diletakkan di luar kurung kurawal
+                sourceType: 'Album',
+                sourceName: albumName,
               );
             },
             child: Container(

@@ -146,7 +146,9 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           )
           .toList(),
       startIndex,
-      albumIds: fetchedAlbumIds, // Kirim data yang benar
+      albumIds: fetchedAlbumIds,
+      sourceType: 'Playlist',
+      sourceName: widget.playlist.name,
     );
   }
 

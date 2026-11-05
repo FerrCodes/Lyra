@@ -77,6 +77,8 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     List<Song> songs,
     int initialIndex, {
     Map<String, String>? albumIds,
+    String? sourceType,
+    String? sourceName,
   }) async {
     if (songs.isEmpty) return;
     if (initialIndex < 0 || initialIndex >= songs.length) initialIndex = 0;
@@ -84,7 +86,6 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     await _sessionInitFuture;
     _currentAlbumIds = albumIds ?? {};
 
-    // 1. Buat antrean dasar (tanpa gambar) agar pemutaran instan
     final mediaItems = songs.map((s) {
       return MediaItem(
         id: s.path,
@@ -92,7 +93,11 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
         artist: s.artist,
         album: s.album,
         duration: Duration(milliseconds: s.durationMs),
-        extras: {'albumId': _currentAlbumIds[s.path] ?? '0'},
+        extras: {
+          'albumId': _currentAlbumIds[s.path] ?? '0',
+          'sourceType': sourceType ?? 'Unknown', // Simpan tipe sumber
+          'sourceName': sourceName ?? 'Unknown', // Simpan nama sumber
+        },
       );
     }).toList();
 
