@@ -12,6 +12,9 @@ import '../audio/lyra_audio_handler.dart';
 import '../../features/playlist/widgets/playlist_header.dart';
 import '../../features/playlist/widgets/playlist_track_list.dart';
 import '../../features/playlist/sheets/edit_playlist_sheet.dart';
+import '../providers/songs_provider.dart';
+import 'package:on_audio_query/on_audio_query.dart';
+import '../models/song.dart' as local;
 
 class PlaylistDetailPage extends ConsumerStatefulWidget {
   final Playlist playlist;
@@ -116,6 +119,18 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       startIndex = 0;
     }
 
+    // Ambil daftar lagu asli untuk mendapatkan albumId
+    final allLocalSongs = ref.read(allSongsProvider).value ?? [];
+    final songMap = {for (var s in allLocalSongs) s.id: s.albumId};
+
+    Map<String, String> fetchedAlbumIds = {};
+    for (var song in listToPlay) {
+      final albumId = songMap[song.id]; // Cocokkan berdasarkan ID lagu
+      if (albumId != null && albumId != '0') {
+        fetchedAlbumIds[song.path] = albumId;
+      }
+    }
+
     handler.playQueue(
       listToPlay
           .map(
@@ -131,6 +146,7 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           )
           .toList(),
       startIndex,
+      albumIds: fetchedAlbumIds, // Kirim data yang benar
     );
   }
 
@@ -182,6 +198,22 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
   // === FUNGSI BOTTOM SHEET OPSI LAGU ===
   void _showSongOptions(Song song) {
+    // Cari albumId SEBELUM memunculkan bottom sheet
+    final albumIdStr = (ref.read(allSongsProvider).value ?? [])
+        .firstWhere(
+          (element) => element.id == song.id,
+          orElse: () => local.Song(
+            id: '',
+            title: '',
+            artist: '',
+            album: '',
+            path: '',
+            durationMs: 0,
+            albumId: '0',
+          ),
+        )
+        .albumId;
+
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -200,13 +232,25 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               child: Row(
                 children: [
                   Container(
-                    width: 40,
-                    height: 40,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade300,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.music_note, color: Colors.grey),
+                    clipBehavior: Clip.antiAlias,
+                    child: QueryArtworkWidget(
+                      id: int.tryParse(albumIdStr) ?? 0,
+                      type: ArtworkType.ALBUM,
+                      size: 200,
+                      artworkHeight: 50,
+                      artworkWidth: 50,
+                      artworkBorder: BorderRadius.circular(8),
+                      nullArtworkWidget: const Icon(
+                        Icons.music_note,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -673,7 +717,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
                       child: Row(
                         children: [
-                          // 👇 TOMBOL FILTER BARU (Gaya SongsPage)
                           GestureDetector(
                             onTap: _showFilterMenu,
                             child: Container(
@@ -716,7 +759,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             ),
                           ),
                           const Spacer(),
-                          // 👇 TOMBOL SHUFFLE (Tetap seperti desain baru)
                           Material(
                             color: const Color(0xFFECE9E2),
                             shape: const CircleBorder(),
@@ -733,7 +775,6 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          // 👇 TOMBOL PLAY (Tetap seperti desain baru)
                           Material(
                             color: const Color(0xFF24231F),
                             shape: const CircleBorder(),
@@ -817,6 +858,10 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   // Container, Column, atau SliverToBoxAdapter.
                   PlaylistTrackList(
                     displayedSongs: _displayedSongs,
+                    albumIds: {
+                      for (var s in (ref.watch(allSongsProvider).value ?? []))
+                        s.id: s.albumId,
+                    },
                     isSelectionMode: _isSelectionMode,
                     selectedSongIds: _selectedSongIds,
                     currentSort: _currentSort,

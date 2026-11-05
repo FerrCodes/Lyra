@@ -1,13 +1,14 @@
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import '../../../database/database.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 
 class PlaylistTrackList extends StatelessWidget {
   final List<Song> displayedSongs;
   final bool isSelectionMode;
   final Set<String> selectedSongIds;
   final String currentSort;
-
+  final Map<String, String> albumIds;
   final Function(int oldIndex, int newIndex) onReorder;
   final Function(Song song) onToggleSelection;
   final Function(Song song) onPlaySong;
@@ -25,6 +26,7 @@ class PlaylistTrackList extends StatelessWidget {
     required this.onPlaySong,
     required this.onLongPress,
     required this.onShowOptions,
+    required this.albumIds,
   });
 
   static const List<List<Color>> _artworkPalettes = [
@@ -139,7 +141,7 @@ class PlaylistTrackList extends StatelessWidget {
                       size: 22,
                     ),
                     const SizedBox(width: 11),
-                    _buildArtwork(index),
+                    _buildArtwork(song, index),
                     const SizedBox(width: 12),
                     _buildSongLabels(song),
                     const SizedBox(width: 8),
@@ -179,7 +181,7 @@ class PlaylistTrackList extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(8, 8, 5, 8),
                 child: Row(
                   children: [
-                    _buildArtwork(index),
+                    _buildArtwork(song, index),
                     const SizedBox(width: 13),
                     _buildSongLabels(song),
                     const SizedBox(width: 8),
@@ -203,30 +205,45 @@ class PlaylistTrackList extends StatelessWidget {
     );
   }
 
-  Widget _buildArtwork(int index) {
-    final palette = _artworkPalettes[index % _artworkPalettes.length];
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(13),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: palette,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 7,
-            offset: Offset(0, 3),
+  Widget _buildArtwork(Song song, int index) {
+    // Ambil albumId dari map yang dikirim dari halaman utama
+    final String albumIdStr = albumIds[song.id] ?? '0';
+    final int albumId = int.tryParse(albumIdStr) ?? 0;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(13),
+      child: QueryArtworkWidget(
+        id: albumId,
+        type: ArtworkType.ALBUM,
+        size: 200,
+        artworkHeight: 50,
+        artworkWidth: 50,
+        artworkBorder: BorderRadius.circular(13),
+        // Jika tidak ada gambar, gunakan desain gradient bawaan
+        nullArtworkWidget: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(13),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _artworkPalettes[index % _artworkPalettes.length],
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x12000000),
+                blurRadius: 7,
+                offset: Offset(0, 3),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: const Icon(
-        Icons.graphic_eq_rounded,
-        color: Color(0xE6FFFFFF),
-        size: 25,
+          child: const Icon(
+            Icons.graphic_eq_rounded,
+            color: Color(0xE6FFFFFF),
+            size: 25,
+          ),
+        ),
       ),
     );
   }
