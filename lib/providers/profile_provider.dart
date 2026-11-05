@@ -34,3 +34,9 @@ Future<void> updateProfileName(String newName) async {
   await prefs.setString('profile_name', newName);
   profileNameNotifier.value = newName;
 }
+
+Future<void> removeProfileImage() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('profile_image');
+  profileImageNotifier.value = null;
+}

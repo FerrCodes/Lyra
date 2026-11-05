@@ -257,16 +257,27 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.music_note,
-                            color: Colors.grey,
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: QueryArtworkWidget(
+                            id: int.parse(song.albumId),
+                            type: ArtworkType.ALBUM,
+                            size: 200,
+                            artworkHeight: 40,
+                            artworkWidth: 40,
+                            artworkBorder: BorderRadius.circular(8),
+                            nullArtworkWidget: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.music_note,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),

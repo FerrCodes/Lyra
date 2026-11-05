@@ -101,12 +101,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _saveChanges() async {
     if (!_hasChanges) return;
 
-    // Simpan gambar jika berubah
-    if (_currentImagePath != _originalImagePath && _currentImagePath != null) {
-      await updateProfileImage(_currentImagePath!);
+    // Simpan gambar jika ada perubahan
+    if (_currentImagePath != _originalImagePath) {
+      if (_currentImagePath == null) {
+        // Jika dihapus, hapus dari SharedPreferences dan jembatan
+        await removeProfileImage();
+      } else {
+        // Jika diganti, simpan gambar baru
+        await updateProfileImage(_currentImagePath!);
+      }
     }
 
-    // Simpan nama jika berubah
+    // Simpan nama jika ada perubahan
     final newName = _nameController.text.trim();
     if (newName.isNotEmpty && newName != _originalName) {
       await updateProfileName(newName);
@@ -118,7 +124,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       _originalName = newName;
     });
 
-    // Tutup keyboard dan beri notifikasi
     FocusScope.of(context).unfocus();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,7 +168,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   child: Column(
                     children: [
                       GestureDetector(
-                        onTap: _pickImage,
+                        onTap: _showPhotoOptions,
                         child: Stack(
                           children: [
                             Container(
@@ -222,7 +227,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   ],
                                 ),
                                 child: const Icon(
-                                  Icons.camera_alt,
+                                  Icons.add_photo_alternate,
                                   color: Colors.black87,
                                   size: 18,
                                 ),
@@ -234,34 +239,50 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                       const SizedBox(height: 16),
 
-                      // INPUT NAMA (TANPA TOMBOL SIMPAN)
+                      // INPUT NAMA (Dengan Efek Floating Label)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: TextField(
                           controller: _nameController,
-                          textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: Colors.black87,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Ketik nama kamu...',
-                            hintStyle: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontWeight: FontWeight.normal,
+                            labelText: 'Nama Pengguna',
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            floatingLabelStyle: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.bold,
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade100,
+                            fillColor: const Color(
+                              0xFFF2F2F2,
+                            ), // Warna abu pudar
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16,
-                              vertical: 16,
+                              vertical: 18,
                             ),
                             prefixIcon: const Icon(
                               Icons.person_outline,
                               color: Colors.grey,
+                              size: 24,
                             ),
+
+                            // Garis pinggir dihilangkan
                             border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
                               borderSide: BorderSide.none,
                             ),
@@ -490,6 +511,86 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Fungsi untuk menampilkan bottom sheet pilihan foto
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // 1. Pilihan Ambil dari Galeri
+                _buildPhotoOption(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Galeri',
+                  onTap: () {
+                    Navigator.pop(context); // Tutup bottom sheet dulu
+                    _pickImage(); // Panggil fungsi Kotlin untuk buka galeri
+                  },
+                ),
+
+                // 2. Pilihan Hapus Foto
+                _buildPhotoOption(
+                  icon: Icons.delete_outline,
+                  label: 'Hapus Foto',
+                  iconColor: Colors.redAccent, // Beri warna merah untuk hapus
+                  onTap: () {
+                    Navigator.pop(context);
+                    setState(() {
+                      _currentImagePath = null; // Set foto jadi kosong
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Widget bantuan untuk tombol di dalam bottom sheet
+  Widget _buildPhotoOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color iconColor = Colors.black87,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: iconColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -348,7 +348,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildMenuOption(Icons.play_arrow_rounded, 'Play', () {
+                      _buildMenuOption(Icons.playlist_play, 'Play', () {
                         Navigator.pop(context);
                       }),
                       _buildMenuOption(Icons.edit_outlined, 'Edit', () {

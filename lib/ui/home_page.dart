@@ -326,7 +326,7 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                           child: const Icon(
-                            Icons.add,
+                            Icons.playlist_add,
                             color: Colors.black,
                             size: 20,
                           ),
