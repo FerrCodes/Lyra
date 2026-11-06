@@ -8,6 +8,7 @@ import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import '../features/playlist/widgets/playlist_track_list.dart';
 
 final GlobalKey<SongsPageState> songsPageKey = GlobalKey<SongsPageState>();
 
@@ -645,9 +646,21 @@ class SongsPageState extends ConsumerState<SongsPage> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Colors.grey),
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.more_vert, color: Colors.grey),
-                        onPressed: () => _showSongOptions(song, isFav),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isPlaying) ...[
+                            const EqualizerAnimation(),
+                            const SizedBox(width: 8),
+                          ],
+                          IconButton(
+                            icon: const Icon(
+                              Icons.more_vert,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => _showSongOptions(song, isFav),
+                          ),
+                        ],
                       ),
                       onTap: () async {
                         final handler = audioHandler as LyraAudioHandler;

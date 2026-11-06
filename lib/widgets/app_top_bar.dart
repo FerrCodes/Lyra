@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../providers/profile_provider.dart';
 import 'default_profile_avatar.dart';
+import 'lyra_header.dart';
 import '../ui/settings_page.dart';
 import '../ui/profile_page.dart';
 import '../ui/songs_page.dart';
@@ -28,40 +29,11 @@ class AppTopBar extends StatelessWidget {
     );
   }
 
-  // FUNGSI BAKU: Kapsul Putih dengan fungsi onTap langsung di dalam
-  Widget _buildPill({
+  // Fungsi khusus untuk Avatar (karena ada bordernya)
+  Widget _buildAvatarCircle({
     required Widget child,
     required VoidCallback onTap,
-    double? width,
   }) {
-    return Container(
-      height: 48,
-      width: width,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap, // <--- Fungsi klik di sini
-          child: child,
-        ),
-      ),
-    );
-  }
-
-  // FUNGSI BAKU: Lingkaran Putih dengan fungsi onTap langsung di dalam
-  Widget _buildCircle({required Widget child, required VoidCallback onTap}) {
     return Container(
       height: 48,
       width: 48,
@@ -81,13 +53,12 @@ class AppTopBar extends StatelessWidget {
         shape: const CircleBorder(),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onTap, // <--- Fungsi klik di sini
+          onTap: onTap,
           customBorder: const CircleBorder(),
           child: Stack(
             alignment: Alignment.center,
             children: [
               ClipOval(child: SizedBox(width: 48, height: 48, child: child)),
-              // Border tipis di atas gambar
               Container(
                 width: 48,
                 height: 48,
@@ -112,19 +83,16 @@ class AppTopBar extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          _buildCircle(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfilePage()),
-              );
-            },
+          _buildAvatarCircle(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfilePage()),
+            ),
             child: ValueListenableBuilder<String?>(
               valueListenable: profileImageNotifier,
               builder: (context, imagePath, child) {
-                if (imagePath != null && imagePath.isNotEmpty) {
+                if (imagePath != null && imagePath.isNotEmpty)
                   return Image.file(File(imagePath), fit: BoxFit.cover);
-                }
                 return const DefaultProfileAvatar(size: 48);
               },
             ),
@@ -137,36 +105,41 @@ class AppTopBar extends StatelessWidget {
     if (currentTab == 1) {
       return Row(
         children: [
-          Builder(
-            builder: (buttonContext) {
-              return _buildPill(
-                onTap: () => songsPageKey.currentState?.triggerFilterDialog(
-                  buttonContext,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.sort, color: Colors.black87, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        currentSortFilter,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+          TopBarButton(
+            isCircle: false,
+            onTap: () {},
+            customChild: Builder(
+              builder: (buttonContext) {
+                return InkWell(
+                  onTap: () => songsPageKey.currentState?.triggerFilterDialog(
+                    buttonContext,
                   ),
-                ),
-              );
-            },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.sort, color: Colors.black87, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          currentSortFilter,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
           const Spacer(),
-          _buildPill(
-            onTap: () {}, // Dummy onTap karena isinya ada dua tombol
-            child: Row(
+          TopBarButton(
+            isCircle: false,
+            onTap: () {},
+            customChild: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Material(
@@ -207,16 +180,15 @@ class AppTopBar extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildCircle(
+          TopBarButton(
             onTap: () =>
                 playlistPageKey.currentState?.showCreatePlaylistDialog(),
-            child: const Center(
-              child: Icon(Icons.playlist_add, color: Colors.black, size: 22),
-            ),
+            icon: Icons.playlist_add,
           ),
-          _buildPill(
+          TopBarButton(
+            isCircle: false,
             onTap: () => playlistPageKey.currentState?.toggleEditMode(),
-            child: Padding(
+            customChild: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Center(
                 child: ValueListenableBuilder<bool>(
@@ -246,9 +218,10 @@ class AppTopBar extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildPill(
-            onTap: () {}, // Dummy onTap
-            child: Row(
+          TopBarButton(
+            isCircle: false,
+            onTap: () {},
+            customChild: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Builder(
@@ -276,12 +249,10 @@ class AppTopBar extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     customBorder: const CircleBorder(),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsPage()),
-                      );
-                    },
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsPage()),
+                    ),
                     child: const Padding(
                       padding: EdgeInsets.all(12),
                       child: Icon(
@@ -295,19 +266,16 @@ class AppTopBar extends StatelessWidget {
               ],
             ),
           ),
-          _buildCircle(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfilePage()),
-              );
-            },
+          _buildAvatarCircle(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfilePage()),
+            ),
             child: ValueListenableBuilder<String?>(
               valueListenable: profileImageNotifier,
               builder: (context, imagePath, child) {
-                if (imagePath != null && imagePath.isNotEmpty) {
+                if (imagePath != null && imagePath.isNotEmpty)
                   return Image.file(File(imagePath), fit: BoxFit.cover);
-                }
                 return const DefaultProfileAvatar(size: 48);
               },
             ),

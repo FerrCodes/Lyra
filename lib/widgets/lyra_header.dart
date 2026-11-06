@@ -17,13 +17,10 @@ class LyraHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Bagian Kiri
         if (leftWidget != null)
           Flexible(child: _buildSmartContainer(leftWidget!))
         else
           const SizedBox(width: 48),
-
-        // Bagian Kanan
         if (rightWidget != null)
           Flexible(child: _buildSmartContainer(rightWidget!))
         else
@@ -32,9 +29,7 @@ class LyraHeader extends StatelessWidget {
     );
   }
 
-  // Fungsi pintar untuk mendeteksi jumlah tombol (Kiri & Kanan)
   Widget _buildSmartContainer(Widget child) {
-    // Jika isinya berupa Row (lebih dari 1 tombol), jadikan Kapsul
     if (child is Row) {
       return Container(
         height: 48,
@@ -56,7 +51,6 @@ class LyraHeader extends StatelessWidget {
       );
     }
 
-    // Jika hanya 1 widget (seperti Avatar), jadikan Lingkaran
     return Container(
       height: 48,
       width: 48,
@@ -76,7 +70,6 @@ class LyraHeader extends StatelessWidget {
   }
 }
 
-// Komponen Tombol Ikon khusus untuk dipakai di dalam LyraHeader
 class LyraHeaderIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
@@ -91,15 +84,23 @@ class LyraHeaderIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon, color: iconColor, size: 20),
-      onPressed: onTap,
-      visualDensity: VisualDensity.compact,
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+      ),
     );
   }
 }
 
-// Widget Tombol Top Bar dengan Efek Ripple (Splash) yang Rapi
+// WIDGET BAKU: Digunakan di SEMUA halaman untuk Kapsul & Lingkaran
 class TopBarButton extends StatelessWidget {
   final IconData? icon;
   final Widget? customChild;
@@ -111,27 +112,37 @@ class TopBarButton extends StatelessWidget {
     this.icon,
     this.customChild,
     required this.onTap,
-    this.isCircle = true, // Default: Lingkaran. Jika false: Kapsul
+    this.isCircle = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: isCircle
-          ? const CircleBorder()
-          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      elevation: 2,
-      shadowColor: Colors.black.withValues(alpha: 0.1),
-      clipBehavior:
-          Clip.antiAlias, // Memotong efek ripple agar rapi di dalam bentuk
-      child: InkWell(
-        onTap: onTap,
-        // Di dalam TopBarButton
-        child: Container(
-          height: 48,
-          width: isCircle ? 48 : null,
-          padding: isCircle ? null : const EdgeInsets.symmetric(horizontal: 16),
+    return Container(
+      height: 48,
+      width: isCircle ? 48 : null,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: isCircle ? null : BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: isCircle
+            ? const CircleBorder()
+            : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: isCircle
+              ? const CircleBorder()
+              : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: Center(
             widthFactor: 1.0,
             heightFactor: 1.0,

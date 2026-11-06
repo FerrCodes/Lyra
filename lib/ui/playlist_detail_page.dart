@@ -940,6 +940,9 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             // tidak ada panel putih full-width di belakangnya.
             // TOP BAR OVERLAY
             if (_isSelectionMode)
+              // ==========================================
+              // 1. TAMPILAN SAAT MULTI-SELECT (BAR HITAM)
+              // ==========================================
               Positioned(
                 top: topPadding + 12,
                 left: 16,
@@ -1009,120 +1012,83 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 ),
               )
             else
+              // ==========================================
+              // 2. TAMPILAN NORMAL (TOMBOL BACK & KAPSUL)
+              // ==========================================
               Positioned(
                 top: topPadding + 12,
                 left: 16,
                 right: 16,
-                child: LyraHeader(
-                  isDarkMode: true,
-                  leftWidget: LyraHeaderIconButton(
-                    icon: Icons.arrow_back_ios_new,
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  rightWidget: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      LyraHeaderIconButton(
-                        icon: Icons.star_border,
-                        onTap: () {},
-                      ),
-                      LyraHeaderIconButton(
-                        icon: Icons.add,
-                        onTap: _showAddSongsToPlaylist,
-                      ),
-                      LyraHeaderIconButton(
-                        icon: Icons.more_horiz,
-                        onTap: _showMoreMenu,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            Positioned(
-              top: topPadding + 12,
-              left: 16,
-              right: 16,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      height: 48,
-                      width: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.18),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Tombol Back (Kiri)
+                    TopBarButton(
+                      icon: Icons.arrow_back_ios_new,
+                      onTap: () => Navigator.pop(context),
+                    ),
+
+                    // Kapsul Kanan (Star, Add, More)
+                    TopBarButton(
+                      isCircle: false, // Kapsul
+                      onTap: () {}, // Dummy karena di dalamnya ada tombol
+                      customChild: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Tombol Star
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: () {},
+                              child: const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Icon(
+                                  Icons.star_border,
+                                  color: Colors.black87,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Tombol Add
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: _showAddSongsToPlaylist,
+                              child: const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Icon(
+                                  Icons.add,
+                                  color: Colors.black87,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Tombol More
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: _showMoreMenu,
+                              child: const Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Icon(
+                                  Icons.more_horiz,
+                                  color: Colors.black87,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: Colors.black,
-                        size: 20,
-                      ),
                     ),
-                  ),
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.18),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GestureDetector(
-                          onTap: () {},
-                          child: const Padding(
-                            padding: EdgeInsets.only(left: 16, right: 8),
-                            child: Icon(
-                              Icons.star_border,
-                              color: Colors.black87,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: _showAddSongsToPlaylist,
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
-                            child: Icon(
-                              Icons.add,
-                              color: Colors.black87,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: _showMoreMenu,
-                          child: const Padding(
-                            padding: EdgeInsets.only(left: 8, right: 16),
-                            child: Icon(
-                              Icons.more_horiz,
-                              color: Colors.black87,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
             // Action bar untuk mode seleksi.
             AnimatedPositioned(
