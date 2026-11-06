@@ -83,14 +83,12 @@ class SongsPageState extends ConsumerState<SongsPage> {
   }
 
   void _showFilterMenu(BuildContext buttonContext) {
-    // Guard: pastikan RenderBox valid sebelum dipakai
     final renderObject = buttonContext.findRenderObject();
     if (renderObject is! RenderBox) return;
 
     final RenderBox renderBox = renderObject;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
-
-    final double topPosition = (offset.dy - renderBox.size.height) + 25;
+    final double topPosition = offset.dy + renderBox.size.height - 60;
     final double leftPosition = offset.dx - 1;
 
     showDialog(

@@ -919,7 +919,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               right: 0,
               child: IgnorePointer(
                 child: Container(
-                  height: topPadding + 120,
+                  height: topPadding + 90,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
@@ -940,9 +940,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             // tidak ada panel putih full-width di belakangnya.
             // TOP BAR OVERLAY
             if (_isSelectionMode)
-              // ==========================================
-              // 1. TAMPILAN SAAT MULTI-SELECT (BAR HITAM)
-              // ==========================================
+              // TAMPILAN SAAT MULTI-SELECT (BAR HITAM)
               Positioned(
                 top: topPadding + 12,
                 left: 16,
@@ -1012,9 +1010,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 ),
               )
             else
-              // ==========================================
-              // 2. TAMPILAN NORMAL (TOMBOL BACK & KAPSUL)
-              // ==========================================
+              // TAMPILAN NORMAL (TOMBOL BACK & KAPSUL)
               Positioned(
                 top: topPadding + 12,
                 left: 16,
