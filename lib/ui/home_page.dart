@@ -10,6 +10,7 @@ import 'settings_page.dart';
 import 'profile_page.dart';
 import 'dart:io';
 import '../providers/profile_provider.dart';
+import '../widgets/default_profile_avatar.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,34 +19,55 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-// === KELAS OBSERVER UNTUK MEMANTAU NAVIGASI DI DALAM TAB ===
+// Memantau route aktif pada setiap nested Navigator.
 class _NestedNavigatorObserver extends NavigatorObserver {
-  final Function(bool isRoot) onRouteChanged;
-  int _routeCount = 0;
+  final void Function(bool isRoot, Route<dynamic>? activeRoute) onRouteChanged;
+  final List<Route<dynamic>> _routeStack = [];
 
   _NestedNavigatorObserver(this.onRouteChanged);
 
   void _update() {
+    final isRoot = _routeStack.length <= 1;
+    final activeRoute = _routeStack.isEmpty ? null : _routeStack.last;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      onRouteChanged(_routeCount <= 1);
+      onRouteChanged(isRoot, activeRoute);
     });
   }
 
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _routeCount++;
+    _routeStack.remove(route);
+    _routeStack.add(route);
     _update();
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _routeCount--;
+    _routeStack.remove(route);
     _update();
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    _routeCount--;
+    _routeStack.remove(route);
+    _update();
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    final oldIndex = oldRoute == null ? -1 : _routeStack.indexOf(oldRoute);
+
+    if (oldIndex >= 0) {
+      if (newRoute == null) {
+        _routeStack.removeAt(oldIndex);
+      } else {
+        _routeStack[oldIndex] = newRoute;
+      }
+    } else if (newRoute != null) {
+      _routeStack.add(newRoute);
+    }
+
     _update();
   }
 }
@@ -55,7 +77,11 @@ class _HomePageState extends State<HomePage> {
   bool _isScrolled = false;
   String _currentSortFilter = 'Name';
   final ScrollController _mainScrollController = ScrollController();
-  double _currentScrollOffset = 0;
+  final double _currentScrollOffset = 0;
+  // Simpan offset berdasarkan tab DAN route, bukan satu nilai global.
+  // Ini mencegah posisi scroll dari tab/halaman sebelumnya terbawa.
+  final Map<int, Map<Route<dynamic>, double>> _scrollOffsetsByTab = {};
+  final Map<int, Route<dynamic>?> _activeRoutesByTab = {};
 
   final List<String> _titles = [
     'Beranda',
@@ -76,14 +102,100 @@ class _HomePageState extends State<HomePage> {
   bool _isLibraryRoot = true;
 
   late final _songsObserver = _NestedNavigatorObserver(
-    (isRoot) => setState(() => _isSongsRoot = isRoot),
+    (isRoot, route) => _handleNestedRouteChanged(1, isRoot, route),
   );
   late final _playlistObserver = _NestedNavigatorObserver(
-    (isRoot) => setState(() => _isPlaylistRoot = isRoot),
+    (isRoot, route) => _handleNestedRouteChanged(2, isRoot, route),
   );
   late final _libraryObserver = _NestedNavigatorObserver(
-    (isRoot) => setState(() => _isLibraryRoot = isRoot),
+    (isRoot, route) => _handleNestedRouteChanged(3, isRoot, route),
   );
+
+  void _handleNestedRouteChanged(
+    int tabIndex,
+    bool isRoot,
+    Route<dynamic>? activeRoute,
+  ) {
+    if (!mounted) return;
+
+    final offset = activeRoute == null
+        ? 0.0
+        : (_scrollOffsetsByTab[tabIndex]?[activeRoute] ?? 0.0);
+
+    setState(() {
+      _activeRoutesByTab[tabIndex] = activeRoute;
+
+      if (tabIndex == 1) _isSongsRoot = isRoot;
+      if (tabIndex == 2) _isPlaylistRoot = isRoot;
+      if (tabIndex == 3) _isLibraryRoot = isRoot;
+
+      // Kalau route aktif berubah, pulihkan status scroll route tujuan.
+      if (_currentTab == tabIndex) {
+        _isScrolled = offset > 40;
+      }
+    });
+  }
+
+  Route<dynamic>? _activeRouteForTab(int tabIndex) {
+    // Beranda dan Search berada langsung di route HomePage.
+    if (tabIndex == 0 || tabIndex == 4) {
+      return ModalRoute.of(context);
+    }
+    return _activeRoutesByTab[tabIndex];
+  }
+
+  double _activeOffsetForTab(int tabIndex) {
+    final route = _activeRouteForTab(tabIndex);
+    if (route == null) return 0.0;
+    return _scrollOffsetsByTab[tabIndex]?[route] ?? 0.0;
+  }
+
+  void _handleScrollNotification(
+    int tabIndex,
+    ScrollNotification notification,
+  ) {
+    if (notification.metrics.axis != Axis.vertical) return;
+
+    final scrollContext = notification.context;
+    final route = scrollContext == null
+        ? _activeRouteForTab(tabIndex)
+        : ModalRoute.of(scrollContext);
+    if (route == null) return;
+
+    (_scrollOffsetsByTab[tabIndex] ??= <Route<dynamic>, double>{})[route] =
+        notification.metrics.pixels;
+
+    // Event dari route yang tidak sedang aktif hanya disimpan, tidak mengubah UI.
+    if (tabIndex != _currentTab) return;
+    final activeRoute = _activeRouteForTab(tabIndex);
+    if (activeRoute != null && !identical(route, activeRoute)) return;
+
+    final nextIsScrolled = notification.metrics.pixels > 40;
+    if (nextIsScrolled != _isScrolled && mounted) {
+      setState(() => _isScrolled = nextIsScrolled);
+    }
+  }
+
+  Widget _buildScrollTrackedTab(int tabIndex, Widget child) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        _handleScrollNotification(tabIndex, notification);
+        // Jangan hentikan notification agar listener lain tetap bisa menerimanya.
+        return false;
+      },
+      child: child,
+    );
+  }
+
+  void _switchTab(int index) {
+    if (index == _currentTab) return;
+
+    final nextIsScrolled = _activeOffsetForTab(index) > 40;
+    setState(() {
+      _currentTab = index;
+      _isScrolled = nextIsScrolled;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,27 +226,16 @@ class _HomePageState extends State<HomePage> {
             // =========================================================
             // KONTEN UTAMA (DENGAN NESTED NAVIGATOR)
             // =========================================================
-            NotificationListener<ScrollNotification>(
-              onNotification: (scrollInfo) {
-                if (scrollInfo.metrics.axis == Axis.horizontal) return false;
+            PrimaryScrollController(
+              controller: _mainScrollController,
+              child: IndexedStack(
+                index: _currentTab,
+                children: [
+                  _buildScrollTrackedTab(0, _buildDashboardView()),
 
-                _currentScrollOffset = scrollInfo.metrics.pixels;
-
-                if (scrollInfo.metrics.pixels > 40 && !_isScrolled) {
-                  setState(() => _isScrolled = true);
-                } else if (scrollInfo.metrics.pixels <= 40 && _isScrolled) {
-                  setState(() => _isScrolled = false);
-                }
-                return true;
-              },
-              child: PrimaryScrollController(
-                controller: _mainScrollController,
-                child: IndexedStack(
-                  index: _currentTab,
-                  children: [
-                    _buildDashboardView(),
-
-                    // Tab Songs
+                  // Tab Songs
+                  _buildScrollTrackedTab(
+                    1,
                     Navigator(
                       key: _songsNavKey,
                       observers: [_songsObserver],
@@ -148,8 +249,11 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
+                  ),
 
-                    // Tab Playlist
+                  // Tab Playlist
+                  _buildScrollTrackedTab(
+                    2,
                     Navigator(
                       key: _playlistNavKey,
                       observers: [_playlistObserver],
@@ -157,8 +261,11 @@ class _HomePageState extends State<HomePage> {
                         builder: (_) => PlaylistPage(key: playlistPageKey),
                       ),
                     ),
+                  ),
 
-                    // Tab Library
+                  // Tab Library
+                  _buildScrollTrackedTab(
+                    3,
                     Navigator(
                       key: _libraryNavKey,
                       observers: [_libraryObserver],
@@ -166,9 +273,9 @@ class _HomePageState extends State<HomePage> {
                         builder: (_) => LibraryPage(key: libraryPageKey),
                       ),
                     ),
-                    const SearchPage(),
-                  ],
-                ),
+                  ),
+                  _buildScrollTrackedTab(4, const SearchPage()),
+                ],
               ),
             ),
 
@@ -420,26 +527,23 @@ class _HomePageState extends State<HomePage> {
                               ),
                             );
                           }
-                          return const Icon(
-                            Icons.person_outline,
-                            color: Colors.black,
-                            size: 24,
-                          );
+                          // Jika tidak ada foto, gunakan widget default yang baru
+                          return const DefaultProfileAvatar(size: 48);
                         },
                       ),
                     ),
                   ),
                 )
               else if (_currentTab == 3)
-                // HEADER LIBRARY (Gaya Kapsul gabungan seperti Songs)
+                // HEADER LIBRARY
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 12,
                   left: 16,
                   right: 16,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Kapsul Putih berisi 2 Ikon (Settings & Menu)
-                      const Spacer(),
+                      // KAPSUL KIRI
                       Container(
                         height: 48,
                         decoration: BoxDecoration(
@@ -456,24 +560,7 @@ class _HomePageState extends State<HomePage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SettingsPage(),
-                                  ),
-                                );
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.only(left: 16, right: 12),
-                                child: Icon(
-                                  Icons.settings_outlined,
-                                  color: Colors.black,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
+                            // More Vert
                             Builder(
                               builder: (buttonContext) {
                                 return GestureDetector(
@@ -496,7 +583,72 @@ class _HomePageState extends State<HomePage> {
                                 );
                               },
                             ),
+                            // Settings
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SettingsPage(),
+                                  ),
+                                );
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.only(left: 10, right: 12),
+                                child: Icon(
+                                  Icons.settings_outlined,
+                                  color: Colors.black,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
                           ],
+                        ),
+                      ),
+
+                      // AVATAR USER
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ProfilePage(),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 48,
+                          width: 48,
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          // Menggunakan ValueListenableBuilder agar otomatis berubah
+                          child: ValueListenableBuilder<String?>(
+                            valueListenable: profileImageNotifier,
+                            builder: (context, imagePath, child) {
+                              if (imagePath != null && imagePath.isNotEmpty) {
+                                return ClipOval(
+                                  child: Image.file(
+                                    File(imagePath),
+                                    fit: BoxFit.cover,
+                                    width: 48,
+                                    height: 48,
+                                  ),
+                                );
+                              }
+                              // Jika tidak ada foto, gunakan avatar default Lyra
+                              return const DefaultProfileAvatar(size: 44);
+                            },
+                          ),
                         ),
                       ),
                     ],
@@ -547,49 +699,65 @@ class _HomePageState extends State<HomePage> {
                 currentIndex: _currentTab,
                 isScrolled: _isScrolled,
                 onHomeTap: () {
-                  // 1. Jika sedang di halaman detail (bukan root), tutup halamannya dulu
+                  // 1. Jika sedang di halaman detail (bukan root)
                   bool isInsideDetail = false;
                   if (_currentTab == 1 && !_isSongsRoot) isInsideDetail = true;
-                  if (_currentTab == 2 && !_isPlaylistRoot)
+                  if (_currentTab == 2 && !_isPlaylistRoot) {
                     isInsideDetail = true;
-                  if (_currentTab == 3 && !_isLibraryRoot)
+                  }
+                  if (_currentTab == 3 && !_isLibraryRoot) {
                     isInsideDetail = true;
+                  }
 
                   if (isInsideDetail) {
-                    if (_currentTab == 1)
+                    bool handledScroll = false;
+
+                    // 👇 CEK SCROLL KHUSUS UNTUK TAB PLAYLIST (Tab 2)
+                    if (_currentTab == 2) {
+                      final detailState = playlistPageKey
+                          .currentState
+                          ?.detailPageKey
+                          .currentState;
+                      if (detailState != null && detailState.isScrolledDown) {
+                        detailState.scrollToTop();
+                        handledScroll = true; // Berhasil di-scroll
+                      }
+                    }
+
+                    // Jika scroll sudah ditangani, hentikan proses (jangan tutup halaman)
+                    if (handledScroll) return;
+
+                    // Jika sudah di paling atas (tidak di-scroll), BARU tutup halamannya
+                    if (_currentTab == 1) {
                       _songsNavKey.currentState?.popUntil((r) => r.isFirst);
-                    if (_currentTab == 2)
+                    }
+                    if (_currentTab == 2) {
                       _playlistNavKey.currentState?.popUntil((r) => r.isFirst);
-                    if (_currentTab == 3)
+                    }
+                    if (_currentTab == 3) {
                       _libraryNavKey.currentState?.popUntil((r) => r.isFirst);
+                    }
                     return;
                   }
 
-                  // 2. Cek apakah halaman saat ini sedang di-scroll (bukan di paling atas)
+                  // 2. Cek apakah halaman root sedang di-scroll (Kode lama kamu biarkan saja)
                   bool isScrolledDown = false;
-
-                  // Cek scroll di Beranda
                   if (_currentTab == 0 && _currentScrollOffset > 10) {
                     isScrolledDown = true;
-                  }
-                  // Cek scroll di Songs
-                  else if (_currentTab == 1) {
+                  } else if (_currentTab == 1) {
                     isScrolledDown =
                         songsPageKey.currentState?.isScrolledDown ?? false;
-                  }
-                  // Cek scroll di Playlist
-                  else if (_currentTab == 2) {
+                  } else if (_currentTab == 2) {
                     isScrolledDown =
                         playlistPageKey.currentState?.isScrolledDown ?? false;
-                  }
-                  // Cek scroll di Library
-                  else if (_currentTab == 3) {
+                  } else if (_currentTab == 3) {
                     isScrolledDown =
                         libraryPageKey.currentState?.isScrolledDown ?? false;
                   }
 
-                  // 3. Jika sedang di-scroll, luncurkan ke atas
+                  // 3. Jika root sedang di-scroll, luncurkan ke atas
                   if (isScrolledDown) {
+                    // ... (kode if-else milikmu biarkan sama)
                     if (_currentTab == 0 && _mainScrollController.hasClients) {
                       _mainScrollController.animateTo(
                         0.0,
@@ -614,14 +782,17 @@ class _HomePageState extends State<HomePage> {
                 onTabChanged: (index) {
                   // Jika menekan tab yang sama, kembalikan ke halaman utama tab tersebut
                   if (index == _currentTab) {
-                    if (index == 1)
+                    if (index == 1) {
                       _songsNavKey.currentState?.popUntil((r) => r.isFirst);
-                    if (index == 2)
+                    }
+                    if (index == 2) {
                       _playlistNavKey.currentState?.popUntil((r) => r.isFirst);
-                    if (index == 3)
+                    }
+                    if (index == 3) {
                       _libraryNavKey.currentState?.popUntil((r) => r.isFirst);
+                    }
                   } else {
-                    setState(() => _currentTab = index);
+                    _switchTab(index);
                   }
                 },
               ),

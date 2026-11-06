@@ -21,10 +21,10 @@ class PlaylistDetailPage extends ConsumerStatefulWidget {
   const PlaylistDetailPage({super.key, required this.playlist});
 
   @override
-  ConsumerState<PlaylistDetailPage> createState() => _PlaylistDetailPageState();
+  ConsumerState<PlaylistDetailPage> createState() => PlaylistDetailPageState();
 }
 
-class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
+class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   List<Song> _songsInPlaylist = [];
   List<Song> _displayedSongs = [];
   bool _isLoading = true;
@@ -661,6 +661,19 @@ class _PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         },
       ),
     );
+  }
+
+  bool get isScrolledDown =>
+      _scrollController.hasClients && _scrollController.offset > 10;
+
+  void scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   // ==========================================

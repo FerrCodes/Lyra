@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
-import '../providers/profile_provider.dart'; // Pastikan file ini sudah dibuat
+import '../providers/profile_provider.dart';
+import '../widgets/default_profile_avatar.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:path_provider/path_provider.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -75,12 +78,34 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   Future<void> _pickImage() async {
     try {
-      final String? path = await _platform.invokeMethod('pickImage');
-      if (path != null && path.isNotEmpty) {
-        // HANYA ubah state, jangan simpan ke prefs dulu
-        setState(() {
-          _currentImagePath = path;
-        });
+      final String? imagePath = await _platform.invokeMethod('pickImage');
+
+      if (imagePath != null && imagePath.isNotEmpty) {
+        final croppedFile = await ImageCropper().cropImage(
+          sourcePath: imagePath,
+          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Potong Foto Profil',
+              toolbarColor: const Color(0xFF673AB7), // Warna ungu Lyra
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.square,
+              lockAspectRatio: true,
+              hideBottomControls: true,
+              cropStyle: CropStyle.circle,
+            ),
+          ],
+        );
+
+        if (croppedFile != null) {
+          final permanentPath = await _saveImagePermanently(croppedFile.path);
+
+          if (mounted) {
+            setState(() {
+              _currentImagePath = permanentPath;
+            });
+          }
+        }
       }
     } on PlatformException catch (e) {
       if (mounted) {
@@ -89,6 +114,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         );
       }
     }
+  }
+
+  Future<String> _saveImagePermanently(String tempPath) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final fileName =
+        'profile_avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final permanentFile = File('${directory.path}/$fileName');
+    final savedFile = await File(tempPath).copy(permanentFile.path);
+    return savedFile.path;
   }
 
   // Fungsi untuk mengecek apakah ada perubahan
@@ -125,6 +159,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     });
 
     FocusScope.of(context).unfocus();
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -176,36 +211,19 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               height: 110,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: _currentImagePath == null
-                                    ? const LinearGradient(
-                                        colors: [
-                                          Colors.deepPurple,
-                                          Colors.purpleAccent,
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      )
-                                    : null,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
+                                // Hapus gradient lama karena sudah dipindah ke widget
                               ),
-                              child: ClipOval(
-                                child: _currentImagePath != null
-                                    ? Image.file(
+                              child: _currentImagePath != null
+                                  ? ClipOval(
+                                      child: Image.file(
                                         File(_currentImagePath!),
                                         fit: BoxFit.cover,
-                                      )
-                                    : const Icon(
-                                        Icons.person,
-                                        size: 60,
-                                        color: Colors.white,
+                                        width: 110,
+                                        height: 110,
                                       ),
-                              ),
+                                    )
+                                  // Gunakan widget default jika kosong
+                                  : const DefaultProfileAvatar(size: 110),
                             ),
                             // Ikon Kamera Kecil di Ujung Avatar
                             Positioned(
@@ -227,7 +245,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   ],
                                 ),
                                 child: const Icon(
-                                  Icons.add_photo_alternate,
+                                  Icons.edit,
                                   color: Colors.black87,
                                   size: 18,
                                 ),
@@ -532,8 +550,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               children: [
                 // 1. Pilihan Ambil dari Galeri
                 _buildPhotoOption(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Galeri',
+                  icon: Icons.add_photo_alternate,
+                  label: 'Ambil dari Galeri',
                   onTap: () {
                     Navigator.pop(context); // Tutup bottom sheet dulu
                     _pickImage(); // Panggil fungsi Kotlin untuk buka galeri

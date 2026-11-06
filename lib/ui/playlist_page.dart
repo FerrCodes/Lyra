@@ -25,7 +25,8 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
   bool _isLoading = true;
   final ScrollController _scrollController = ScrollController();
   bool isEditMode = false;
-  bool _isMenuOpen = false;
+  final bool _isMenuOpen = false;
+  final GlobalKey<PlaylistDetailPageState> detailPageKey = GlobalKey();
 
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
@@ -474,7 +475,10 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => PlaylistDetailPage(playlist: playlist),
+                  builder: (_) => PlaylistDetailPage(
+                    key: detailPageKey,
+                    playlist: playlist,
+                  ),
                 ),
               ).then((_) => _loadPlaylists());
             },

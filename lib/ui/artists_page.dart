@@ -44,11 +44,12 @@ class _ArtistsPageState extends ConsumerState<ArtistsPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFFF2F2F7),
         body: Center(child: CircularProgressIndicator()),
       );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),

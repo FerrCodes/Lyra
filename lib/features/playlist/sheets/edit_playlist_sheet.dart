@@ -119,7 +119,7 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                             }
                           }
                         } catch (e) {
-                          print("Error: $e");
+                          //print("Error: $e");
                         }
                       },
                       child: Column(

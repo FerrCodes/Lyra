@@ -44,74 +44,79 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
   }
 
   void showMoreMenu(BuildContext buttonContext) {
+    // Cari posisi tombol yang ditekan
+    final RenderBox renderBox = buttonContext.findRenderObject() as RenderBox;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+
+    // Rumus posisi persis seperti di Playlist Detail
+    final double topPosition = offset.dy + renderBox.size.height - 60;
+    final double leftPosition = offset.dx - 1; // Disamakan dengan tombol
+
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.1),
       builder: (context) {
-        return Align(
-          alignment: Alignment.topRight,
-          child: Padding(
-            padding: EdgeInsets.only(
-              // Menggunakan rumus yang sama persis seperti halaman detail playlist
-              top: MediaQuery.of(context).padding.top + 12,
-              right: 16,
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: 220, // Lebar disesuaikan
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildPopoverItem(Icons.refresh, 'Refresh', () async {
-                      Navigator.pop(context); // Tutup popover
-                      await _loadStats(); // Tunggu loading selesai
-
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Data diperbarui')),
-                        );
-                      }
-                    }),
-                    const Divider(height: 1, thickness: 0.5),
-                    _buildPopoverItem(
-                      Icons.account_tree_outlined,
-                      'View as Tree',
-                      () {
+        return Stack(
+          children: [
+            Positioned(
+              top: topPosition,
+              left: leftPosition,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 220, // Lebar disesuaikan
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildPopoverItem(Icons.refresh, 'Refresh', () async {
+                        Navigator.pop(context); // Tutup popover
+                        await _loadStats(); // Tunggu loading selesai
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Data diperbarui')),
+                          );
+                        }
+                      }),
+                      const Divider(height: 1, thickness: 0.5),
+                      _buildPopoverItem(
+                        Icons.account_tree_outlined,
+                        'View as Tree',
+                        () {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Fitur View as Tree segera hadir'),
+                            ),
+                          );
+                        },
+                      ),
+                      const Divider(height: 1, thickness: 0.5),
+                      _buildPopoverItem(Icons.graphic_eq, 'Equalizer', () {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Fitur View as Tree segera hadir'),
+                            content: Text('Fitur Equalizer segera hadir'),
                           ),
                         );
-                      },
-                    ),
-                    const Divider(height: 1, thickness: 0.5),
-                    _buildPopoverItem(Icons.graphic_eq, 'Equalizer', () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fitur Equalizer segera hadir'),
-                        ),
-                      );
-                    }),
-                    const SizedBox(height: 8),
-                  ],
+                      }),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         );
       },
     );
