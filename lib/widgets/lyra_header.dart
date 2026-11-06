@@ -1,89 +1,46 @@
 import 'package:flutter/material.dart';
 
 class LyraHeader extends StatelessWidget {
-  final String title;
-  final VoidCallback? onBack;
-  final Widget? rightWidget;
   final Widget? leftWidget;
+  final Widget? rightWidget;
+  final bool isDarkMode;
 
   const LyraHeader({
     super.key,
-    required this.title,
-    this.onBack,
-    this.rightWidget,
     this.leftWidget,
+    this.rightWidget,
+    this.isDarkMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasTitle = title.trim().isNotEmpty;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Bagian Kiri
+        if (leftWidget != null)
+          Flexible(child: _buildSmartContainer(leftWidget!))
+        else
+          const SizedBox(width: 48),
 
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 12,
-      left: 16,
-      right: 16,
-      child: Row(
-        children: [
-          // Tombol Kiri
-          if (onBack != null)
-            _buildPillButton(Icons.arrow_back_ios_new, onBack!)
-          else if (leftWidget != null)
-            leftWidget!
-          else if (hasTitle)
-            const SizedBox(width: 48),
-
-          // Judul Tengah (Hanya muncul jika title tidak kosong)
-          if (hasTitle)
-            Expanded(
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            )
-          else
-            const Spacer(),
-
-          // Tombol Kanan
-          if (rightWidget != null)
-            rightWidget!
-          else if (hasTitle)
-            const SizedBox(width: 48),
-        ],
-      ),
+        // Bagian Kanan
+        if (rightWidget != null)
+          Flexible(child: _buildSmartContainer(rightWidget!))
+        else
+          const SizedBox(width: 48),
+      ],
     );
   }
 
-  Widget _buildPillButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+  // Fungsi pintar untuk mendeteksi jumlah tombol (Kiri & Kanan)
+  Widget _buildSmartContainer(Widget child) {
+    // Jika isinya berupa Row (lebih dari 1 tombol), jadikan Kapsul
+    if (child is Row) {
+      return Container(
         height: 48,
-        width: 48,
         decoration: BoxDecoration(
           color: Colors.white,
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -92,7 +49,95 @@ class LyraHeader extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, color: Colors.black, size: 20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: child,
+        ),
+      );
+    }
+
+    // Jika hanya 1 widget (seperti Avatar), jadikan Lingkaran
+    return Container(
+      height: 48,
+      width: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+// Komponen Tombol Ikon khusus untuk dipakai di dalam LyraHeader
+class LyraHeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color iconColor;
+
+  const LyraHeaderIconButton({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    this.iconColor = Colors.black,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon, color: iconColor, size: 20),
+      onPressed: onTap,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+// Widget Tombol Top Bar dengan Efek Ripple (Splash) yang Rapi
+class TopBarButton extends StatelessWidget {
+  final IconData? icon;
+  final Widget? customChild;
+  final VoidCallback onTap;
+  final bool isCircle;
+
+  const TopBarButton({
+    super.key,
+    this.icon,
+    this.customChild,
+    required this.onTap,
+    this.isCircle = true, // Default: Lingkaran. Jika false: Kapsul
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: isCircle
+          ? const CircleBorder()
+          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
+      clipBehavior:
+          Clip.antiAlias, // Memotong efek ripple agar rapi di dalam bentuk
+      child: InkWell(
+        onTap: onTap,
+        // Di dalam TopBarButton
+        child: Container(
+          height: 48,
+          width: isCircle ? 48 : null,
+          padding: isCircle ? null : const EdgeInsets.symmetric(horizontal: 16),
+          child: Center(
+            widthFactor: 1.0,
+            heightFactor: 1.0,
+            child: customChild ?? Icon(icon, color: Colors.black, size: 20),
+          ),
+        ),
       ),
     );
   }

@@ -15,6 +15,7 @@ import '../../features/playlist/sheets/edit_playlist_sheet.dart';
 import '../providers/songs_provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../models/song.dart' as local;
+import '../widgets/lyra_header.dart';
 
 class PlaylistDetailPage extends ConsumerStatefulWidget {
   final Playlist playlist;
@@ -161,17 +162,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         ))
         .go();
     _loadSongs();
-  }
-
-  void _selectAll() {
-    setState(() {
-      if (_selectedSongIds.length == _displayedSongs.length) {
-        _selectedSongIds.clear();
-        _isSelectionMode = false;
-      } else {
-        _selectedSongIds = _displayedSongs.map((e) => e.id).toSet();
-      }
-    });
   }
 
   void _removeSelectedSongs() async {
@@ -948,6 +938,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
             // TOP BAR tetap fixed sebagai overlay. Hanya tombolnya yang putih;
             // tidak ada panel putih full-width di belakangnya.
+            // TOP BAR OVERLAY
             if (_isSelectionMode)
               Positioned(
                 top: topPadding + 12,
@@ -966,7 +957,19 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     child: Row(
                       children: [
                         GestureDetector(
-                          onTap: _selectAll,
+                          onTap: () {
+                            setState(() {
+                              if (_selectedSongIds.length ==
+                                  _displayedSongs.length) {
+                                _selectedSongIds.clear();
+                                _isSelectionMode = false;
+                              } else {
+                                _selectedSongIds = _displayedSongs
+                                    .map((e) => e.id)
+                                    .toSet();
+                              }
+                            });
+                          },
                           child: Row(
                             children: [
                               Icon(
@@ -1010,37 +1013,46 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 top: topPadding + 12,
                 left: 16,
                 right: 16,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        height: 48,
-                        width: 48,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.18),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.black,
-                          size: 20,
-                        ),
+                child: LyraHeader(
+                  isDarkMode: true,
+                  leftWidget: LyraHeaderIconButton(
+                    icon: Icons.arrow_back_ios_new,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  rightWidget: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      LyraHeaderIconButton(
+                        icon: Icons.star_border,
+                        onTap: () {},
                       ),
-                    ),
-                    Container(
+                      LyraHeaderIconButton(
+                        icon: Icons.add,
+                        onTap: _showAddSongsToPlaylist,
+                      ),
+                      LyraHeaderIconButton(
+                        icon: Icons.more_horiz,
+                        onTap: _showMoreMenu,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            Positioned(
+              top: topPadding + 12,
+              left: 16,
+              right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
                       height: 48,
+                      width: 48,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
+                        shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.18),
@@ -1049,48 +1061,68 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                           ),
                         ],
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GestureDetector(
-                            onTap: () {},
-                            child: const Padding(
-                              padding: EdgeInsets.only(left: 16, right: 8),
-                              child: Icon(
-                                Icons.star_border,
-                                color: Colors.black87,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _showAddSongsToPlaylist,
-                            child: const Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 8),
-                              child: Icon(
-                                Icons.add,
-                                color: Colors.black87,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _showMoreMenu,
-                            child: const Padding(
-                              padding: EdgeInsets.only(left: 8, right: 16),
-                              child: Icon(
-                                Icons.more_horiz,
-                                color: Colors.black87,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: const Icon(
+                        Icons.arrow_back_ios_new,
+                        color: Colors.black,
+                        size: 20,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.18),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () {},
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 16, right: 8),
+                            child: Icon(
+                              Icons.star_border,
+                              color: Colors.black87,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _showAddSongsToPlaylist,
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Icon(
+                              Icons.add,
+                              color: Colors.black87,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _showMoreMenu,
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 8, right: 16),
+                            child: Icon(
+                              Icons.more_horiz,
+                              color: Colors.black87,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            ),
 
             // Action bar untuk mode seleksi.
             AnimatedPositioned(

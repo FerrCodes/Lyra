@@ -49,7 +49,7 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     final Offset offset = renderBox.localToGlobal(Offset.zero);
 
     // Rumus posisi persis seperti di Playlist Detail
-    final double topPosition = offset.dy + renderBox.size.height - 60;
+    final double topPosition = offset.dy + renderBox.size.height - 70;
     final double leftPosition = offset.dx - 1; // Disamakan dengan tombol
 
     showDialog(
