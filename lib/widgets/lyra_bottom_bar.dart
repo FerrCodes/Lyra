@@ -59,11 +59,34 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
       return _buildAppleMusicSearchBar();
     }
 
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 350),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: widget.isScrolled ? _buildScrolledState() : _buildDefaultState(),
+    return RepaintBoundary(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        reverseDuration: const Duration(milliseconds: 250),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        // Rata bawah, supaya baris tombol tidak melompat
+        layoutBuilder: (currentChild, previousChildren) {
+          return Stack(
+            alignment: Alignment.bottomCenter,
+            children: [
+              ...previousChildren,
+              if (currentChild != null) currentChild,
+            ],
+          );
+        },
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              alignment: Alignment.bottomCenter,
+              scale: Tween<double>(begin: 0.96, end: 1.0).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: widget.isScrolled ? _buildScrolledState() : _buildDefaultState(),
+      ),
     );
   }
 

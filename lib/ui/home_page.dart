@@ -69,10 +69,9 @@ class _NestedNavigatorObserver extends NavigatorObserver {
 
 class _HomePageState extends State<HomePage> {
   int _currentTab = 0;
-  bool _isScrolled = false;
+  final ValueNotifier<bool> _isScrolled = ValueNotifier<bool>(false);
   String _currentSortFilter = 'Name';
   final ScrollController _mainScrollController = ScrollController();
-  final double _currentScrollOffset = 0;
   // Simpan offset berdasarkan tab DAN route, bukan satu nilai global.
   // Ini mencegah posisi scroll dari tab/halaman sebelumnya terbawa.
   final Map<int, Map<Route<dynamic>, double>> _scrollOffsetsByTab = {};
@@ -118,7 +117,7 @@ class _HomePageState extends State<HomePage> {
 
       // Kalau route aktif berubah, pulihkan status scroll route tujuan.
       if (_currentTab == tabIndex) {
-        _isScrolled = offset > 40;
+        _isScrolled.value = offset > 40;
       }
     });
   }
@@ -157,9 +156,10 @@ class _HomePageState extends State<HomePage> {
     final activeRoute = _activeRouteForTab(tabIndex);
     if (activeRoute != null && !identical(route, activeRoute)) return;
 
-    final nextIsScrolled = notification.metrics.pixels > 40;
-    if (nextIsScrolled != _isScrolled && mounted) {
-      setState(() => _isScrolled = nextIsScrolled);
+    final pixels = notification.metrics.pixels;
+    final nextIsScrolled = _isScrolled.value ? pixels > 15 : pixels > 40;
+    if (nextIsScrolled != _isScrolled.value) {
+      _isScrolled.value = nextIsScrolled;
     }
   }
 
@@ -178,10 +178,15 @@ class _HomePageState extends State<HomePage> {
     if (index == _currentTab) return;
 
     final nextIsScrolled = _activeOffsetForTab(index) > 40;
-    setState(() {
-      _currentTab = index;
-      _isScrolled = nextIsScrolled;
-    });
+    setState(() => _currentTab = index);
+    _isScrolled.value = nextIsScrolled;
+  }
+
+  @override
+  void dispose() {
+    _isScrolled.dispose();
+    _mainScrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -340,106 +345,102 @@ class _HomePageState extends State<HomePage> {
               left: 0,
               right: 0,
               bottom: MediaQuery.of(context).padding.bottom + 12,
-              child: LyraBottomBar(
-                currentIndex: _currentTab,
-                isScrolled: _isScrolled,
-                onHomeTap: () {
-                  // 1. Jika sedang di halaman detail (bukan root)
-                  bool isInsideDetail = false;
-                  if (_currentTab == 1 && !_isSongsRoot) isInsideDetail = true;
-                  if (_currentTab == 2 && !_isPlaylistRoot) {
-                    isInsideDetail = true;
-                  }
-                  if (_currentTab == 3 && !_isLibraryRoot) {
-                    isInsideDetail = true;
-                  }
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _isScrolled,
+                builder: (context, isScrolled, _) => LyraBottomBar(
+                  currentIndex: _currentTab,
+                  isScrolled: isScrolled,
+                  onHomeTap: () {
+                    // Jika sedang di halaman detail (bukan root)
+                    bool isInsideDetail = false;
+                    if (_currentTab == 1 && !_isSongsRoot)
+                      isInsideDetail = true;
+                    if (_currentTab == 2 && !_isPlaylistRoot) {
+                      isInsideDetail = true;
+                    }
+                    if (_currentTab == 3 && !_isLibraryRoot) {
+                      isInsideDetail = true;
+                    }
 
-                  if (isInsideDetail) {
-                    bool handledScroll = false;
+                    if (isInsideDetail) {
+                      bool handledScroll = false;
 
-                    // 👇 CEK SCROLL KHUSUS UNTUK TAB PLAYLIST (Tab 2)
-                    if (_currentTab == 2) {
-                      final detailState = playlistPageKey
-                          .currentState
-                          ?.detailPageKey
-                          .currentState;
-                      if (detailState != null && detailState.isScrolledDown) {
-                        detailState.scrollToTop();
-                        handledScroll = true; // Berhasil di-scroll
+                      // CEK SCROLL KHUSUS UNTUK TAB PLAYLIST (Tab 2)
+                      if (_currentTab == 2) {
+                        final detailState = playlistPageKey
+                            .currentState
+                            ?.detailPageKey
+                            .currentState;
+                        if (detailState != null && detailState.isScrolledDown) {
+                          detailState.scrollToTop();
+                          handledScroll = true; // Berhasil di-scroll
+                        }
                       }
+
+                      // Jika scroll sudah ditangani, hentikan proses (jangan tutup halaman)
+                      if (handledScroll) return;
+
+                      _switchTab(0);
+                      return;
                     }
 
-                    // Jika scroll sudah ditangani, hentikan proses (jangan tutup halaman)
-                    if (handledScroll) return;
-
-                    // Jika sudah di paling atas (tidak di-scroll), BARU tutup halamannya
-                    if (_currentTab == 1) {
-                      _songsNavKey.currentState?.popUntil((r) => r.isFirst);
-                    }
-                    if (_currentTab == 2) {
-                      _playlistNavKey.currentState?.popUntil((r) => r.isFirst);
-                    }
-                    if (_currentTab == 3) {
-                      _libraryNavKey.currentState?.popUntil((r) => r.isFirst);
-                    }
-                    return;
-                  }
-
-                  // 2. Cek apakah halaman root sedang di-scroll (Kode lama kamu biarkan saja)
-                  bool isScrolledDown = false;
-                  if (_currentTab == 0 && _currentScrollOffset > 10) {
-                    isScrolledDown = true;
-                  } else if (_currentTab == 1) {
-                    isScrolledDown =
-                        songsPageKey.currentState?.isScrolledDown ?? false;
-                  } else if (_currentTab == 2) {
-                    isScrolledDown =
-                        playlistPageKey.currentState?.isScrolledDown ?? false;
-                  } else if (_currentTab == 3) {
-                    isScrolledDown =
-                        libraryPageKey.currentState?.isScrolledDown ?? false;
-                  }
-
-                  // 3. Jika root sedang di-scroll, luncurkan ke atas
-                  if (isScrolledDown) {
-                    // ... (kode if-else milikmu biarkan sama)
-                    if (_currentTab == 0 && _mainScrollController.hasClients) {
-                      _mainScrollController.animateTo(
-                        0.0,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOutCubic,
-                      );
+                    // Cek apakah halaman root sedang di-scroll (Kode lama kamu biarkan saja)
+                    bool isScrolledDown = false;
+                    if (_currentTab == 0 && _activeOffsetForTab(0) > 10) {
+                      isScrolledDown = true;
                     } else if (_currentTab == 1) {
-                      songsPageKey.currentState?.scrollToTop();
+                      isScrolledDown =
+                          songsPageKey.currentState?.isScrolledDown ?? false;
                     } else if (_currentTab == 2) {
-                      playlistPageKey.currentState?.scrollToTop();
+                      isScrolledDown =
+                          playlistPageKey.currentState?.isScrolledDown ?? false;
                     } else if (_currentTab == 3) {
-                      libraryPageKey.currentState?.scrollToTop();
+                      isScrolledDown =
+                          libraryPageKey.currentState?.isScrolledDown ?? false;
                     }
-                    return;
-                  }
 
-                  // 4. Jika sudah di paling atas, pindah ke tab Beranda
-                  if (_currentTab != 0) {
-                    setState(() => _currentTab = 0);
-                  }
-                },
-                onTabChanged: (index) {
-                  // Jika menekan tab yang sama, kembalikan ke halaman utama tab tersebut
-                  if (index == _currentTab) {
-                    if (index == 1) {
-                      _songsNavKey.currentState?.popUntil((r) => r.isFirst);
+                    // Jika root sedang di-scroll, luncurkan ke atas
+                    if (isScrolledDown) {
+                      // ... (kode if-else milikmu biarkan sama)
+                      if (_currentTab == 0 &&
+                          _mainScrollController.hasClients) {
+                        _mainScrollController.animateTo(
+                          0.0,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeOutCubic,
+                        );
+                      } else if (_currentTab == 1) {
+                        songsPageKey.currentState?.scrollToTop();
+                      } else if (_currentTab == 2) {
+                        playlistPageKey.currentState?.scrollToTop();
+                      } else if (_currentTab == 3) {
+                        libraryPageKey.currentState?.scrollToTop();
+                      }
+                      return;
                     }
-                    if (index == 2) {
-                      _playlistNavKey.currentState?.popUntil((r) => r.isFirst);
+
+                    // Jika sudah di paling atas, pindah ke tab Beranda
+                    _switchTab(0);
+                  },
+                  onTabChanged: (index) {
+                    // Jika menekan tab yang sama, kembalikan ke halaman utama tab tersebut
+                    if (index == _currentTab) {
+                      if (index == 1) {
+                        _songsNavKey.currentState?.popUntil((r) => r.isFirst);
+                      }
+                      if (index == 2) {
+                        _playlistNavKey.currentState?.popUntil(
+                          (r) => r.isFirst,
+                        );
+                      }
+                      if (index == 3) {
+                        _libraryNavKey.currentState?.popUntil((r) => r.isFirst);
+                      }
+                    } else {
+                      _switchTab(index);
                     }
-                    if (index == 3) {
-                      _libraryNavKey.currentState?.popUntil((r) => r.isFirst);
-                    }
-                  } else {
-                    _switchTab(index);
-                  }
-                },
+                  },
+                ),
               ),
             ),
           ],

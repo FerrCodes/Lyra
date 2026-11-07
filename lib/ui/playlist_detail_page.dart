@@ -17,6 +17,7 @@ import '../providers/songs_provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../models/song.dart' as local;
 import '../widgets/lyra_header.dart';
+import 'package:audio_service/audio_service.dart';
 
 class PlaylistDetailPage extends ConsumerStatefulWidget {
   final Playlist playlist;
@@ -858,40 +859,63 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
-  // Tombol Play (Kapsul Hitam)
+  // Tombol Play (Kapsul Biru Khas Lyra)
   Widget _buildPlayButton() {
-    return GestureDetector(
-      onTap: () => _playPlaylist(),
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.black, // Warna hitam pekat khas tombol Play
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return StreamBuilder<PlaybackState>(
+      stream: audioHandler.playbackState,
+      builder: (context, snapshot) {
+        final isPlaying = snapshot.data?.playing ?? false;
+
+        return GestureDetector(
+          onTap: () {
+            if (isPlaying) {
+              audioHandler.pause();
+            } else {
+              if (audioHandler.mediaItem.value == null ||
+                  audioHandler.queue.value.isEmpty) {
+                _playPlaylist();
+              } else {
+                audioHandler.play();
+              }
+            }
+          },
+          child: Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade600,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  // Bayangan juga disesuaikan dengan warna biru
+                  color: Colors.blue.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
-            SizedBox(width: 8),
-            Text(
-              'Play',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  color: Colors.white, // Ikon tetap putih agar kontras
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isPlaying ? 'Pause' : 'Play',
+                  style: const TextStyle(
+                    color: Colors.white, // Teks tetap putih
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -916,6 +940,55 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         child: const Center(
           child: Icon(Icons.shuffle_rounded, color: Colors.black87, size: 20),
         ),
+      ),
+    );
+  }
+
+  Widget _buildActionRow() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          _buildPlayButton(),
+          const SizedBox(width: 8),
+          _buildShuffleButton(),
+          const SizedBox(width: 12),
+          Container(
+            height: 30,
+            width: 1.5,
+            color: const Color.fromARGB(255, 206, 206, 206),
+          ),
+          const SizedBox(width: 12),
+          _buildActionPill(
+            icon: Icons.filter_list,
+            label: 'Urutkan',
+            onTap: _showSortBottomSheet,
+          ),
+          const SizedBox(width: 8),
+          _buildActionPill(
+            icon: Icons.format_list_bulleted,
+            label: 'Sesuaikan',
+            onTap: () {
+              setState(() {
+                _isSelectionMode = true;
+              });
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildActionPill(
+            icon: Icons.search,
+            label: 'Cari',
+            onTap: _showSearchBottomSheet,
+          ),
+          const SizedBox(width: 8),
+          _buildActionPill(
+            icon: Icons.info_outline,
+            label: 'Info',
+            onTap: _showInfoBottomSheet,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
     );
   }
@@ -960,6 +1033,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     final screenWidth = MediaQuery.of(context).size.width;
     final topPadding = MediaQuery.of(context).padding.top;
     final headerHeight = screenWidth + topPadding + 32;
+    final topInset = topPadding + 60;
 
     if (_isLoading) {
       return const Scaffold(
@@ -968,6 +1042,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       );
     }
 
+    // 👇 TAMBAHKAN ANIMATED BUILDER DI SINI
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -990,72 +1065,36 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 slivers: [
                   SliverToBoxAdapter(
                     child: SizedBox(
-                      height: headerHeight,
-                      child: PlaylistHeader(
-                        imagePath: _currentImagePath,
-                        playlistName: _currentPlaylistName,
-                        songCount: _songsInPlaylist.length,
-                        description: _currentDescription,
-                        playlistId: widget.playlist.id,
+                      height: headerHeight - topInset,
+                      child: OverflowBox(
+                        alignment: Alignment.topCenter,
+                        minHeight: headerHeight,
+                        maxHeight: headerHeight,
+                        child: SizedBox(
+                          height: headerHeight,
+                          child: PlaylistHeader(
+                            imagePath: _currentImagePath,
+                            playlistName: _currentPlaylistName,
+                            songCount: _songsInPlaylist.length,
+                            description: _currentDescription,
+                            playlistId: widget.playlist.id,
+                          ),
+                        ),
                       ),
                     ),
                   ),
 
-                  // Kontrol playlist: Tombol Aksi Horizontal
-                  SliverToBoxAdapter(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      child: Row(
-                        children: [
-                          _buildPlayButton(),
-                          const SizedBox(width: 8),
-                          _buildShuffleButton(),
-                          const SizedBox(width: 12),
-                          Container(
-                            height: 30,
-                            width: 1.5,
-                            color: const Color.fromARGB(255, 206, 206, 206),
-                          ),
-                          const SizedBox(width: 12),
-                          _buildActionPill(
-                            icon: Icons.filter_list,
-                            label: 'Urutkan',
-                            onTap: _showSortBottomSheet,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildActionPill(
-                            icon: Icons.format_list_bulleted,
-                            label: 'Sesuaikan',
-                            onTap: () {
-                              setState(() {
-                                _isSelectionMode = true;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _buildActionPill(
-                            icon: Icons.search,
-                            label: 'Cari',
-                            onTap: _showSearchBottomSheet,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildActionPill(
-                            icon: Icons.info_outline,
-                            label: 'Info',
-                            onTap: _showInfoBottomSheet,
-                          ),
-                          const SizedBox(width: 8),
-                        ],
-                      ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _PinnedActionRowDelegate(
+                      topInset: topInset,
+                      rowHeight: 68,
+                      color: pageColor,
+                      child: _buildActionRow(),
                     ),
                   ),
+
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  // PENTING: jangan bungkus PlaylistTrackList dengan
-                  // Container, Column, atau SliverToBoxAdapter.
                   PlaylistTrackList(
                     displayedSongs: _displayedSongs,
                     albumIds: {
@@ -1333,4 +1372,43 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       ),
     );
   }
+}
+
+class _PinnedActionRowDelegate extends SliverPersistentHeaderDelegate {
+  final double topInset;
+  final double rowHeight;
+  final Widget child;
+  final Color color;
+
+  _PinnedActionRowDelegate({
+    required this.topInset,
+    required this.rowHeight,
+    required this.child,
+    required this.color,
+  });
+
+  @override
+  double get minExtent => topInset + rowHeight;
+  @override
+  double get maxExtent => topInset + rowHeight;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Column(
+      children: [
+        Container(
+          height: topInset,
+          color: overlapsContent ? color : Colors.transparent,
+        ),
+        Container(height: rowHeight, color: color, child: child),
+      ],
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _PinnedActionRowDelegate old) => true;
 }
