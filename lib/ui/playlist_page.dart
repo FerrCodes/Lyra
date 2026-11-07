@@ -95,7 +95,18 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 1. HEADER & TOMBOL CENTANG
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade500,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // HEADER & TOMBOL CENTANG
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -431,7 +442,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
       );
     }
 
-    // 2. TAMPILAN NORMAL
+    // TAMPILAN NORMAL
     return GridView.builder(
       controller: _scrollController,
       padding: EdgeInsets.only(
@@ -520,7 +531,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   child: Stack(
                     fit: StackFit.expand, // Memaksa isi stack memenuhi area
                     children: [
-                      // 1. TAMPILKAN GAMBAR GALERI JIKA ADA
+                      // TAMPILKAN GAMBAR GALERI JIKA ADA
                       if (hasImage)
                         Image.file(
                           File(playlist.imagePath!),
@@ -537,7 +548,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                           },
                         )
                       else
-                        // 2. JIKA TIDAK ADA GAMBAR, TAMPILKAN IKON DEFAULT
+                        // JIKA TIDAK ADA GAMBAR, TAMPILKAN IKON DEFAULT
                         const Center(
                           child: Icon(
                             Icons.queue_music,
@@ -546,7 +557,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                           ),
                         ),
 
-                      // 3. IKON DRAG (Hanya mode edit)
+                      // IKON DRAG (Hanya mode edit)
                       if (isEditMode)
                         Positioned(
                           top: 8,

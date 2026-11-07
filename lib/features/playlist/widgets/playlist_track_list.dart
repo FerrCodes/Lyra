@@ -33,13 +33,6 @@ class PlaylistTrackList extends StatelessWidget {
     required this.albumIds,
   });
 
-  static const List<List<Color>> _artworkPalettes = [
-    [Color(0xFF625A73), Color(0xFFB4A6C1)],
-    [Color(0xFF536A69), Color(0xFFA5B9A8)],
-    [Color(0xFF8A6654), Color(0xFFD0B49A)],
-    [Color(0xFF555F83), Color(0xFFAAB4D1)],
-  ];
-
   @override
   Widget build(BuildContext context) {
     if (displayedSongs.isEmpty) {
@@ -118,7 +111,7 @@ class PlaylistTrackList extends StatelessWidget {
 
           return Container(
             key: ValueKey(song.id),
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
             decoration: BoxDecoration(
               color: selected
                   ? const Color(0xFFE6EAF2)
@@ -190,17 +183,13 @@ class PlaylistTrackList extends StatelessWidget {
                   onTap: () => onPlaySong(song),
                   onLongPress: () => onLongPress(song),
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 5, 8),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 0, 8),
                     child: Row(
                       children: [
                         _buildArtwork(song, index),
                         const SizedBox(width: 13),
-                        _buildSongLabels(
-                          song,
-                          isPlaying,
-                        ), // <-- Kirim status isPlaying
+                        _buildSongLabels(song, isPlaying),
                         const SizedBox(width: 8),
-
                         // TAMPILKAN ANIMASI JIKA SEDANG DIPUTAR
                         if (isPlaying) ...[
                           const EqualizerAnimation(),
@@ -209,6 +198,7 @@ class PlaylistTrackList extends StatelessWidget {
 
                         IconButton(
                           tooltip: 'More options',
+                          padding: EdgeInsets.zero,
                           visualDensity: VisualDensity.compact,
                           onPressed: () => onShowOptions(song),
                           icon: const Icon(
@@ -230,43 +220,27 @@ class PlaylistTrackList extends StatelessWidget {
   }
 
   Widget _buildArtwork(Song song, int index) {
-    // Ambil albumId dari map yang dikirim dari halaman utama
     final String albumIdStr = albumIds[song.id] ?? '0';
     final int albumId = int.tryParse(albumIdStr) ?? 0;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(13),
+      borderRadius: BorderRadius.circular(8),
       child: QueryArtworkWidget(
         id: albumId,
         type: ArtworkType.ALBUM,
         size: 200,
         artworkHeight: 50,
         artworkWidth: 50,
-        artworkBorder: BorderRadius.circular(13),
-        // Jika tidak ada gambar, gunakan desain gradient bawaan
+        artworkBorder: BorderRadius.circular(8),
+        // Jika tidak ada gambar, gunakan desain default
         nullArtworkWidget: Container(
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(13),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: _artworkPalettes[index % _artworkPalettes.length],
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x12000000),
-                blurRadius: 7,
-                offset: Offset(0, 3),
-              ),
-            ],
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(
-            Icons.graphic_eq_rounded,
-            color: Color(0xE6FFFFFF),
-            size: 25,
-          ),
+          child: const Icon(Icons.music_note, color: Colors.grey),
         ),
       ),
     );

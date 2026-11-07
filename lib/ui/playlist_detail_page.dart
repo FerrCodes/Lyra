@@ -1,12 +1,13 @@
+import '../main.dart';
 import 'dart:io';
 import 'dart:ui';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:lyra/features/playlist/sheets/add_tracks_sheet.dart';
 import '../database/database.dart';
-import '../main.dart';
 import '../providers/database_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../../features/playlist/widgets/playlist_header.dart';
@@ -29,7 +30,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   List<Song> _songsInPlaylist = [];
   List<Song> _displayedSongs = [];
   bool _isLoading = true;
-  final GlobalKey _filterButtonKey = GlobalKey();
   late String _currentPlaylistName;
   String? _currentImagePath;
   String? _currentDescription;
@@ -37,6 +37,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isSelectionMode = false;
   Set<String> _selectedSongIds = {};
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -98,8 +99,21 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   }
 
   void _applySort() {
-    _displayedSongs = List.from(_songsInPlaylist);
-    if (_currentSort == 'Name') {
+    // Filter berdasarkan pencarian
+    List<Song> filtered = List.from(_songsInPlaylist);
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered
+          .where(
+            (s) =>
+                s.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                s.artist.toLowerCase().contains(_searchQuery.toLowerCase()),
+          )
+          .toList();
+    }
+
+    // Urutkan
+    _displayedSongs = filtered;
+    if (_currentSort == 'Name' || _currentSort == 'Title') {
       _displayedSongs.sort(
         (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
       );
@@ -107,6 +121,13 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       _displayedSongs.sort(
         (a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
       );
+    } else if (_currentSort == 'Album') {
+      _displayedSongs.sort(
+        (a, b) => a.album.toLowerCase().compareTo(b.album.toLowerCase()),
+      );
+    } else if (_currentSort == 'Date Added' ||
+        _currentSort == 'Recently added') {
+      _displayedSongs.sort((a, b) => b.id.compareTo(a.id));
     }
   }
 
@@ -347,104 +368,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
-  // ==========================================
-  // UI DIALOG FILTER
-  // ==========================================
-  void _showFilterMenu() {
-    if (_filterButtonKey.currentContext == null) return;
-    final RenderBox renderBox =
-        _filterButtonKey.currentContext!.findRenderObject() as RenderBox;
-    final Offset offset = renderBox.localToGlobal(Offset.zero);
-    final double topPosition = offset.dy + renderBox.size.height - 70;
-    final double leftPosition = offset.dx - 1;
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.1),
-      builder: (context) {
-        return Stack(
-          children: [
-            Positioned(
-              top: topPosition,
-              left: leftPosition,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(
-                  width: 240,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-                        child: Row(
-                          children: [
-                            Text(
-                              _currentSort,
-                              style: TextStyle(
-                                color: Colors.blue.shade700,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.check,
-                              color: Colors.blue.shade700,
-                              size: 18,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1, thickness: 0.5),
-                      _buildFilterOption('Custom order'),
-                      _buildFilterOption('Name'),
-                      _buildFilterOption('Artist'),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildFilterOption(String title) {
-    final isSelected = _currentSort == title;
-    if (isSelected) return const SizedBox.shrink();
-    return Material(
-      color: Colors.transparent,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-        visualDensity: VisualDensity.compact,
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 15, color: Colors.black87),
-        ),
-        onTap: () {
-          setState(() {
-            _currentSort = title;
-            _applySort();
-          });
-          Navigator.of(context, rootNavigator: true).pop();
-        },
-      ),
-    );
-  }
-
   void _showAddSongsToPlaylist() {
     showModalBottomSheet(
       context: context,
@@ -635,6 +558,355 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
+  Widget _buildActionPill({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.black87, size: 18),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSortBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      // Ubah nama context menjadi bottomSheetContext
+      builder: (bottomSheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade500,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Text(
+                  'Urutkan dari:',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Kirim bottomSheetContext ke fungsi
+              _buildSortOption(bottomSheetContext, 'Urutan khusus'),
+              _buildSortOption(bottomSheetContext, 'Judul'),
+              _buildSortOption(bottomSheetContext, 'Artis'),
+              _buildSortOption(bottomSheetContext, 'Album'),
+              _buildSortOption(bottomSheetContext, 'Terakhir ditambahkan'),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // parameter bottomSheetContext
+  Widget _buildSortOption(BuildContext bottomSheetContext, String title) {
+    // Mapping nama tampilan ke logika di _applySort
+    String sortKey = title;
+    if (title == 'Urutan khusus') sortKey = 'Custom order';
+    if (title == 'Judul') sortKey = 'Name';
+    if (title == 'Artis') sortKey = 'Artist';
+    if (title == 'Album') sortKey = 'Album';
+    if (title == 'Terakhir ditambahkan') sortKey = 'Date Added';
+
+    // Cek apakah opsi ini yang sedang aktif
+    final isSelected = _currentSort == sortKey;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          color: isSelected ? Colors.blue.shade700 : Colors.black87,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(Icons.check, color: Colors.blue.shade700)
+          : null,
+      onTap: () {
+        setState(() {
+          _currentSort = sortKey;
+          _applySort();
+        });
+        // Gunakan bottomSheetContext agar yang tertutup hanya Bottom Sheet-nya
+        Navigator.pop(bottomSheetContext);
+      },
+    );
+  }
+
+  void _showInfoBottomSheet() {
+    // Hitung total durasi
+    int totalSeconds = _songsInPlaylist.fold(
+      0,
+      (sum, song) => sum + (song.durationMs ~/ 1000),
+    );
+    String durationText =
+        '${totalSeconds ~/ 60} menit ${totalSeconds % 60} detik';
+
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 16),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade500,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Text(
+                  'Info Playlist',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildInfoRow(
+                Icons.calendar_today,
+                'Tanggal Dibuat',
+                // Format tanggal dari database (widget.playlist.createdAt)
+                DateFormat('dd/MM/yyyy').format(widget.playlist.createdAt),
+              ),
+              _buildInfoRow(
+                Icons.music_note,
+                'Total Lagu',
+                '${_songsInPlaylist.length} lagu',
+              ),
+              _buildInfoRow(Icons.timer, 'Total Durasi', durationText),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.grey.shade600, size: 22),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSearchBottomSheet() {
+    final TextEditingController searchController = TextEditingController(
+      text: _searchQuery,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(
+              context,
+            ).viewInsets.bottom, // Agar tidak tertutup keyboard
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Cari lagu atau artis...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                    _applySort();
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  'Tutup',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Tombol Play (Kapsul Hitam)
+  Widget _buildPlayButton() {
+    return GestureDetector(
+      onTap: () => _playPlaylist(),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.black, // Warna hitam pekat khas tombol Play
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Play',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Tombol Play Acak (Lingkaran Abu-abu)
+  Widget _buildShuffleButton() {
+    return GestureDetector(
+      onTap: () => _playPlaylist(shuffle: true),
+      child: Container(
+        height: 44,
+        width: 44,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Icon(Icons.shuffle_rounded, color: Colors.black87, size: 20),
+        ),
+      ),
+    );
+  }
+
   Widget _buildListTile(IconData icon, String title, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
@@ -716,149 +988,59 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     ),
                   ),
 
-                  // Kontrol playlist: ringan, tanpa panel putih besar.
+                  // Kontrol playlist: Tombol Aksi Horizontal
                   SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(22, 18, 22, 20),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       child: Row(
                         children: [
-                          GestureDetector(
-                            onTap: _showFilterMenu,
-                            child: Container(
-                              key: _filterButtonKey,
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.sort,
-                                    color: Colors.black87,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _currentSort,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          Material(
-                            color: const Color(0xFFECE9E2),
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                              tooltip: 'Shuffle',
-                              onPressed: _displayedSongs.isEmpty
-                                  ? null
-                                  : () => _playPlaylist(shuffle: true),
-                              icon: const Icon(
-                                Icons.shuffle_rounded,
-                                color: Color(0xFF282722),
-                                size: 21,
-                              ),
-                            ),
+                          _buildPlayButton(),
+                          const SizedBox(width: 8),
+                          _buildShuffleButton(),
+                          const SizedBox(width: 12),
+                          Container(
+                            height: 30,
+                            width: 1.5,
+                            color: const Color.fromARGB(255, 206, 206, 206),
                           ),
                           const SizedBox(width: 12),
-                          Material(
-                            color: const Color(0xFF24231F),
-                            shape: const CircleBorder(),
-                            elevation: 3,
-                            shadowColor: Colors.black.withValues(alpha: 0.18),
-                            child: IconButton(
-                              tooltip: 'Play',
-                              onPressed: _displayedSongs.isEmpty
-                                  ? null
-                                  : () => _playPlaylist(),
-                              icon: const Icon(
-                                Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 30,
-                              ),
-                            ),
+                          _buildActionPill(
+                            icon: Icons.filter_list,
+                            label: 'Urutkan',
+                            onTap: _showSortBottomSheet,
                           ),
+                          const SizedBox(width: 8),
+                          _buildActionPill(
+                            icon: Icons.format_list_bulleted,
+                            label: 'Sesuaikan',
+                            onTap: () {
+                              setState(() {
+                                _isSelectionMode = true;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          _buildActionPill(
+                            icon: Icons.search,
+                            label: 'Cari',
+                            onTap: _showSearchBottomSheet,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildActionPill(
+                            icon: Icons.info_outline,
+                            label: 'Info',
+                            onTap: _showInfoBottomSheet,
+                          ),
+                          const SizedBox(width: 8),
                         ],
                       ),
                     ),
                   ),
-
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 2, 24, 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'YOUR COLLECTION',
-                                  style: TextStyle(
-                                    color: Color(0xFF8A857B),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.8,
-                                  ),
-                                ),
-                                SizedBox(height: 5),
-                                Text(
-                                  'Tracks',
-                                  style: TextStyle(
-                                    color: Color(0xFF26251F),
-                                    fontSize: 23,
-                                    height: 1.05,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 2),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 11,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFECE9E2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${_displayedSongs.length} songs',
-                              style: const TextStyle(
-                                color: Color(0xFF69655D),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   // PENTING: jangan bungkus PlaylistTrackList dengan
                   // Container, Column, atau SliverToBoxAdapter.
                   PlaylistTrackList(
@@ -904,7 +1086,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     },
                     onShowOptions: (song) => _showSongOptions(song),
                   ),
-
                   const SliverToBoxAdapter(child: SizedBox(height: 110)),
                 ],
               ),
