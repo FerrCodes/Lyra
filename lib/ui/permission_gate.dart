@@ -54,7 +54,7 @@ class _PermissionGateState extends State<PermissionGate>
 
   @override
   Widget build(BuildContext context) {
-    // 1. Sedang mengecek (Loading)
+    // Sedang mengecek (Loading)
     if (_isChecking) {
       return const Scaffold(
         backgroundColor: Color(0xFFF2F2F7),
@@ -62,16 +62,15 @@ class _PermissionGateState extends State<PermissionGate>
       );
     }
 
-    // 2. Jika Izin Diberikan, Tampilkan Halaman Utama
+    // Jika Izin Diberikan, Tampilkan Halaman Utama
     if (_isPermissionGranted) {
       return const HomePage();
     }
 
-    // 3. Jika Izin Ditolak, Tampilkan Layar Gerbang Izin
+    // Jika Izin Ditolak, Tampilkan Layar Gerbang Izin
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F7),
       body: SafeArea(
-        // <--- 1. Bungkus dengan SafeArea
         child: Center(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -79,7 +78,6 @@ class _PermissionGateState extends State<PermissionGate>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
-                // Ikon besar
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -93,8 +91,6 @@ class _PermissionGateState extends State<PermissionGate>
                   ),
                 ),
                 const SizedBox(height: 32),
-
-                // Teks Penjelasan
                 const Text(
                   'Izin Diperlukan!',
                   style: TextStyle(

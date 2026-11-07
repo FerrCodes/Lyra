@@ -274,7 +274,7 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32.0,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16.0,
       ),
       child: SingleChildScrollView(
         child: Padding(
@@ -325,27 +325,62 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                   ),
                   Positioned(
                     bottom: 12,
-                    left: 12,
-                    child: GestureDetector(
-                      onTap: _pickImageSource,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 8,
+                    right: 12,
+                    child: Row(
+                      children: [
+                        // Tombol Hapus (Hanya muncul jika ada foto)
+                        if (_tempImagePath != null) ...[
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _tempImagePath = null; // Hapus foto dari state
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 8,
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Colors.redAccent,
+                              ),
                             ),
-                          ],
+                          ),
+                          const SizedBox(width: 8), // Jarak antar tombol
+                        ],
+
+                        // Tombol Edit/Pensil
+                        GestureDetector(
+                          onTap: _pickImageSource,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              size: 20,
+                              color: Colors.black87,
+                            ),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.edit,
-                          size: 20,
-                          color: Colors.black87,
-                        ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
@@ -368,17 +403,24 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
               // INPUT DESKRIPSI
               TextField(
                 controller: _descController,
-                maxLines: 3,
+                maxLines: 2,
+                maxLength: 70,
                 decoration: InputDecoration(
                   labelText: 'Deskripsi (Opsional)',
                   alignLabelWithHint: true,
                   filled: true,
                   fillColor: Colors.grey.shade100,
+                  // Penghitung karakter (70/70)
+                  counterText: "${_descController.text.length}/70",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
                   ),
                 ),
+                // Tetap gunakan setState agar angka counter-nya berubah
+                onChanged: (text) {
+                  setState(() {});
+                },
               ),
               const SizedBox(height: 24),
               // TOMBOL SIMPAN

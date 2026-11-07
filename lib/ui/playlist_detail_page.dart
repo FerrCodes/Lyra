@@ -688,13 +688,26 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   }
 
   void _showInfoBottomSheet() {
-    // Hitung total durasi
+    // 1. Hitung total detik dari semua lagu
     int totalSeconds = _songsInPlaylist.fold(
       0,
       (sum, song) => sum + (song.durationMs ~/ 1000),
     );
-    String durationText =
-        '${totalSeconds ~/ 60} menit ${totalSeconds % 60} detik';
+
+    // Format durasi lengkap
+    int hours = totalSeconds ~/ 3600;
+    int minutes = (totalSeconds % 3600) ~/ 60;
+
+    String durationText = '';
+    if (hours > 0) {
+      if (minutes > 0) {
+        durationText = '$hours jam $minutes menit';
+      } else {
+        durationText = '$hours jam';
+      }
+    } else {
+      durationText = '$minutes menit';
+    }
 
     showModalBottomSheet(
       context: context,
@@ -715,7 +728,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade500,
+                    color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -729,17 +742,17 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               ),
               const SizedBox(height: 8),
               _buildInfoRow(
-                Icons.calendar_today,
-                'Tanggal Dibuat',
-                // Format tanggal dari database (widget.playlist.createdAt)
-                DateFormat('dd/MM/yyyy').format(widget.playlist.createdAt),
-              ),
-              _buildInfoRow(
                 Icons.music_note,
                 'Total Lagu',
                 '${_songsInPlaylist.length} lagu',
               ),
               _buildInfoRow(Icons.timer, 'Total Durasi', durationText),
+              _buildInfoRow(
+                Icons.calendar_today,
+                'Tanggal Dibuat',
+                DateFormat('dd/MM/yyyy').format(widget.playlist.createdAt),
+              ),
+              // Tampilkan total durasi yang sudah diformat
               const SizedBox(height: 24),
             ],
           ),
