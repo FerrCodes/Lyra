@@ -45,3 +45,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: LyraFont
+      fonts:
+        - asset: assets/fonts/Aclonica-Regular.ttf
+          weight: 900

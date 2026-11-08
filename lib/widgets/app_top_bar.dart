@@ -8,15 +8,18 @@ import '../ui/profile_page.dart';
 import '../ui/songs_page.dart';
 import '../ui/playlist_page.dart';
 import '../ui/library_page.dart';
+import 'glass_container.dart';
 
 class AppTopBar extends StatelessWidget {
   final int currentTab;
   final String currentSortFilter;
+  final VoidCallback? onInfoTap;
 
   const AppTopBar({
     super.key,
     required this.currentTab,
     required this.currentSortFilter,
+    this.onInfoTap,
   });
 
   @override
@@ -29,17 +32,18 @@ class AppTopBar extends StatelessWidget {
     );
   }
 
-  // Fungsi khusus untuk Avatar (karena ada bordernya)
-  Widget _buildAvatarCircle({
-    required Widget child,
-    required VoidCallback onTap,
-  }) {
+  // Fungsi bantuan untuk membuat lingkaran putih dengan efek kaca/border
+  Widget _buildCircle({required Widget child}) {
     return Container(
       height: 48,
       width: 48,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.black.withValues(alpha: 0.1),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -48,57 +52,74 @@ class AppTopBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              ClipOval(child: SizedBox(width: 48, height: 48, child: child)),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    width: 1.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      child: ClipOval(child: Center(child: child)),
     );
   }
 
   Widget _buildHeaderContent(BuildContext context) {
     // HEADER BERANDA (Tab 0)
     if (currentTab == 0) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _buildAvatarCircle(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfilePage()),
+      if (currentTab == 0) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            GestureDetector(
+              onTap: onInfoTap,
+              behavior: HitTestBehavior.opaque,
+              child: GlassContainer(
+                // Memberikan ruang di dalam kaca agar teks tidak mepet
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                radius: 20, // Sudut melengkung kapsul
+                child: Text(
+                  'LYRA MUSIC',
+                  style: TextStyle(
+                    fontFamily: 'LyraFont',
+                    fontSize: 22, // Sedikit dikecilkan agar pas di dalam kapsul
+                    letterSpacing: -0.5,
+                    color: Colors.black87, // Teks tetap hitam
+                  ),
+                ),
+              ),
             ),
-            child: ValueListenableBuilder<String?>(
-              valueListenable: profileImageNotifier,
-              builder: (context, imagePath, child) {
-                if (imagePath != null && imagePath.isNotEmpty)
-                  return Image.file(File(imagePath), fit: BoxFit.cover);
-                return const DefaultProfileAvatar(size: 48);
-              },
+
+            // Avatar Profil (Kanan)
+            _buildCircle(
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilePage()),
+                    );
+                  },
+                  child: ClipOval(
+                    child: ValueListenableBuilder<String?>(
+                      valueListenable: profileImageNotifier,
+                      builder: (context, imagePath, child) {
+                        if (imagePath != null && imagePath.isNotEmpty) {
+                          return Image.file(
+                            File(imagePath),
+                            fit: BoxFit.cover,
+                            width: 48,
+                            height: 48,
+                          );
+                        }
+                        return const DefaultProfileAvatar(size: 48);
+                      },
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
-      );
+          ],
+        );
+      }
     }
 
     // HEADER SONGS (Tab 1)
@@ -266,20 +287,37 @@ class AppTopBar extends StatelessWidget {
               ],
             ),
           ),
-          _buildAvatarCircle(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfilePage()),
+          _buildCircle(
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfilePage()),
+                    );
+                  },
+                  child: ClipOval(
+                    child: ValueListenableBuilder<String?>(
+                      valueListenable: profileImageNotifier,
+                      builder: (context, imagePath, child) {
+                        if (imagePath != null && imagePath.isNotEmpty) {
+                          return Image.file(
+                            File(imagePath),
+                            fit: BoxFit.cover,
+                            width: 48,
+                            height: 48,
+                          );
+                        }
+                        return const DefaultProfileAvatar(size: 48);
+                      },
+                    ),
+                  ),
+                ),
+              ),
             ),
-            child: ValueListenableBuilder<String?>(
-              valueListenable: profileImageNotifier,
-              builder: (context, imagePath, child) {
-                if (imagePath != null && imagePath.isNotEmpty)
-                  return Image.file(File(imagePath), fit: BoxFit.cover);
-                return const DefaultProfileAvatar(size: 48);
-              },
-            ),
-          ),
         ],
       );
     }

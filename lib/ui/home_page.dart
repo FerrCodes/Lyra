@@ -180,6 +180,163 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  void _showAboutBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final colors = context.lyra;
+
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6, // Muncul setinggi 60% layar
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Handle Bar
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade500,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                // Judul
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Lyra - Music Player Offline',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                // Isi Konten
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(24),
+                    children: [
+                      _buildInfoSection(
+                        colors,
+                        icon: Icons.library_music_rounded,
+                        title: 'Pemutar Musik Offline',
+                        description:
+                            'Lyra memutar lagu langsung dari penyimpanan HP-mu tanpa memerlukan koneksi internet. Cepat, ringan, dan privasimu terjaga.',
+                      ),
+                      _buildInfoSection(
+                        colors,
+                        icon: Icons.queue_music_rounded,
+                        title: 'Manajemen Playlist',
+                        description:
+                            'Buat, edit, dan atur urutan lagu sesukamu. Kamu juga bisa menandai playlist sebagai favorit (ikon bintang) agar muncul di halaman Beranda.',
+                      ),
+                      _buildInfoSection(
+                        colors,
+                        icon: Icons.search_rounded,
+                        title: 'Pencarian Cepat',
+                        description:
+                            'Cari lagu, artis, atau album dengan cepat. Riwayat pencarian terakhirmu akan disimpan agar mudah diakses kembali.',
+                      ),
+                      _buildInfoSection(
+                        colors,
+                        icon: Icons.history_rounded,
+                        title: 'Riwayat & Statistik',
+                        description:
+                            'Lyra mencatat lagu yang sering kamu putar dan lagu terakhir yang kamu dengarkan, ditampilkan langsung di halaman Beranda.',
+                      ),
+                      _buildInfoSection(
+                        colors,
+                        icon: Icons.dark_mode_rounded,
+                        title: 'Kustomisasi Tampilan',
+                        description:
+                            'Ubah nama profil, atur foto, dan nikmati antarmuka Liquid Glass yang modern. Dukungan tema gelap akan segera hadir.',
+                      ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: Text(
+                          'Lyra Music v1.0.0',
+                          style: TextStyle(
+                            color: colors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoSection(
+    LyraColors colors, {
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.accent.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: colors.accent, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _switchTab(int index) {
     if (index == _currentTab) return;
 
@@ -325,6 +482,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               AppTopBar(
                 currentTab: _currentTab,
                 currentSortFilter: _currentSortFilter,
+                onInfoTap: _showAboutBottomSheet,
               ),
             ],
 
