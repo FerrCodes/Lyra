@@ -160,15 +160,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         body: Stack(
           children: [
             // KONTEN UTAMA
-            // KONTEN UTAMA
             Column(
               children: [
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.only(
                       top: MediaQuery.of(context).padding.top + 80,
-                      bottom:
-                          20, // Dikurangi agar tidak terlalu jauh dari copyright
+                      bottom: 20,
                       left: 16,
                       right: 16,
                     ),

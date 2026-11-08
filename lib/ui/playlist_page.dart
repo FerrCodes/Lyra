@@ -7,11 +7,13 @@ import '../providers/database_provider.dart';
 import 'playlist_detail_page.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import '../features/playlist/widgets/playlist_cover.dart';
 
 // Kabel untuk dipanggil dari home_page.dart
 final GlobalKey<PlaylistPageState> playlistPageKey =
     GlobalKey<PlaylistPageState>();
 final ValueNotifier<bool> playlistEditModeNotifier = ValueNotifier<bool>(false);
+final ValueNotifier<bool> playlistViewModeNotifier = ValueNotifier<bool>(false);
 
 class PlaylistPage extends ConsumerStatefulWidget {
   const PlaylistPage({super.key});
@@ -423,68 +425,177 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_playlists.isEmpty) return _buildEmptyState();
 
-    // 1. TAMPILAN MODE EDIT (Drag & Drop)
-    if (isEditMode) {
-      return ReorderableGridView.count(
-        padding: EdgeInsets.only(
-          top: MediaQuery.of(context).padding.top + 100,
-          bottom: 160,
-          left: 16,
-          right: 16,
-        ),
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
-        onReorder: (oldIndex, newIndex) {
-          setState(() {
-            final item = _playlists.removeAt(oldIndex);
-            _playlists.insert(newIndex, item);
-          });
-          _saveNewOrder(); // Simpan otomatis
-        },
-        dragWidgetBuilder: (index, child) {
-          return Material(
-            color: Colors.transparent,
-            elevation: 8,
-            shadowColor: Colors.black.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(20),
-            child: child,
+    return ValueListenableBuilder<bool>(
+      valueListenable: playlistViewModeNotifier,
+      builder: (context, isListView, child) {
+        // 1. TAMPILAN LIST
+        if (isListView) {
+          return ListView.builder(
+            controller: _scrollController,
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 100,
+              bottom: 160,
+              left: 16,
+              right: 16,
+            ),
+            itemCount: _playlists.length,
+            itemBuilder: (context, index) {
+              return _buildPlaylistListTile(
+                _playlists[index],
+                index,
+                isEditMode: false,
+                key: ValueKey(_playlists[index].id),
+              );
+            },
           );
-        },
-        children: _playlists.map((playlist) {
-          return _buildPlaylistCard(
-            playlist,
-            isEditMode: true,
-            key: ValueKey(playlist.id),
-          );
-        }).toList(),
-      );
-    }
+        }
 
-    // TAMPILAN NORMAL
-    return GridView.builder(
-      controller: _scrollController,
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 100,
-        bottom: 160,
-        left: 16,
-        right: 16,
-      ),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: _playlists.length,
-      itemBuilder: (context, index) {
-        return _buildPlaylistCard(
-          _playlists[index],
-          isEditMode: false,
-          key: ValueKey(_playlists[index].id),
+        // TAMPILAN GRID (Bisa Long-Press untuk Reorder)
+        return ReorderableGridView.count(
+          controller: _scrollController,
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 100,
+            bottom: 160,
+            left: 16,
+            right: 16,
+          ),
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.85,
+          onReorder: (oldIndex, newIndex) {
+            setState(() {
+              final item = _playlists.removeAt(oldIndex);
+              _playlists.insert(newIndex, item);
+            });
+            _saveNewOrder(); // Simpan urutan baru ke Database
+          },
+          dragWidgetBuilder: (index, child) {
+            // Tampilan saat card sedang di-drag (melayang)
+            return Material(
+              color: Colors.transparent,
+              elevation: 8,
+              shadowColor: Colors.black.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(20),
+              child: child,
+            );
+          },
+          children: _playlists.map((playlist) {
+            return ReorderableDelayedDragStartListener(
+              key: ValueKey(playlist.id),
+              index: _playlists.indexOf(playlist),
+              child: _buildPlaylistCard(
+                playlist,
+                isEditMode: false, // Ikon drag disembunyikan
+                key: ValueKey(playlist.id),
+              ),
+            );
+          }).toList(),
         );
       },
+    );
+  }
+
+  Widget _buildPlaylistListTile(
+    Playlist playlist,
+    int index, {
+    required bool isEditMode,
+    required Key key,
+  }) {
+    return Container(
+      key: key,
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: isEditMode || _isMenuOpen
+              ? null
+              : () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PlaylistDetailPage(
+                        key: detailPageKey,
+                        playlist: playlist,
+                      ),
+                    ),
+                  ).then((_) => _loadPlaylists());
+                },
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                // Cover Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: PlaylistCover(
+                      playlistId: playlist.id,
+                      imagePath: playlist.imagePath,
+                      iconSize: 28,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Teks
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        playlist.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Tombol Kanan
+                if (isEditMode)
+                  const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Icon(
+                      Icons.drag_indicator_rounded,
+                      color: Colors.grey,
+                    ),
+                  )
+                else
+                  Builder(
+                    builder: (buttonContext) {
+                      return IconButton(
+                        icon: const Icon(Icons.more_vert, color: Colors.grey),
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          _showCardPopover(buttonContext, playlist);
+                        },
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -493,10 +604,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     required bool isEditMode,
     required Key key,
   }) {
-    // Cek apakah playlist punya gambar
-    final bool hasImage =
-        playlist.imagePath != null && playlist.imagePath!.isNotEmpty;
-
     return InkWell(
       key: key,
       borderRadius: BorderRadius.circular(20),
@@ -529,73 +636,15 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                  // Jika ada gambar, gradient merah dihilangkan
-                  gradient: hasImage
-                      ? null
-                      : LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Colors.red.shade400, Colors.red.shade800],
-                        ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
                 ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                  child: Stack(
-                    fit: StackFit.expand, // Memaksa isi stack memenuhi area
-                    children: [
-                      // TAMPILKAN GAMBAR GALERI JIKA ADA
-                      if (hasImage)
-                        Image.file(
-                          File(playlist.imagePath!),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            // Jika file terhapus, tampilkan ikon
-                            return const Center(
-                              child: Icon(
-                                Icons.queue_music,
-                                size: 50,
-                                color: Colors.white54,
-                              ),
-                            );
-                          },
-                        )
-                      else
-                        // JIKA TIDAK ADA GAMBAR, TAMPILKAN IKON DEFAULT
-                        const Center(
-                          child: Icon(
-                            Icons.queue_music,
-                            size: 50,
-                            color: Colors.white54,
-                          ),
-                        ),
-
-                      // IKON DRAG (Hanya mode edit)
-                      if (isEditMode)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.drag_indicator,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                    ],
+                child: SizedBox(
+                  width: double.infinity,
+                  child: PlaylistCover(
+                    playlistId: playlist.id,
+                    imagePath: playlist.imagePath,
                   ),
                 ),
               ),

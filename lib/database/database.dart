@@ -253,6 +253,26 @@ class AppDatabase extends _$AppDatabase {
         .watchSingleOrNull();
   }
 
+  Stream<List<PlayHistoryData>> watchRecentlyPlayed({int limit = 10}) {
+    return (select(playHistory)
+          ..orderBy([
+            (t) => OrderingTerm(
+              expression: t.lastPlayedAt,
+              mode: OrderingMode.desc,
+            ),
+          ])
+          ..limit(limit))
+        .watch();
+  }
+
+  // Daftar id lagu dalam playlist (berurutan), selalu ter-update
+  Stream<List<String>> watchPlaylistSongIds(int playlistId) {
+    final query = select(playlistSongs)
+      ..where((t) => t.playlistId.equals(playlistId))
+      ..orderBy([(t) => OrderingTerm(expression: t.orderIndex)]);
+    return query.watch().map((rows) => rows.map((r) => r.songId).toList());
+  }
+
   Stream<List<Song>> watchFavorites() {
     final query = select(
       favorites,

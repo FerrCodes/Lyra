@@ -20,6 +20,7 @@ class LibraryPage extends ConsumerStatefulWidget {
 class LibraryPageState extends ConsumerState<LibraryPage> {
   bool _isLoading = true;
   int _totalFavorites = 0;
+  int _totalPlaylists = 0;
   final ScrollController _scrollController = ScrollController();
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
@@ -34,10 +35,12 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     setState(() => _isLoading = true);
     final db = ref.read(databaseProvider);
     final favs = await db.getAllFavoriteSongs();
+    final playlists = await db.select(db.playlists).get();
 
     if (mounted) {
       setState(() {
         _totalFavorites = favs.length;
+        _totalPlaylists = playlists.length;
         _isLoading = false;
       });
     }
@@ -222,10 +225,33 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
                 );
               },
             ),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildStatItem(allSongs.length.toString(), 'Total Lagu'),
+                  _buildStatDivider(),
+                  _buildStatItem(_totalPlaylists.toString(), 'Playlist'),
+                ],
+              ),
+            ),
           ],
         ),
 
-        // 2. LAPISAN SPINNER (Hanya muncul saat loading)
+        // LAPISAN SPINNER (Hanya muncul saat loading)
         if (_isLoading)
           Positioned.fill(
             child: IgnorePointer(
@@ -252,7 +278,7 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 80, // Tinggi card list
+        height: 80,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -266,7 +292,6 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
         ),
         child: Row(
           children: [
-            // 1. Garis Warna di Kiri (Aksen)
             Container(
               width: 8,
               height: double.infinity,
@@ -281,7 +306,6 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
 
             const SizedBox(width: 16),
 
-            // 2. Kotak Ikon Berwarna Pastel
             Container(
               width: 50,
               height: 50,
@@ -338,5 +362,33 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
         ),
       ),
     );
+  }
+
+  void refreshStats() {
+    _loadStats();
+  }
+
+  Widget _buildStatItem(String count, String label) {
+    return Column(
+      children: [
+        Text(
+          count,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatDivider() {
+    return Container(height: 30, width: 1, color: Colors.grey.shade200);
   }
 }

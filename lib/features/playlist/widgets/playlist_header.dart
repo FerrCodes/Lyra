@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'playlist_cover.dart';
 
 class PlaylistHeader extends StatelessWidget {
   final String? imagePath;
@@ -30,12 +31,21 @@ class PlaylistHeader extends StatelessWidget {
             child: Image.file(
               File(imagePath!),
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  _buildFallbackBackground(),
+              errorBuilder: (context, error, stackTrace) => PlaylistCover(
+                playlistId: playlistId,
+                imagePath: null,
+                iconSize: 96,
+                artSize: 800,
+              ),
             ),
           )
         else
-          _buildFallbackBackground(),
+          PlaylistCover(
+            playlistId: playlistId,
+            imagePath: null,
+            iconSize: 96,
+            artSize: 800,
+          ),
 
         // Menjaga judul dan deskripsi tetap terbaca di atas foto.
         DecoratedBox(
@@ -102,21 +112,6 @@ class PlaylistHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildFallbackBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF77736C), Color(0xFF292824)],
-        ),
-      ),
-      child: const Center(
-        child: Icon(Icons.album_rounded, size: 86, color: Color(0x66FFFFFF)),
-      ),
     );
   }
 }

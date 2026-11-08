@@ -208,26 +208,35 @@ class AppTopBar extends StatelessWidget {
           ),
           TopBarButton(
             isCircle: false,
-            onTap: () => playlistPageKey.currentState?.toggleEditMode(),
-            customChild: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Center(
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: playlistEditModeNotifier,
-                  builder: (context, isEditing, child) {
-                    return Text(
-                      isEditing ? 'Selesai' : 'Edit',
-                      style: TextStyle(
-                        color: isEditing
-                            ? Colors.green.shade700
-                            : Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+            onTap: () {},
+            customChild: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ValueListenableBuilder<bool>(
+                  valueListenable: playlistViewModeNotifier,
+                  builder: (context, isListView, child) {
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: () {
+                          playlistViewModeNotifier.value = !isListView;
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Icon(
+                            isListView
+                                ? Icons.grid_view_rounded
+                                : Icons.view_list_rounded,
+                            color: Colors.black,
+                            size: 20,
+                          ),
+                        ),
                       ),
                     );
                   },
                 ),
-              ),
+              ],
             ),
           ),
         ],
@@ -245,27 +254,6 @@ class AppTopBar extends StatelessWidget {
             customChild: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Builder(
-                  builder: (buttonContext) {
-                    return Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => libraryPageKey.currentState?.showMoreMenu(
-                          buttonContext,
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Icon(
-                            Icons.more_vert,
-                            color: Colors.black,
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -284,40 +272,58 @@ class AppTopBar extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Tombol Refresh
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () {
+                      libraryPageKey.currentState?.refreshStats();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Icon(
+                        Icons.refresh_rounded,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
           _buildCircle(
-              child: Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ProfilePage()),
-                    );
-                  },
-                  child: ClipOval(
-                    child: ValueListenableBuilder<String?>(
-                      valueListenable: profileImageNotifier,
-                      builder: (context, imagePath, child) {
-                        if (imagePath != null && imagePath.isNotEmpty) {
-                          return Image.file(
-                            File(imagePath),
-                            fit: BoxFit.cover,
-                            width: 48,
-                            height: 48,
-                          );
-                        }
-                        return const DefaultProfileAvatar(size: 48);
-                      },
-                    ),
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfilePage()),
+                  );
+                },
+                child: ClipOval(
+                  child: ValueListenableBuilder<String?>(
+                    valueListenable: profileImageNotifier,
+                    builder: (context, imagePath, child) {
+                      if (imagePath != null && imagePath.isNotEmpty) {
+                        return Image.file(
+                          File(imagePath),
+                          fit: BoxFit.cover,
+                          width: 48,
+                          height: 48,
+                        );
+                      }
+                      return const DefaultProfileAvatar(size: 48);
+                    },
                   ),
                 ),
               ),
             ),
+          ),
         ],
       );
     }
