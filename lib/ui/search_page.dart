@@ -1,12 +1,21 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database.dart';
 import '../main.dart';
 import '../models/song.dart' as local;
 import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
-import 'package:flutter/services.dart';
+import '../theme/lyra_colors.dart';
+
+import '../features/search/search_logic.dart';
+import '../features/search/widgets/song_tile.dart';
+import '../features/search/widgets/artist_tile.dart';
+import '../features/search/widgets/album_tile.dart';
+import '../features/search/widgets/top_result_card.dart';
 
 class SearchQueryNotifier extends Notifier<String> {
   @override
@@ -29,73 +38,265 @@ class SearchPage extends ConsumerStatefulWidget {
 }
 
 class _SearchPageState extends ConsumerState<SearchPage> {
+  // ignore: unused_field
   List<Playlist> _allPlaylists = [];
+  Timer? _debounce;
+  String _debouncedQuery = '';
+  SearchResults? _results;
+
+  List<String> _recentSearches = [];
+  static const _recentKey = 'recent_searches';
 
   @override
   void initState() {
     super.initState();
     _loadPlaylists();
+    _loadRecentSearches();
+
+    // Listener untuk debounce pencarian
+    ref.listenManual(searchQueryProvider, (previous, next) {
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(milliseconds: 200), () {
+        if (mounted) {
+          setState(() {
+            _debouncedQuery = next;
+          });
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadPlaylists() async {
     final db = ref.read(databaseProvider);
     final data = await db.select(db.playlists).get();
     if (mounted) {
-      setState(() {
-        _allPlaylists = data;
-      });
+      setState(() => _allPlaylists = data);
     }
+  }
+
+  Future<void> _loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _recentSearches = prefs.getStringList(_recentKey) ?? [];
+    });
+  }
+
+  Future<void> _saveRecentSearch(String query) async {
+    if (query.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_recentKey) ?? [];
+    list.remove(query); // Hapus jika sudah ada
+    list.insert(0, query); // Tambah ke paling depan
+    if (list.length > 8) list.removeLast(); // Maksimal 8
+    await prefs.setStringList(_recentKey, list);
+    if (mounted) setState(() => _recentSearches = list);
+  }
+
+  Future<void> _clearRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_recentKey);
+    if (mounted) setState(() => _recentSearches = []);
+  }
+
+  void _playSong(local.Song song, List<local.Song> queueSongs) {
+    final handler = audioHandler as LyraAudioHandler;
+    final startIndex = queueSongs.indexWhere((s) => s.id == song.id);
+
+    final albumIds = {for (var s in queueSongs) s.path: s.albumId};
+
+    handler.playQueue(
+      queueSongs
+          .map(
+            (s) => Song(
+              id: s.id,
+              title: s.title,
+              artist: s.artist,
+              album: s.album,
+              path: s.path,
+              durationMs: s.durationMs,
+              addedAt: DateTime.now(),
+            ),
+          )
+          .toList(),
+      startIndex >= 0 ? startIndex : 0,
+      albumIds: albumIds,
+      sourceType: 'Search',
+      sourceName: _debouncedQuery,
+    );
+
+    _saveRecentSearch(_debouncedQuery);
+    FocusScope.of(context).unfocus();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Ambil query pencarian dari provider
-    final query = ref.watch(searchQueryProvider);
+    final colors = context.lyra;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Pantau perubahan lagu dari provider
     final songsAsync = ref.watch(allSongsProvider);
     final allSongs = songsAsync.value ?? [];
 
-    final queryLower = query.toLowerCase();
+    // Hitung ulang hasil hanya jika query atau daftar lagu berubah
+    if (_debouncedQuery.isNotEmpty) {
+      _results = performSearch(allSongs, _debouncedQuery);
+    } else {
+      _results = null;
+    }
 
-    // Logika Filter Lagu
-    final filteredSongs = query.isEmpty
-        ? <local.Song>[]
-        : allSongs
-              .where(
-                (s) =>
-                    s.title.toLowerCase().contains(queryLower) ||
-                    s.artist.toLowerCase().contains(queryLower) ||
-                    s.album.toLowerCase().contains(queryLower),
-              )
-              .toList();
-
-    // Logika Filter Playlist
-    final filteredPlaylists = query.isEmpty
-        ? <Playlist>[]
-        : _allPlaylists
-              .where((p) => p.name.toLowerCase().contains(queryLower))
-              .toList();
+    // Pantau lagu aktif
+    final currentMediaItem = audioHandler.mediaItem.value;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFFF2F2F7), // Background terang
-        systemNavigationBarIconBrightness: Brightness.dark, // Ikon hitam
-        systemNavigationBarDividerColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: colors.pageBackground,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF2F2F7),
+        backgroundColor: colors.pageBackground,
         body: Stack(
           children: [
             // KONTEN UTAMA
             SafeArea(
-              child: query.isEmpty
-                  ? _buildInitialState()
-                  : _buildSearchResults(filteredSongs, filteredPlaylists),
+              child: CustomScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
+                  if (_debouncedQuery.isEmpty)
+                    _buildInitialState(colors)
+                  else if (_results == null ||
+                      (_results!.songs.isEmpty &&
+                          _results!.artists.isEmpty &&
+                          _results!.albums.isEmpty))
+                    _buildEmptyState(colors)
+                  else ...[
+                    // Top Result
+                    if (_results!.topSongResult != null) ...[
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Text(
+                            'Top Result',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: TopResultCard(
+                          song: _results!.topSongResult!,
+                          onPlay: () => _playSong(
+                            _results!.topSongResult!,
+                            _results!.songs.map((e) => e.song).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Songs
+                    if (_results!.songs.isNotEmpty) ...[
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                          child: Text(
+                            'Songs',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverList.builder(
+                        itemCount: _results!.songs.length,
+                        itemBuilder: (context, index) {
+                          final res = _results!.songs[index];
+                          final isPlaying =
+                              currentMediaItem?.id == res.song.path;
+                          return SongTile(
+                            song: res.song,
+                            query: _debouncedQuery,
+                            isPlaying: isPlaying,
+                            onTap: () => _playSong(
+                              res.song,
+                              _results!.songs.map((e) => e.song).toList(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+
+                    // Artists
+                    if (_results!.artists.isNotEmpty) ...[
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                          child: Text(
+                            'Artists',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverList.builder(
+                        itemCount: _results!.artists.length,
+                        itemBuilder: (context, index) {
+                          return ArtistTile(
+                            artist: _results!.artists[index],
+                            onTap: () {},
+                          );
+                        },
+                      ),
+                    ],
+
+                    // Albums
+                    if (_results!.albums.isNotEmpty) ...[
+                      const SliverToBoxAdapter(
+                        child: Padding(
+                          padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+                          child: Text(
+                            'Albums',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverList.builder(
+                        itemCount: _results!.albums.length,
+                        itemBuilder: (context, index) {
+                          return AlbumTile(
+                            album: _results!.albums[index],
+                            onTap: () {},
+                          );
+                        },
+                      ),
+                    ],
+
+                    // Padding bawah
+                    const SliverToBoxAdapter(child: SizedBox(height: 140)),
+                  ],
+                ],
+              ),
             ),
 
-            // === OVERLAY GRADASI PUTIH UNTUK STATUS BAR ===
+            // OVERLAY GRADASI ATAS
             Positioned(
               top: 0,
               left: 0,
@@ -108,8 +309,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.white.withValues(alpha: 0.9),
-                        Colors.white.withValues(alpha: 0.0),
+                        colors.pageBackground.withValues(alpha: 0.9),
+                        colors.pageBackground.withValues(alpha: 0.0),
                       ],
                       stops: const [0.0, 0.8],
                     ),
@@ -123,128 +324,90 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     );
   }
 
-  Widget _buildInitialState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search, size: 80, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            'Artists, Songs, Lyrics, and More',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
+  Widget _buildInitialState(LyraColors colors) {
+    if (_recentSearches.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.search,
+                size: 80,
+                color: colors.textSecondary.withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Artists, Songs, Lyrics, and More',
+                style: TextStyle(fontSize: 16, color: colors.textSecondary),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchResults(List<local.Song> songs, List<Playlist> playlists) {
-    if (songs.isEmpty && playlists.isEmpty) {
-      return const Center(
-        child: Text(
-          'Tidak ada hasil yang ditemukan.',
-          style: TextStyle(color: Colors.grey),
         ),
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.only(
-        top: 16,
-        bottom: 120,
-      ), // Bottom padding untuk keyboard/bottom bar
-      children: [
-        // --- BAGIAN PLAYLIST ---
-        if (playlists.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              'Playlist',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          ...playlists.map(
-            (p) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              leading: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(8),
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Recent Searches',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: colors.textPrimary,
+                  ),
                 ),
-                child: const Icon(Icons.queue_music, color: Colors.red),
-              ),
-              title: Text(
-                p.name,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              onTap: () {
-                // Navigasi ke detail playlist bisa ditambahkan di sini nanti
-              },
-            ),
-          ),
-        ],
-
-        // --- BAGIAN LAGU ---
-        if (songs.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-            child: Text(
-              'Lagu',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          ...songs.map(
-            (song) => ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              leading: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(8),
+                TextButton(
+                  onPressed: _clearRecentSearches,
+                  child: Text('Clear', style: TextStyle(color: colors.accent)),
                 ),
-                child: const Icon(Icons.music_note, color: Colors.grey),
-              ),
-              title: Text(
-                song.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              subtitle: Text(
-                '${song.artist} • ${song.album}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.grey),
-              ),
-              onTap: () {
-                final handler = audioHandler as LyraAudioHandler;
-                final startIndex = songs.indexWhere((s) => s.id == song.id);
-
-                handler.playQueue(
-                  songs
-                      .map(
-                        (s) => Song(
-                          id: s.id,
-                          title: s.title,
-                          artist: s.artist,
-                          album: s.album,
-                          path: s.path,
-                          durationMs: s.durationMs,
-                          addedAt: DateTime.now(),
-                        ),
-                      )
-                      .toList(),
-                  startIndex,
-                );
-              },
+              ],
             ),
-          ),
-        ],
-      ],
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _recentSearches
+                  .map(
+                    (q) => ActionChip(
+                      label: Text(
+                        q,
+                        style: TextStyle(color: colors.textPrimary),
+                      ),
+                      backgroundColor: colors.textSecondary.withValues(
+                        alpha: 0.1,
+                      ),
+                      side: BorderSide.none,
+                      onPressed: () {
+                        ref.read(searchQueryProvider.notifier).setQuery(q);
+                      },
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(LyraColors colors) {
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: Center(
+        child: Text(
+          'Tidak ada hasil untuk "$_debouncedQuery"',
+          style: TextStyle(fontSize: 16, color: colors.textSecondary),
+        ),
+      ),
     );
   }
 }
