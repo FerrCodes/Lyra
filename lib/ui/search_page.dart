@@ -6,11 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database.dart';
 import '../main.dart';
 import '../models/song.dart' as local;
-import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../theme/lyra_colors.dart';
-
+import 'package:audio_service/audio_service.dart';
 import '../features/search/search_logic.dart';
 import '../features/search/widgets/song_tile.dart';
 import '../features/search/widgets/artist_tile.dart';
@@ -38,19 +37,17 @@ class SearchPage extends ConsumerStatefulWidget {
 }
 
 class _SearchPageState extends ConsumerState<SearchPage> {
-  // ignore: unused_field
-  List<Playlist> _allPlaylists = [];
   Timer? _debounce;
   String _debouncedQuery = '';
   SearchResults? _results;
-
+  String? _lastQuery;
+  List<local.Song>? _lastSongs;
   List<String> _recentSearches = [];
   static const _recentKey = 'recent_searches';
 
   @override
   void initState() {
     super.initState();
-    _loadPlaylists();
     _loadRecentSearches();
 
     // Listener untuk debounce pencarian
@@ -72,16 +69,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.dispose();
   }
 
-  Future<void> _loadPlaylists() async {
-    final db = ref.read(databaseProvider);
-    final data = await db.select(db.playlists).get();
-    if (mounted) {
-      setState(() => _allPlaylists = data);
-    }
-  }
-
   Future<void> _loadRecentSearches() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _recentSearches = prefs.getStringList(_recentKey) ?? [];
     });
@@ -144,14 +134,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final allSongs = songsAsync.value ?? [];
 
     // Hitung ulang hasil hanya jika query atau daftar lagu berubah
-    if (_debouncedQuery.isNotEmpty) {
-      _results = performSearch(allSongs, _debouncedQuery);
-    } else {
+    if (_debouncedQuery.isEmpty) {
       _results = null;
+      _lastQuery = null;
+    } else if (_debouncedQuery != _lastQuery ||
+        !identical(allSongs, _lastSongs)) {
+      _results = performSearch(allSongs, _debouncedQuery);
+      _lastQuery = _debouncedQuery;
+      _lastSongs = allSongs;
     }
-
-    // Pantau lagu aktif
-    final currentMediaItem = audioHandler.mediaItem.value;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -169,10 +160,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           children: [
             // KONTEN UTAMA
             SafeArea(
+              top: false,
               child: CustomScrollView(
                 keyboardDismissBehavior:
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 slivers: [
+                  SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: MediaQuery.of(context).padding.top + 8,
+                    ),
+                  ),
                   if (_debouncedQuery.isEmpty)
                     _buildInitialState(colors)
                   else if (_results == null ||
@@ -224,16 +221,19 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         itemCount: _results!.songs.length,
                         itemBuilder: (context, index) {
                           final res = _results!.songs[index];
-                          final isPlaying =
-                              currentMediaItem?.id == res.song.path;
-                          return SongTile(
-                            song: res.song,
-                            query: _debouncedQuery,
-                            isPlaying: isPlaying,
-                            onTap: () => _playSong(
-                              res.song,
-                              _results!.songs.map((e) => e.song).toList(),
-                            ),
+                          return StreamBuilder<MediaItem?>(
+                            stream: audioHandler.mediaItem,
+                            builder: (context, snap) {
+                              return SongTile(
+                                song: res.song,
+                                query: _debouncedQuery,
+                                isPlaying: snap.data?.id == res.song.path,
+                                onTap: () => _playSong(
+                                  res.song,
+                                  _results!.songs.map((e) => e.song).toList(),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),

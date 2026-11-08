@@ -51,6 +51,16 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String>(searchQueryProvider, (_, next) {
+      if (_searchController.text != next) {
+        _searchController.text = next;
+        _searchController.selection = TextSelection.collapsed(
+          offset: next.length,
+        );
+        setState(() {});
+      }
+    });
+
     if (widget.currentIndex == 4) {
       return _buildAppleMusicSearchBar();
     }
