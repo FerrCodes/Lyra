@@ -67,14 +67,12 @@ class FloatingHeaderAction extends StatelessWidget {
         width: isLabeled ? null : 48,
         padding: isLabeled ? const EdgeInsets.symmetric(horizontal: 16) : null,
         decoration: BoxDecoration(
-          color: bgColor, // Warna Light
+          color: bgColor,
           shape: isLabeled ? BoxShape.rectangle : BoxShape.circle,
           borderRadius: isLabeled ? BorderRadius.circular(20) : null,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(
-                alpha: 0.15,
-              ), // Shadow dikembalikan
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),
@@ -90,8 +88,7 @@ class FloatingHeaderAction extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 )
-              : (customIcon ??
-                    Icon(icon, color: iconColor, size: 20)), // Warna Ikon Light
+              : (customIcon ?? Icon(icon, color: iconColor, size: 20)),
         ),
       ),
     );
@@ -110,11 +107,11 @@ class HeaderTitlePill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: bgColor, // Warna Light
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15), // Shadow dikembalikan
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 10,
             offset: const Offset(0, 5),
           ),

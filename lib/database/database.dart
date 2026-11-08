@@ -6,7 +6,7 @@ part 'database.g.dart';
 
 // Tabel Master untuk semua lagu yang diketahui aplikasi
 class Songs extends Table {
-  TextColumn get id => text()(); // ID dari MediaStore
+  TextColumn get id => text()();
   TextColumn get title => text()();
   TextColumn get artist => text()();
   TextColumn get album => text()();
@@ -18,7 +18,7 @@ class Songs extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-// Tabel Favorit (Hanya menyimpan relasi ke Songs)
+// Tabel Favorit
 class Favorites extends Table {
   TextColumn get songId =>
       text().references(Songs, #id, onDelete: KeyAction.cascade)();
@@ -50,12 +50,30 @@ class PlaylistSongs extends Table {
   Set<Column> get primaryKey => {playlistId, songId};
 }
 
-@DriftDatabase(tables: [Songs, Favorites, Playlists, PlaylistSongs])
+// 👇 1A. TABEL BARU: PLAY HISTORY
+class PlayHistory extends Table {
+  TextColumn get path => text()();
+  TextColumn get songId => text()();
+  TextColumn get title => text()();
+  TextColumn get artist => text()();
+  TextColumn get album => text()();
+  TextColumn get albumId => text()();
+  IntColumn get durationMs => integer()();
+  IntColumn get playCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastPlayedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {path};
+}
+
+@DriftDatabase(
+  tables: [Songs, Favorites, Playlists, PlaylistSongs, PlayHistory],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3; // 👈 Naikkan ke 3
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -66,15 +84,17 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(playlists, playlists.description);
         await m.addColumn(playlistSongs, playlistSongs.orderIndex);
       }
+      if (from < 3) {
+        await m.createTable(playHistory); // 👈 Migrasi tabel baru
+      }
     },
   );
 
-  // --- FUNGSI BANTUAN ---
-  // Tambah/update lagu ke tabel master
+  // ... (Fungsi bantuan lama biarkan saja) ...
+
   Future<void> saveSong(SongsCompanion song) =>
       into(songs).insertOnConflictUpdate(song);
 
-  // Ambil semua lagu favorit (Join dengan tabel Songs)
   Future<List<Song>> getAllFavoriteSongs() async {
     final query = select(
       favorites,
@@ -83,20 +103,17 @@ class AppDatabase extends _$AppDatabase {
     return rows.map((row) => row.readTable(songs)).toList();
   }
 
-  // Cek apakah lagu difavoritkan
   Future<bool> isFavorite(String songId) async {
     final query = select(favorites)..where((t) => t.songId.equals(songId));
     final result = await query.getSingleOrNull();
     return result != null;
   }
 
-  // Toggle Favorit
   Future<void> toggleFavorite(Song song) async {
     final isFav = await isFavorite(song.id);
     if (isFav) {
       await (delete(favorites)..where((t) => t.songId.equals(song.id))).go();
     } else {
-      // Simpan lagu ke master dulu agar relasinya valid
       await saveSong(
         SongsCompanion.insert(
           id: song.id,
@@ -111,7 +128,6 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  // Ambil lagu dalam playlist tertentu
   Future<List<Song>> getSongsInPlaylist(int playlistId) async {
     final query = select(playlistSongs).join([
       innerJoin(songs, songs.id.equalsExp(playlistSongs.songId)),
@@ -124,7 +140,6 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> addSongToPlaylist(int playlistId, Song song) async {
-    // Pastikan lagu ada di master
     await saveSong(
       SongsCompanion.insert(
         id: song.id,
@@ -136,7 +151,6 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
 
-    // Cari urutan terakhir
     final query = selectOnly(playlistSongs)
       ..addColumns([playlistSongs.orderIndex.max()])
       ..where(playlistSongs.playlistId.equals(playlistId));
@@ -146,7 +160,6 @@ class AppDatabase extends _$AppDatabase {
             .getSingleOrNull() ??
         -1;
 
-    // Masukkan ke playlist dengan urutan baru
     await into(playlistSongs).insert(
       PlaylistSongsCompanion.insert(
         playlistId: playlistId,
@@ -154,6 +167,74 @@ class AppDatabase extends _$AppDatabase {
         orderIndex: Value(maxOrder + 1),
       ),
       mode: InsertMode.insertOrIgnore,
+    );
+  }
+
+  // 👇 FUNGSI BARU UNTUK PLAY HISTORY
+  Future<void> recordPlay({
+    required String path,
+    required String songId,
+    required String title,
+    required String artist,
+    required String album,
+    required String albumId,
+    required int durationMs,
+  }) async {
+    final existing = await (select(
+      playHistory,
+    )..where((t) => t.path.equals(path))).getSingleOrNull();
+
+    if (existing != null) {
+      await (update(playHistory)..where((t) => t.path.equals(path))).write(
+        PlayHistoryCompanion(
+          playCount: Value(existing.playCount + 1),
+          lastPlayedAt: Value(DateTime.now()),
+        ),
+      );
+    } else {
+      await into(playHistory).insert(
+        PlayHistoryCompanion.insert(
+          path: path,
+          songId: songId,
+          title: title,
+          artist: artist,
+          album: album,
+          albumId: albumId,
+          durationMs: durationMs,
+          lastPlayedAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  Stream<List<PlayHistoryData>> watchTopPlayed({int limit = 10}) {
+    return (select(playHistory)
+          ..orderBy([
+            (t) =>
+                OrderingTerm(expression: t.playCount, mode: OrderingMode.desc),
+          ])
+          ..limit(limit))
+        .watch();
+  }
+
+  Stream<PlayHistoryData?> watchLastPlayed() {
+    return (select(playHistory)
+          ..orderBy([
+            (t) => OrderingTerm(
+              expression: t.lastPlayedAt,
+              mode: OrderingMode.desc,
+            ),
+          ])
+          ..limit(1))
+        .watchSingleOrNull();
+  }
+
+  Stream<List<Song>> watchFavorites() {
+    final query = select(
+      favorites,
+    ).join([innerJoin(songs, songs.id.equalsExp(favorites.songId))]);
+    return query.watch().map(
+      (rows) => rows.map((row) => row.readTable(songs)).toList(),
     );
   }
 }

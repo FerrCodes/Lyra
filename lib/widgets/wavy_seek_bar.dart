@@ -160,7 +160,7 @@ class _WavyPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 👇 Animasi amplitudo (6 -> 2) dan radius (7 -> 9)
+    // Animasi amplitudo (6 -> 2) dan radius (7 -> 9)
     final waveHeight = lerpDouble(6.0, 2.0, dragAnimValue)!;
     final thumbRadius = lerpDouble(7.0, 9.0, dragAnimValue)!;
 

@@ -7,12 +7,16 @@ import 'library_page.dart';
 import 'search_page.dart';
 import '../widgets/app_top_bar.dart';
 import '../theme/lyra_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/database_provider.dart';
+import '../services/play_history_recorder.dart';
+import '../features/home/dashboard_view.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
 // Memantau route aktif pada setiap nested Navigator.
@@ -68,7 +72,8 @@ class _NestedNavigatorObserver extends NavigatorObserver {
   }
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends ConsumerState<HomePage> {
+  late PlayHistoryRecorder _recorder;
   int _currentTab = 0;
   final ValueNotifier<bool> _isScrolled = ValueNotifier<bool>(false);
   String _currentSortFilter = 'Name';
@@ -184,7 +189,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _recorder = PlayHistoryRecorder(ref.read(databaseProvider), ref);
+    _recorder.start();
+  }
+
+  @override
   void dispose() {
+    _recorder.dispose();
     _isScrolled.dispose();
     _mainScrollController.dispose();
     super.dispose();
@@ -224,7 +237,18 @@ class _HomePageState extends State<HomePage> {
               child: IndexedStack(
                 index: _currentTab,
                 children: [
-                  _buildScrollTrackedTab(0, _buildDashboardView()),
+                  _buildScrollTrackedTab(
+                    0,
+                    DashboardView(
+                      controller: _mainScrollController,
+                      onOpenPlaylist: (playlist) {
+                        _switchTab(2); // Pindah ke tab Playlist
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          playlistPageKey.currentState?.openPlaylist(playlist);
+                        });
+                      },
+                    ),
+                  ),
 
                   // Tab Songs
                   _buildScrollTrackedTab(
@@ -445,151 +469,5 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-  }
-
-  Widget _buildDashboardView() {
-    return ListView(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 80,
-        bottom: 160,
-      ),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Selamat ${_getGreeting()},',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const Text(
-                'Siap mendengarkan sesuatu hari ini?',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 32),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Playlist Terakhir Diputar',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 170,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: 3,
-            itemBuilder: (context, index) {
-              return Container(
-                width: 140,
-                margin: const EdgeInsets.only(right: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 140,
-                      width: 140,
-                      decoration: BoxDecoration(
-                        color: Colors.deepPurple.shade100,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(
-                        Icons.queue_music,
-                        size: 40,
-                        color: Colors.deepPurple,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Playlist Favorit ${index + 1}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 32),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Lagu Sering Diputar',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.1,
-            ),
-            itemCount: 4,
-            itemBuilder: (context, index) {
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.album, size: 50, color: Colors.blueAccent),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Lagu Hits ${index + 1}',
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Pagi';
-    if (hour < 15) return 'Siang';
-    if (hour < 18) return 'Sore';
-    return 'Malam';
   }
 }

@@ -50,6 +50,17 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
     });
   }
 
+  void openPlaylist(Playlist playlist) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            PlaylistDetailPage(key: detailPageKey, playlist: playlist),
+      ),
+      (route) => route.isFirst,
+    ).then((_) => _loadPlaylists());
+  }
+
   // Fungsi Publik: Toggle Mode Edit
   void toggleEditMode() {
     setState(() {

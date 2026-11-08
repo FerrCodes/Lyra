@@ -1335,6 +1335,566 @@ class PlaylistSongsCompanion extends UpdateCompanion<PlaylistSong> {
   }
 }
 
+class $PlayHistoryTable extends PlayHistory
+    with TableInfo<$PlayHistoryTable, PlayHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlayHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _pathMeta = const VerificationMeta('path');
+  @override
+  late final GeneratedColumn<String> path = GeneratedColumn<String>(
+    'path',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _songIdMeta = const VerificationMeta('songId');
+  @override
+  late final GeneratedColumn<String> songId = GeneratedColumn<String>(
+    'song_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _artistMeta = const VerificationMeta('artist');
+  @override
+  late final GeneratedColumn<String> artist = GeneratedColumn<String>(
+    'artist',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _albumMeta = const VerificationMeta('album');
+  @override
+  late final GeneratedColumn<String> album = GeneratedColumn<String>(
+    'album',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _albumIdMeta = const VerificationMeta(
+    'albumId',
+  );
+  @override
+  late final GeneratedColumn<String> albumId = GeneratedColumn<String>(
+    'album_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _playCountMeta = const VerificationMeta(
+    'playCount',
+  );
+  @override
+  late final GeneratedColumn<int> playCount = GeneratedColumn<int>(
+    'play_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _lastPlayedAtMeta = const VerificationMeta(
+    'lastPlayedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastPlayedAt = GeneratedColumn<DateTime>(
+    'last_played_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    path,
+    songId,
+    title,
+    artist,
+    album,
+    albumId,
+    durationMs,
+    playCount,
+    lastPlayedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'play_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlayHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('path')) {
+      context.handle(
+        _pathMeta,
+        path.isAcceptableOrUnknown(data['path']!, _pathMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pathMeta);
+    }
+    if (data.containsKey('song_id')) {
+      context.handle(
+        _songIdMeta,
+        songId.isAcceptableOrUnknown(data['song_id']!, _songIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_songIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('artist')) {
+      context.handle(
+        _artistMeta,
+        artist.isAcceptableOrUnknown(data['artist']!, _artistMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_artistMeta);
+    }
+    if (data.containsKey('album')) {
+      context.handle(
+        _albumMeta,
+        album.isAcceptableOrUnknown(data['album']!, _albumMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_albumMeta);
+    }
+    if (data.containsKey('album_id')) {
+      context.handle(
+        _albumIdMeta,
+        albumId.isAcceptableOrUnknown(data['album_id']!, _albumIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_albumIdMeta);
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_durationMsMeta);
+    }
+    if (data.containsKey('play_count')) {
+      context.handle(
+        _playCountMeta,
+        playCount.isAcceptableOrUnknown(data['play_count']!, _playCountMeta),
+      );
+    }
+    if (data.containsKey('last_played_at')) {
+      context.handle(
+        _lastPlayedAtMeta,
+        lastPlayedAt.isAcceptableOrUnknown(
+          data['last_played_at']!,
+          _lastPlayedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastPlayedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {path};
+  @override
+  PlayHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlayHistoryData(
+      path: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}path'],
+      )!,
+      songId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}song_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      artist: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}artist'],
+      )!,
+      album: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}album'],
+      )!,
+      albumId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}album_id'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      )!,
+      playCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}play_count'],
+      )!,
+      lastPlayedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_played_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PlayHistoryTable createAlias(String alias) {
+    return $PlayHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class PlayHistoryData extends DataClass implements Insertable<PlayHistoryData> {
+  final String path;
+  final String songId;
+  final String title;
+  final String artist;
+  final String album;
+  final String albumId;
+  final int durationMs;
+  final int playCount;
+  final DateTime lastPlayedAt;
+  const PlayHistoryData({
+    required this.path,
+    required this.songId,
+    required this.title,
+    required this.artist,
+    required this.album,
+    required this.albumId,
+    required this.durationMs,
+    required this.playCount,
+    required this.lastPlayedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['path'] = Variable<String>(path);
+    map['song_id'] = Variable<String>(songId);
+    map['title'] = Variable<String>(title);
+    map['artist'] = Variable<String>(artist);
+    map['album'] = Variable<String>(album);
+    map['album_id'] = Variable<String>(albumId);
+    map['duration_ms'] = Variable<int>(durationMs);
+    map['play_count'] = Variable<int>(playCount);
+    map['last_played_at'] = Variable<DateTime>(lastPlayedAt);
+    return map;
+  }
+
+  PlayHistoryCompanion toCompanion(bool nullToAbsent) {
+    return PlayHistoryCompanion(
+      path: Value(path),
+      songId: Value(songId),
+      title: Value(title),
+      artist: Value(artist),
+      album: Value(album),
+      albumId: Value(albumId),
+      durationMs: Value(durationMs),
+      playCount: Value(playCount),
+      lastPlayedAt: Value(lastPlayedAt),
+    );
+  }
+
+  factory PlayHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlayHistoryData(
+      path: serializer.fromJson<String>(json['path']),
+      songId: serializer.fromJson<String>(json['songId']),
+      title: serializer.fromJson<String>(json['title']),
+      artist: serializer.fromJson<String>(json['artist']),
+      album: serializer.fromJson<String>(json['album']),
+      albumId: serializer.fromJson<String>(json['albumId']),
+      durationMs: serializer.fromJson<int>(json['durationMs']),
+      playCount: serializer.fromJson<int>(json['playCount']),
+      lastPlayedAt: serializer.fromJson<DateTime>(json['lastPlayedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'path': serializer.toJson<String>(path),
+      'songId': serializer.toJson<String>(songId),
+      'title': serializer.toJson<String>(title),
+      'artist': serializer.toJson<String>(artist),
+      'album': serializer.toJson<String>(album),
+      'albumId': serializer.toJson<String>(albumId),
+      'durationMs': serializer.toJson<int>(durationMs),
+      'playCount': serializer.toJson<int>(playCount),
+      'lastPlayedAt': serializer.toJson<DateTime>(lastPlayedAt),
+    };
+  }
+
+  PlayHistoryData copyWith({
+    String? path,
+    String? songId,
+    String? title,
+    String? artist,
+    String? album,
+    String? albumId,
+    int? durationMs,
+    int? playCount,
+    DateTime? lastPlayedAt,
+  }) => PlayHistoryData(
+    path: path ?? this.path,
+    songId: songId ?? this.songId,
+    title: title ?? this.title,
+    artist: artist ?? this.artist,
+    album: album ?? this.album,
+    albumId: albumId ?? this.albumId,
+    durationMs: durationMs ?? this.durationMs,
+    playCount: playCount ?? this.playCount,
+    lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
+  );
+  PlayHistoryData copyWithCompanion(PlayHistoryCompanion data) {
+    return PlayHistoryData(
+      path: data.path.present ? data.path.value : this.path,
+      songId: data.songId.present ? data.songId.value : this.songId,
+      title: data.title.present ? data.title.value : this.title,
+      artist: data.artist.present ? data.artist.value : this.artist,
+      album: data.album.present ? data.album.value : this.album,
+      albumId: data.albumId.present ? data.albumId.value : this.albumId,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      playCount: data.playCount.present ? data.playCount.value : this.playCount,
+      lastPlayedAt: data.lastPlayedAt.present
+          ? data.lastPlayedAt.value
+          : this.lastPlayedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlayHistoryData(')
+          ..write('path: $path, ')
+          ..write('songId: $songId, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('albumId: $albumId, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('playCount: $playCount, ')
+          ..write('lastPlayedAt: $lastPlayedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    path,
+    songId,
+    title,
+    artist,
+    album,
+    albumId,
+    durationMs,
+    playCount,
+    lastPlayedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlayHistoryData &&
+          other.path == this.path &&
+          other.songId == this.songId &&
+          other.title == this.title &&
+          other.artist == this.artist &&
+          other.album == this.album &&
+          other.albumId == this.albumId &&
+          other.durationMs == this.durationMs &&
+          other.playCount == this.playCount &&
+          other.lastPlayedAt == this.lastPlayedAt);
+}
+
+class PlayHistoryCompanion extends UpdateCompanion<PlayHistoryData> {
+  final Value<String> path;
+  final Value<String> songId;
+  final Value<String> title;
+  final Value<String> artist;
+  final Value<String> album;
+  final Value<String> albumId;
+  final Value<int> durationMs;
+  final Value<int> playCount;
+  final Value<DateTime> lastPlayedAt;
+  final Value<int> rowid;
+  const PlayHistoryCompanion({
+    this.path = const Value.absent(),
+    this.songId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.artist = const Value.absent(),
+    this.album = const Value.absent(),
+    this.albumId = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.playCount = const Value.absent(),
+    this.lastPlayedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PlayHistoryCompanion.insert({
+    required String path,
+    required String songId,
+    required String title,
+    required String artist,
+    required String album,
+    required String albumId,
+    required int durationMs,
+    this.playCount = const Value.absent(),
+    required DateTime lastPlayedAt,
+    this.rowid = const Value.absent(),
+  }) : path = Value(path),
+       songId = Value(songId),
+       title = Value(title),
+       artist = Value(artist),
+       album = Value(album),
+       albumId = Value(albumId),
+       durationMs = Value(durationMs),
+       lastPlayedAt = Value(lastPlayedAt);
+  static Insertable<PlayHistoryData> custom({
+    Expression<String>? path,
+    Expression<String>? songId,
+    Expression<String>? title,
+    Expression<String>? artist,
+    Expression<String>? album,
+    Expression<String>? albumId,
+    Expression<int>? durationMs,
+    Expression<int>? playCount,
+    Expression<DateTime>? lastPlayedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (path != null) 'path': path,
+      if (songId != null) 'song_id': songId,
+      if (title != null) 'title': title,
+      if (artist != null) 'artist': artist,
+      if (album != null) 'album': album,
+      if (albumId != null) 'album_id': albumId,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (playCount != null) 'play_count': playCount,
+      if (lastPlayedAt != null) 'last_played_at': lastPlayedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PlayHistoryCompanion copyWith({
+    Value<String>? path,
+    Value<String>? songId,
+    Value<String>? title,
+    Value<String>? artist,
+    Value<String>? album,
+    Value<String>? albumId,
+    Value<int>? durationMs,
+    Value<int>? playCount,
+    Value<DateTime>? lastPlayedAt,
+    Value<int>? rowid,
+  }) {
+    return PlayHistoryCompanion(
+      path: path ?? this.path,
+      songId: songId ?? this.songId,
+      title: title ?? this.title,
+      artist: artist ?? this.artist,
+      album: album ?? this.album,
+      albumId: albumId ?? this.albumId,
+      durationMs: durationMs ?? this.durationMs,
+      playCount: playCount ?? this.playCount,
+      lastPlayedAt: lastPlayedAt ?? this.lastPlayedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (path.present) {
+      map['path'] = Variable<String>(path.value);
+    }
+    if (songId.present) {
+      map['song_id'] = Variable<String>(songId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (artist.present) {
+      map['artist'] = Variable<String>(artist.value);
+    }
+    if (album.present) {
+      map['album'] = Variable<String>(album.value);
+    }
+    if (albumId.present) {
+      map['album_id'] = Variable<String>(albumId.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (playCount.present) {
+      map['play_count'] = Variable<int>(playCount.value);
+    }
+    if (lastPlayedAt.present) {
+      map['last_played_at'] = Variable<DateTime>(lastPlayedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlayHistoryCompanion(')
+          ..write('path: $path, ')
+          ..write('songId: $songId, ')
+          ..write('title: $title, ')
+          ..write('artist: $artist, ')
+          ..write('album: $album, ')
+          ..write('albumId: $albumId, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('playCount: $playCount, ')
+          ..write('lastPlayedAt: $lastPlayedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1342,6 +1902,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FavoritesTable favorites = $FavoritesTable(this);
   late final $PlaylistsTable playlists = $PlaylistsTable(this);
   late final $PlaylistSongsTable playlistSongs = $PlaylistSongsTable(this);
+  late final $PlayHistoryTable playHistory = $PlayHistoryTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1351,6 +1912,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     favorites,
     playlists,
     playlistSongs,
+    playHistory,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -2761,6 +3323,295 @@ typedef $$PlaylistSongsTableProcessedTableManager =
       PlaylistSong,
       PrefetchHooks Function({bool playlistId, bool songId})
     >;
+typedef $$PlayHistoryTableCreateCompanionBuilder =
+    PlayHistoryCompanion Function({
+      required String path,
+      required String songId,
+      required String title,
+      required String artist,
+      required String album,
+      required String albumId,
+      required int durationMs,
+      Value<int> playCount,
+      required DateTime lastPlayedAt,
+      Value<int> rowid,
+    });
+typedef $$PlayHistoryTableUpdateCompanionBuilder =
+    PlayHistoryCompanion Function({
+      Value<String> path,
+      Value<String> songId,
+      Value<String> title,
+      Value<String> artist,
+      Value<String> album,
+      Value<String> albumId,
+      Value<int> durationMs,
+      Value<int> playCount,
+      Value<DateTime> lastPlayedAt,
+      Value<int> rowid,
+    });
+
+class $$PlayHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $PlayHistoryTable> {
+  $$PlayHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get songId => $composableBuilder(
+    column: $table.songId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get artist => $composableBuilder(
+    column: $table.artist,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get album => $composableBuilder(
+    column: $table.album,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get albumId => $composableBuilder(
+    column: $table.albumId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get playCount => $composableBuilder(
+    column: $table.playCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastPlayedAt => $composableBuilder(
+    column: $table.lastPlayedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PlayHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $PlayHistoryTable> {
+  $$PlayHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get path => $composableBuilder(
+    column: $table.path,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get songId => $composableBuilder(
+    column: $table.songId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get artist => $composableBuilder(
+    column: $table.artist,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get album => $composableBuilder(
+    column: $table.album,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get albumId => $composableBuilder(
+    column: $table.albumId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get playCount => $composableBuilder(
+    column: $table.playCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastPlayedAt => $composableBuilder(
+    column: $table.lastPlayedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PlayHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PlayHistoryTable> {
+  $$PlayHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get path =>
+      $composableBuilder(column: $table.path, builder: (column) => column);
+
+  GeneratedColumn<String> get songId =>
+      $composableBuilder(column: $table.songId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get artist =>
+      $composableBuilder(column: $table.artist, builder: (column) => column);
+
+  GeneratedColumn<String> get album =>
+      $composableBuilder(column: $table.album, builder: (column) => column);
+
+  GeneratedColumn<String> get albumId =>
+      $composableBuilder(column: $table.albumId, builder: (column) => column);
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get playCount =>
+      $composableBuilder(column: $table.playCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastPlayedAt => $composableBuilder(
+    column: $table.lastPlayedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$PlayHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PlayHistoryTable,
+          PlayHistoryData,
+          $$PlayHistoryTableFilterComposer,
+          $$PlayHistoryTableOrderingComposer,
+          $$PlayHistoryTableAnnotationComposer,
+          $$PlayHistoryTableCreateCompanionBuilder,
+          $$PlayHistoryTableUpdateCompanionBuilder,
+          (
+            PlayHistoryData,
+            BaseReferences<_$AppDatabase, $PlayHistoryTable, PlayHistoryData>,
+          ),
+          PlayHistoryData,
+          PrefetchHooks Function()
+        > {
+  $$PlayHistoryTableTableManager(_$AppDatabase db, $PlayHistoryTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlayHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlayHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlayHistoryTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> path = const Value.absent(),
+                Value<String> songId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> artist = const Value.absent(),
+                Value<String> album = const Value.absent(),
+                Value<String> albumId = const Value.absent(),
+                Value<int> durationMs = const Value.absent(),
+                Value<int> playCount = const Value.absent(),
+                Value<DateTime> lastPlayedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PlayHistoryCompanion(
+                path: path,
+                songId: songId,
+                title: title,
+                artist: artist,
+                album: album,
+                albumId: albumId,
+                durationMs: durationMs,
+                playCount: playCount,
+                lastPlayedAt: lastPlayedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String path,
+                required String songId,
+                required String title,
+                required String artist,
+                required String album,
+                required String albumId,
+                required int durationMs,
+                Value<int> playCount = const Value.absent(),
+                required DateTime lastPlayedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PlayHistoryCompanion.insert(
+                path: path,
+                songId: songId,
+                title: title,
+                artist: artist,
+                album: album,
+                albumId: albumId,
+                durationMs: durationMs,
+                playCount: playCount,
+                lastPlayedAt: lastPlayedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PlayHistoryTable, PlayHistoryData>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $PlayHistoryTable,
+                    PlayHistoryData
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PlayHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PlayHistoryTable,
+      PlayHistoryData,
+      $$PlayHistoryTableFilterComposer,
+      $$PlayHistoryTableOrderingComposer,
+      $$PlayHistoryTableAnnotationComposer,
+      $$PlayHistoryTableCreateCompanionBuilder,
+      $$PlayHistoryTableUpdateCompanionBuilder,
+      (
+        PlayHistoryData,
+        BaseReferences<_$AppDatabase, $PlayHistoryTable, PlayHistoryData>,
+      ),
+      PlayHistoryData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2773,4 +3624,6 @@ class $AppDatabaseManager {
       $$PlaylistsTableTableManager(_db, _db.playlists);
   $$PlaylistSongsTableTableManager get playlistSongs =>
       $$PlaylistSongsTableTableManager(_db, _db.playlistSongs);
+  $$PlayHistoryTableTableManager get playHistory =>
+      $$PlayHistoryTableTableManager(_db, _db.playHistory);
 }

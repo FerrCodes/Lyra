@@ -78,7 +78,7 @@ class AppTopBar extends StatelessWidget {
   }
 
   Widget _buildHeaderContent(BuildContext context) {
-    // 1. HEADER BERANDA (Tab 0)
+    // HEADER BERANDA (Tab 0)
     if (currentTab == 0) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -101,7 +101,7 @@ class AppTopBar extends StatelessWidget {
       );
     }
 
-    // 2. HEADER SONGS (Tab 1)
+    // HEADER SONGS (Tab 1)
     if (currentTab == 1) {
       return Row(
         children: [
@@ -175,7 +175,7 @@ class AppTopBar extends StatelessWidget {
       );
     }
 
-    // 3. HEADER PLAYLIST (Tab 2)
+    // HEADER PLAYLIST (Tab 2)
     if (currentTab == 2) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -213,7 +213,7 @@ class AppTopBar extends StatelessWidget {
       );
     }
 
-    // 4. HEADER LIBRARY (Tab 3)
+    // HEADER LIBRARY (Tab 3)
     if (currentTab == 3) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

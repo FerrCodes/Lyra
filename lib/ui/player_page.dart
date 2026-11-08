@@ -8,6 +8,11 @@ import '../theme/lyra_colors.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/lyra_bottom_bar.dart';
 import '../widgets/marquee_text.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/database_provider.dart';
+import '../providers/songs_provider.dart';
+import '../database/database.dart';
+import '../models/song.dart' as local;
 
 class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key});
@@ -278,21 +283,74 @@ class _PlayerPageState extends State<PlayerPage> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: colors.textSecondary.withValues(
-                                    alpha: 0.1,
-                                  ),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.favorite_border,
-                                    color: colors.textPrimary,
-                                    size: 20,
-                                  ),
-                                  onPressed: () {},
-                                ),
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  // Cari data lagu di local storage/mediastore
+                                  final allSongs =
+                                      ref.watch(allSongsProvider).value ?? [];
+                                  final localSong = allSongs.firstWhere(
+                                    (s) => s.path == item.id,
+                                    orElse: () => local.Song(
+                                      id: '',
+                                      title: '',
+                                      artist: '',
+                                      album: '',
+                                      path: '',
+                                      durationMs: 0,
+                                      albumId: '',
+                                    ),
+                                  );
+
+                                  // Ambil database
+                                  final db = ref.read(databaseProvider);
+
+                                  // Pantau tabel favorit
+                                  return StreamBuilder<List<Song>>(
+                                    stream: db.watchFavorites(),
+                                    builder: (context, snapshot) {
+                                      final isFav =
+                                          snapshot.data?.any(
+                                            (s) => s.path == item.id,
+                                          ) ??
+                                          false;
+
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          color: colors.textSecondary
+                                              .withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: IconButton(
+                                          icon: Icon(
+                                            isFav
+                                                ? Icons.favorite
+                                                : Icons.favorite_border,
+                                            color: isFav
+                                                ? colors.accent
+                                                : colors.textPrimary,
+                                            size: 20,
+                                          ),
+                                          onPressed: () async {
+                                            if (localSong.id.isEmpty) return;
+                                            // Ubah ke model database Drift
+                                            final dbSong = Song(
+                                              id: localSong.id,
+                                              title: localSong.title,
+                                              artist: localSong.artist,
+                                              album: localSong.album,
+                                              path: localSong.path,
+                                              durationMs: localSong.durationMs,
+                                              addedAt: DateTime.now(),
+                                            );
+
+                                            // Simpan/Hapus dari database
+                                            await db.toggleFavorite(dbSong);
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
                               ),
                             ],
                           ),

@@ -95,9 +95,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     );
   }
 
-  // ==========================================
   // DESAIN KHUSUS TAB SEARCH
-  // ==========================================
   Widget _buildAppleMusicSearchBar() {
     final colors = context.lyra;
 
@@ -189,9 +187,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     );
   }
 
-  // =========================================================================
   // DESAIN SAAT DI ATAS (3 KAPSUL BAWAAN)
-  // =========================================================================
   Widget _buildDefaultState() {
     return StreamBuilder<MediaItem?>(
       key: const ValueKey('default_state'),
@@ -335,9 +331,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     );
   }
 
-  // =========================================================================
   // DESAIN SAAT DI-SCROLL
-  // =========================================================================
   Widget _buildScrolledState() {
     return StreamBuilder<MediaItem?>(
       key: const ValueKey('scrolled_state'),
@@ -503,9 +497,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
   }
 }
 
-// ==========================================
 // WIDGET ANIMASI SENTUH (SCALE)
-// ==========================================
 class PressableScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -539,9 +531,7 @@ class _PressableScaleState extends State<PressableScale> {
   }
 }
 
-// ==========================================
 // KONTEN MINI PLAYER (UPDATED)
-// ==========================================
 class MiniPlayerContent extends StatelessWidget {
   final MediaItem item;
   final bool isCompact;

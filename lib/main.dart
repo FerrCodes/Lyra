@@ -18,12 +18,11 @@ Future<void> main() async {
   await initializeDateFormatting('id_ID', null);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent, // Background status bar transparan
+      statusBarColor: Colors.transparent, // Background status bar
       statusBarIconBrightness:
           Brightness.dark, // Ikon jadi hitam (untuk background terang)
-      statusBarBrightness: Brightness.light, // Untuk iOS
-      systemNavigationBarIconBrightness:
-          Brightness.dark, // Ikon navigasi bawah hitam
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.dark, // Ikon navigasi bawah
     ),
   );
 
