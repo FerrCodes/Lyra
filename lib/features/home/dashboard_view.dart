@@ -39,47 +39,35 @@ class DashboardView extends ConsumerWidget {
         bottom: 160,
       ),
       children: [
-        // 1. SAPAAN
+        // SAPAAN
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: ValueListenableBuilder<String>(
             valueListenable: profileNameNotifier,
             builder: (context, name, child) {
+              // Cek apakah masih nama default
               final isDefaultName = name == 'Pengguna Lyra';
+              // Jika nama default, tampilkan "Selamat Malam,"
+              // Jika ada nama, tampilkan "Selamat Malam, Nama,"
+              final greetingText = isDefaultName
+                  ? 'Selamat ${_getGreeting()},'
+                  : 'Selamat ${_getGreeting()}, $name';
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (isDefaultName)
-                    Text(
-                      'Selamat ${_getGreeting()},',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textPrimary,
-                      ),
-                    )
-                  else ...[
-                    Text(
-                      'Selamat ${_getGreeting()},',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: colors.textSecondary,
-                      ),
+                  Text(
+                    greetingText,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                      color: colors.textPrimary,
                     ),
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: colors.textPrimary,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 4),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
                     'Siap mendengarkan sesuatu hari ini?',
                     style: TextStyle(fontSize: 16, color: colors.textSecondary),
@@ -91,6 +79,7 @@ class DashboardView extends ConsumerWidget {
         ),
 
         const SizedBox(height: 28),
+
         StreamBuilder<List<Playlist>>(
           stream:
               (db.select(db.playlists)..orderBy([
@@ -120,7 +109,36 @@ class DashboardView extends ConsumerWidget {
                       height: 180,
                       child: Center(child: CircularProgressIndicator()),
                     )
-                  : _buildPlaylistList(snapshot.data ?? [], colors, isDark),
+                  : _buildPlaylistList(
+                      'Playlist Kamu',
+                      snapshot.data ?? [],
+                      colors,
+                      isDark,
+                    ),
+            );
+          },
+        ),
+        const SizedBox(height: 28),
+        StreamBuilder<List<Playlist>>(
+          stream: db.watchFavoritePlaylists(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) return const SizedBox.shrink();
+            final favPlaylists = snapshot.data ?? [];
+
+            // Jika belum ada playlist favorit, sembunyikan section ini
+            if (favPlaylists.isEmpty) return const SizedBox.shrink();
+
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: _buildPlaylistList(
+                'Playlist Favorit',
+                favPlaylists,
+                colors,
+                isDark,
+              ),
             );
           },
         ),
@@ -129,6 +147,7 @@ class DashboardView extends ConsumerWidget {
   }
 
   Widget _buildPlaylistList(
+    String title,
     List<Playlist> playlists,
     LyraColors colors,
     bool isDark,
@@ -136,15 +155,15 @@ class DashboardView extends ConsumerWidget {
     if (playlists.isEmpty) return const SizedBox.shrink();
 
     return Column(
-      key: const ValueKey('data'), // Key untuk AnimatedSwitcher
+      key: ValueKey(title), // Key unik untuk AnimatedSwitcher
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'Playlist Kamu',
+            title, // 👈 Gunakan parameter title
             style: TextStyle(
-              fontSize: 22, // Judul 22 bold
+              fontSize: 22,
               fontWeight: FontWeight.bold,
               color: colors.textPrimary,
             ),
@@ -162,7 +181,6 @@ class DashboardView extends ConsumerWidget {
               final hasImage =
                   playlist.imagePath != null && playlist.imagePath!.isNotEmpty;
 
-              // Efek tekan skala 0.97 dengan PressableScale
               return PressableScale(
                 onTap: () => onOpenPlaylist(playlist),
                 child: Container(
@@ -186,7 +204,6 @@ class DashboardView extends ConsumerWidget {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                          // Bayangan sangat lembut (hanya di tema terang)
                           boxShadow: isDark
                               ? []
                               : [

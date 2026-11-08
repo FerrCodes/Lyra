@@ -1265,20 +1265,43 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           // Tombol Star
-                          Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: () {},
-                              child: const Padding(
-                                padding: EdgeInsets.all(12),
-                                child: Icon(
-                                  Icons.star_border,
-                                  color: Colors.black87,
-                                  size: 20,
+                          Consumer(
+                            builder: (context, ref, child) {
+                              final db = ref.read(databaseProvider);
+                              return StreamBuilder<bool>(
+                                stream: db.watchPlaylistIsFavorite(
+                                  widget.playlist.id,
                                 ),
-                              ),
-                            ),
+                                builder: (context, snapshot) {
+                                  final isFav = snapshot.data ?? false;
+                                  return Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: () async {
+                                        await db.togglePlaylistFavorite(
+                                          widget.playlist,
+                                        );
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Icon(
+                                          // Ikon berubah jadi solid jika favorit
+                                          isFav
+                                              ? Icons.star_rounded
+                                              : Icons.star_border,
+                                          // Warna kuning/oranye jika favorit
+                                          color: isFav
+                                              ? Colors.orange
+                                              : Colors.black87,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
                           ),
                           // Tombol Add
                           Material(

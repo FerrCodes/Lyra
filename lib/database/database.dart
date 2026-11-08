@@ -36,6 +36,7 @@ class Playlists extends Table {
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   TextColumn get description => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
 }
 
 // Tabel Relasi Playlist dan Lagu
@@ -50,7 +51,7 @@ class PlaylistSongs extends Table {
   Set<Column> get primaryKey => {playlistId, songId};
 }
 
-// 👇 1A. TABEL BARU: PLAY HISTORY
+// TABEL PLAY HISTORY
 class PlayHistory extends Table {
   TextColumn get path => text()();
   TextColumn get songId => text()();
@@ -73,7 +74,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3; // 👈 Naikkan ke 3
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -85,12 +86,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(playlistSongs, playlistSongs.orderIndex);
       }
       if (from < 3) {
-        await m.createTable(playHistory); // 👈 Migrasi tabel baru
+        await m.createTable(playHistory);
+      }
+      if (from < 4) {
+        await m.addColumn(playlists, playlists.isFavorite);
       }
     },
   );
-
-  // ... (Fungsi bantuan lama biarkan saja) ...
 
   Future<void> saveSong(SongsCompanion song) =>
       into(songs).insertOnConflictUpdate(song);
@@ -126,6 +128,28 @@ class AppDatabase extends _$AppDatabase {
       );
       await into(favorites).insert(FavoritesCompanion.insert(songId: song.id));
     }
+  }
+
+  // Fungsi untuk mengubah status favorit playlist
+  Future<void> togglePlaylistFavorite(Playlist playlist) async {
+    await (update(playlists)..where((t) => t.id.equals(playlist.id))).write(
+      PlaylistsCompanion(isFavorite: Value(!playlist.isFavorite)),
+    );
+  }
+
+  // Stream untuk memantau status favorit satu playlist (untuk halaman detail)
+  Stream<bool> watchPlaylistIsFavorite(int playlistId) {
+    return (select(playlists)..where((t) => t.id.equals(playlistId)))
+        .watchSingle()
+        .map((p) => p.isFavorite);
+  }
+
+  // Stream untuk mengambil semua playlist yang difavoritkan (untuk halaman beranda)
+  Stream<List<Playlist>> watchFavoritePlaylists() {
+    return (select(playlists)
+          ..where((t) => t.isFavorite.equals(true))
+          ..orderBy([(t) => OrderingTerm(expression: t.sortOrder)]))
+        .watch();
   }
 
   Future<List<Song>> getSongsInPlaylist(int playlistId) async {
@@ -170,7 +194,7 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  // 👇 FUNGSI BARU UNTUK PLAY HISTORY
+  // FUNGSI BARU UNTUK PLAY HISTORY
   Future<void> recordPlay({
     required String path,
     required String songId,
