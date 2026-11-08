@@ -23,6 +23,12 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     _sessionInitFuture = _initAudioSession();
 
     _playbackSub = _player.playbackEventStream.listen(_broadcastState);
+    _player.shuffleModeEnabledStream.listen(
+      (_) => _broadcastState(_player.playbackEvent),
+    );
+    _player.loopModeStream.listen(
+      (_) => _broadcastState(_player.playbackEvent),
+    );
 
     _indexSub = _player.currentIndexStream.listen((index) {
       if (index != null && index >= 0 && index < queue.value.length) {
@@ -48,15 +54,34 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   void _broadcastState(PlaybackEvent event) {
     final playing = _player.playing;
+    final shuffleOn = _player.shuffleModeEnabled;
+    final loop = _player.loopMode;
+
     playbackState.add(
       playbackState.value.copyWith(
         controls: [
+          MediaControl.custom(
+            androidIcon: shuffleOn
+                ? 'drawable/ic_shuffle_on'
+                : 'drawable/ic_shuffle_off',
+            label: 'Shuffle',
+            name: 'toggleShuffle',
+          ),
           MediaControl.skipToPrevious,
           if (playing) MediaControl.pause else MediaControl.play,
           MediaControl.skipToNext,
+          MediaControl.custom(
+            androidIcon: switch (loop) {
+              LoopMode.off => 'drawable/ic_repeat_off',
+              LoopMode.all => 'drawable/ic_repeat_all',
+              LoopMode.one => 'drawable/ic_repeat_one',
+            },
+            label: 'Repeat',
+            name: 'cycleRepeat',
+          ),
         ],
         systemActions: const {MediaAction.seek},
-        androidCompactActionIndices: const [0, 1, 2],
+        androidCompactActionIndices: const [1, 2, 3],
         processingState: switch (_player.processingState) {
           ProcessingState.idle => AudioProcessingState.idle,
           ProcessingState.loading => AudioProcessingState.loading,
@@ -69,6 +94,14 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
         bufferedPosition: _player.bufferedPosition,
         speed: _player.speed,
         queueIndex: event.currentIndex,
+        shuffleMode: shuffleOn
+            ? AudioServiceShuffleMode.all
+            : AudioServiceShuffleMode.none,
+        repeatMode: switch (loop) {
+          LoopMode.off => AudioServiceRepeatMode.none,
+          LoopMode.all => AudioServiceRepeatMode.all,
+          LoopMode.one => AudioServiceRepeatMode.one,
+        },
       ),
     );
   }
@@ -172,6 +205,45 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> seek(Duration position) => _player.seek(position);
+
+  @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+    final enable = shuffleMode != AudioServiceShuffleMode.none;
+    if (enable) await _player.shuffle();
+    await _player.setShuffleModeEnabled(enable);
+  }
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) async {
+    await _player.setLoopMode(switch (repeatMode) {
+      AudioServiceRepeatMode.none => LoopMode.off,
+      AudioServiceRepeatMode.one => LoopMode.one,
+      _ => LoopMode.all,
+    });
+  }
+
+  @override
+  Future<dynamic> customAction(
+    String name, [
+    Map<String, dynamic>? extras,
+  ]) async {
+    switch (name) {
+      case 'toggleShuffle':
+        return setShuffleMode(
+          _player.shuffleModeEnabled
+              ? AudioServiceShuffleMode.none
+              : AudioServiceShuffleMode.all,
+        );
+      case 'cycleRepeat':
+        // off -> all -> one -> off
+        return setRepeatMode(switch (_player.loopMode) {
+          LoopMode.off => AudioServiceRepeatMode.all,
+          LoopMode.all => AudioServiceRepeatMode.one,
+          LoopMode.one => AudioServiceRepeatMode.none,
+        });
+    }
+    return super.customAction(name, extras);
+  }
 
   @override
   Future<void> skipToNext() async {

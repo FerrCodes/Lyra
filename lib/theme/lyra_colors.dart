@@ -33,7 +33,7 @@ class LyraColors extends ThemeExtension<LyraColors> {
     glassShadow: Color(0x08000000),
     textPrimary: Color(0xDE000000),
     textSecondary: Color(0x8A000000),
-    accent: Colors.red,
+    accent: Color(0xFF0A84FF),
   );
 
   static const dark = LyraColors(
@@ -45,7 +45,7 @@ class LyraColors extends ThemeExtension<LyraColors> {
     glassShadow: Colors.transparent,
     textPrimary: Color(0xEBFFFFFF),
     textSecondary: Color(0x99FFFFFF),
-    accent: Color(0xFFFF453A),
+    accent: Color(0xFF64B5FF),
   );
 
   @override
