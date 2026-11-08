@@ -443,6 +443,15 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
           });
           _saveNewOrder(); // Simpan otomatis
         },
+        dragWidgetBuilder: (index, child) {
+          return Material(
+            color: Colors.transparent,
+            elevation: 8,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(20),
+            child: child,
+          );
+        },
         children: _playlists.map((playlist) {
           return _buildPlaylistCard(
             playlist,

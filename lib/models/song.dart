@@ -25,7 +25,7 @@ class Song {
       artist: map['artist']?.toString() ?? 'Unknown Artist',
       album: map['album']?.toString() ?? 'Unknown Album',
       path: map['path']?.toString() ?? '',
-      albumId: map['albumId'] ?? '0',
+      albumId: map['albumId']?.toString() ?? '0',
       // Amankan Angka: Konversi ke num dulu, baru ke int. Jika null, jadikan 0
       durationMs: (map['duration'] as num?)?.toInt() ?? 0,
     );

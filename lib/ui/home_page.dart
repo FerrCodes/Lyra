@@ -213,25 +213,26 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (_currentTab == 4) hideHeader = true;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Ikon status bar hitam
-        statusBarBrightness: Brightness.light,
-        // Tambahkan ini untuk Navigation Bar HP:
-        systemNavigationBarColor: Color(
-          0xFFF2F2F7,
-        ), // Sesuaikan dengan warna background aplikasimu
+        statusBarIconBrightness: Theme.of(context).brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
+        statusBarBrightness: Theme.of(context).brightness == Brightness.dark
+            ? Brightness.dark
+            : Brightness.light,
+        systemNavigationBarColor: colors.pageBackground,
         systemNavigationBarIconBrightness:
-            Brightness.dark, // Ikon navigasi hitam
+            Theme.of(context).brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
         systemNavigationBarDividerColor: Colors.transparent,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF2F2F7),
+        backgroundColor: colors.pageBackground,
         body: Stack(
           children: [
-            // =========================================================
             // KONTEN UTAMA (DENGAN NESTED NAVIGATOR)
-            // =========================================================
             PrimaryScrollController(
               controller: _mainScrollController,
               child: IndexedStack(
@@ -296,9 +297,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            // =========================================================
             // HEADER (Hanya muncul jika bukan di halaman detail)
-            // =========================================================
             if (!hideHeader)
               Positioned(
                 top: 0,
@@ -312,10 +311,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          // Gunakan Putih dengan transparansi 0.8 (lebih tegas)
-                          Colors.white.withValues(alpha: 0.8),
-                          // Memudar sepenuhnya di bawah
-                          Colors.white.withValues(alpha: 0.0),
+                          colors.pageBackground.withValues(alpha: 0.8),
+                          colors.pageBackground.withValues(alpha: 0.0),
                         ],
                         stops: const [0.0, 0.8],
                       ),
@@ -331,9 +328,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ],
 
-            // =========================================================
             // OVERLAY GRADASI UNTUK AREA BOTTOM BAR
-            // =========================================================
             Positioned(
               left: 0,
               right: 0,
@@ -360,9 +355,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
 
-            // =========================================================
             // BOTTOM BAR
-            // =========================================================
             Positioned(
               left: 0,
               right: 0,

@@ -6,6 +6,7 @@ import '../../database/database.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../theme/lyra_colors.dart';
+import '../../widgets/lyra_bottom_bar.dart';
 
 class DashboardView extends ConsumerWidget {
   final ScrollController controller;
@@ -28,6 +29,7 @@ class DashboardView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.lyra;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final db = ref.watch(databaseProvider);
 
     return ListView(
@@ -50,6 +52,8 @@ class DashboardView extends ConsumerWidget {
                   if (isDefaultName)
                     Text(
                       'Selamat ${_getGreeting()},',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -66,6 +70,8 @@ class DashboardView extends ConsumerWidget {
                     ),
                     Text(
                       name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -83,18 +89,15 @@ class DashboardView extends ConsumerWidget {
             },
           ),
         ),
-        const SizedBox(height: 32),
 
-        // PLAYLIST KAMU
+        const SizedBox(height: 28),
         StreamBuilder<List<Playlist>>(
-          // error handling pada stream
           stream:
               (db.select(db.playlists)..orderBy([
                     (t) => drift.OrderingTerm(expression: t.sortOrder),
                   ]))
                   .watch(),
           builder: (context, snapshot) {
-            // Jika database error
             if (snapshot.hasError) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -105,138 +108,136 @@ class DashboardView extends ConsumerWidget {
               );
             }
 
-            // Loading state
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox(
-                height: 180,
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            final playlists = snapshot.data ?? [];
-            if (playlists.isEmpty) return const SizedBox.shrink();
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Playlist Kamu',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: colors.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  height: 180,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: playlists.length,
-                    itemBuilder: (context, index) {
-                      final playlist = playlists[index];
-                      final hasImage =
-                          playlist.imagePath != null &&
-                          playlist.imagePath!.isNotEmpty;
-
-                      // Bungkus dengan TweenAnimationBuilder untuk animasi Fade-in
-                      return TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: Duration(
-                          milliseconds: 300 + (index * 100),
-                        ), // Staggered animasi
-                        curve: Curves.easeOut,
-                        builder: (context, opacity, child) {
-                          return Opacity(
-                            opacity: opacity,
-                            child: Transform.translate(
-                              offset: Offset(
-                                0,
-                                20 * (1 - opacity),
-                              ), // Efek naik dari bawah
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: GestureDetector(
-                          onTap: () => onOpenPlaylist(playlist),
-                          child: Container(
-                            width: 140,
-                            margin: const EdgeInsets.only(right: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  height: 140,
-                                  width: 140,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    gradient: hasImage
-                                        ? null
-                                        : LinearGradient(
-                                            colors: [
-                                              colors.accent.withValues(
-                                                alpha: 0.5,
-                                              ),
-                                              colors.accent,
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: hasImage
-                                        ? Image.file(
-                                            File(playlist.imagePath!),
-                                            fit: BoxFit.cover,
-                                            // Error builder untuk gambar
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Center(
-                                                      child: Icon(
-                                                        Icons.queue_music,
-                                                        size: 40,
-                                                        color: colors
-                                                            .pageBackground,
-                                                      ),
-                                                    ),
-                                          )
-                                        : Center(
-                                            child: Icon(
-                                              Icons.queue_music,
-                                              size: 40,
-                                              color: colors.pageBackground,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  playlist.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: colors.textPrimary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+            // FadeTransition 250ms saat data pertama tiba
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+              child: snapshot.connectionState == ConnectionState.waiting
+                  ? const SizedBox(
+                      key: ValueKey('loading'),
+                      height: 180,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : _buildPlaylistList(snapshot.data ?? [], colors, isDark),
             );
           },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaylistList(
+    List<Playlist> playlists,
+    LyraColors colors,
+    bool isDark,
+  ) {
+    if (playlists.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      key: const ValueKey('data'), // Key untuk AnimatedSwitcher
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Playlist Kamu',
+            style: TextStyle(
+              fontSize: 22, // Judul 22 bold
+              fontWeight: FontWeight.bold,
+              color: colors.textPrimary,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 180,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: playlists.length,
+            itemBuilder: (context, index) {
+              final playlist = playlists[index];
+              final hasImage =
+                  playlist.imagePath != null && playlist.imagePath!.isNotEmpty;
+
+              // Efek tekan skala 0.97 dengan PressableScale
+              return PressableScale(
+                onTap: () => onOpenPlaylist(playlist),
+                child: Container(
+                  width: 140,
+                  margin: const EdgeInsets.only(right: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 140,
+                        width: 140,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          gradient: hasImage
+                              ? null
+                              : LinearGradient(
+                                  colors: [
+                                    colors.accent.withValues(alpha: 0.5),
+                                    colors.accent,
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                          // Bayangan sangat lembut (hanya di tema terang)
+                          boxShadow: isDark
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: hasImage
+                              ? Image.file(
+                                  File(playlist.imagePath!),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Center(
+                                        child: Icon(
+                                          Icons.queue_music,
+                                          size: 40,
+                                          color: colors.pageBackground,
+                                        ),
+                                      ),
+                                )
+                              : Center(
+                                  child: Icon(
+                                    Icons.queue_music,
+                                    size: 40,
+                                    color: colors.pageBackground,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        playlist.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ],
     );
