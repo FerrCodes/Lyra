@@ -6,6 +6,7 @@ import 'playlist_page.dart';
 import 'library_page.dart';
 import 'search_page.dart';
 import '../widgets/app_top_bar.dart';
+import '../theme/lyra_colors.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -191,7 +192,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Cek apakah header perlu disembunyikan
+    final colors = context.lyra; // Cek apakah header perlu disembunyikan
     bool hideHeader = false;
     if (_currentTab == 1 && !_isSongsRoot) hideHeader = true;
     if (_currentTab == 2 && !_isPlaylistRoot) hideHeader = true;
@@ -287,15 +288,12 @@ class _HomePageState extends State<HomePage> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          // Putih semi-transparan di paling atas (menutupi status bar)
-                          Colors.white.withValues(alpha: 0.9),
-                          // Memudar sepenuhnya tepat sebelum area tombol
+                          // Gunakan Putih dengan transparansi 0.8 (lebih tegas)
+                          Colors.white.withValues(alpha: 0.8),
+                          // Memudar sepenuhnya di bawah
                           Colors.white.withValues(alpha: 0.0),
                         ],
-                        stops: const [
-                          0.0,
-                          0.8,
-                        ], // Memudar lebih cepat (di 80% tinggi overlay)
+                        stops: const [0.0, 0.8],
                       ),
                     ),
                   ),
@@ -318,18 +316,18 @@ class _HomePageState extends State<HomePage> {
               bottom: 0,
               child: IgnorePointer(
                 child: Container(
-                  height: MediaQuery.of(context).padding.bottom + 170,
+                  height: MediaQuery.of(context).padding.bottom + 90,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
                         // Transparan di atas
-                        Colors.white.withValues(alpha: 0.0),
+                        colors.pageBackground.withValues(alpha: 0.0),
                         // Mulai memutih di tengah
-                        Colors.white.withValues(alpha: 0.5),
-                        // Putih solid (samakan dengan warna background aplikasi) di paling bawah
-                        const Color(0xFFF2F2F7).withValues(alpha: 1.0),
+                        colors.pageBackground.withValues(alpha: 0.3),
+                        // Putih solid di paling bawah
+                        colors.pageBackground.withValues(alpha: 0.6),
                       ],
                       stops: const [0.0, 0.5, 1.0],
                     ),

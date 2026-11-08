@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/profile_provider.dart';
+import 'theme/lyra_colors.dart';
 
 late final AudioHandler audioHandler;
 
@@ -59,6 +60,7 @@ class LyraApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
+        extensions: const [LyraColors.light],
       ),
       home: const PermissionGate(),
     );
