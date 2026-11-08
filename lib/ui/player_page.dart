@@ -1,404 +1,564 @@
-import 'dart:math' as math;
+import '../main.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import '../main.dart';
-import '../audio/lyra_audio_handler.dart';
+import '../widgets/wavy_seek_bar.dart';
+import '../theme/lyra_colors.dart';
+import '../widgets/glass_container.dart';
+import '../widgets/lyra_bottom_bar.dart';
+import '../widgets/marquee_text.dart';
 
-class PlayerPage extends StatelessWidget {
+class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key});
 
   @override
+  State<PlayerPage> createState() => _PlayerPageState();
+}
+
+class _PlayerPageState extends State<PlayerPage> {
+  static final Map<int, Color> _colorCache = {};
+  Color? _dynamicColor;
+  int? _lastAlbumId;
+
+  Future<Color> _getDynamicColor(int albumId, Color fallback) async {
+    if (_colorCache.containsKey(albumId)) return _colorCache[albumId]!;
+
+    try {
+      final artwork = await OnAudioQuery().queryArtwork(
+        albumId,
+        ArtworkType.ALBUM,
+        size: 400,
+        format: ArtworkFormat.JPEG,
+      );
+      if (artwork != null) {
+        final scheme = await ColorScheme.fromImageProvider(
+          provider: MemoryImage(artwork),
+        );
+        final color = scheme.primary;
+        _colorCache[albumId] = color;
+        return color;
+      }
+    } catch (_) {}
+
+    _colorCache[albumId] = fallback;
+    return fallback;
+  }
+
+  // Penyesuaian kontras untuk tema terang
+  Color _getContrastColor(Color color, bool isDark) {
+    if (isDark) return color;
+    final hsl = HSLColor.fromColor(color);
+    if (hsl.lightness > 0.45) {
+      return hsl.withLightness(0.45).toColor();
+    }
+    return color;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    const pageColor = Color(0xFFF2F2F7);
+    final colors = context.lyra;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: pageColor,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: colors.pageBackground,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: pageColor,
+        backgroundColor: colors.pageBackground,
         body: StreamBuilder<MediaItem?>(
           stream: audioHandler.mediaItem,
           builder: (context, mediaSnapshot) {
             final item = mediaSnapshot.data;
 
             if (item == null) {
-              return const Center(child: Text('Tidak ada lagu yang diputar'));
+              // Empty State dengan tombol kembali
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Tidak ada lagu yang diputar',
+                      style: TextStyle(fontSize: 16, color: colors.textPrimary),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colors.accent,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Kembali'),
+                    ),
+                  ],
+                ),
+              );
             }
 
             final albumId =
                 int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0;
 
-            return SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  // 1. CUSTOM TOP BAR (Ala Spotify)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Panah Bawah
-                        IconButton(
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down,
-                            size: 36,
-                            color: Colors.black87,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
+            // Memicu fetch warna jika albumId berubah
+            if (albumId != _lastAlbumId) {
+              _lastAlbumId = albumId;
+              _getDynamicColor(albumId, colors.pageBackground).then((color) {
+                if (mounted) setState(() => _dynamicColor = color);
+              });
+            }
 
-                        // Teks Tengah: Playing From
-                        // Teks Tengah: Playing From
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Playing from ${item.extras?['sourceType'] ?? ''}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                item.extras?['sourceName'] ?? 'Unknown',
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+            final baseColor = _dynamicColor ?? colors.pageBackground;
+            final accentColor = _getContrastColor(baseColor, isDark);
 
-                        // Titik Tiga
-                        IconButton(
-                          icon: const Icon(
-                            Icons.more_vert,
-                            color: Colors.black87,
-                          ),
-                          onPressed: () {},
-                        ),
+            return TweenAnimationBuilder<Color?>(
+              tween: ColorTween(end: baseColor),
+              duration: const Duration(milliseconds: 500),
+              builder: (context, animatedColor, child) {
+                final currentBaseColor = animatedColor ?? baseColor;
+
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        currentBaseColor.withValues(alpha: 0.3),
+                        colors.pageBackground,
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // ALBUM ART
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Container(
-                      width: double.infinity,
-                      height: MediaQuery.of(context).size.width * 0.75,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 30,
-                            offset: const Offset(0, 15),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: QueryArtworkWidget(
-                          id: albumId,
-                          type: ArtworkType.ALBUM,
-                          size: 800,
-                          artworkBorder: BorderRadius.circular(24),
-                          nullArtworkWidget: Container(
-                            color: Colors.grey.shade300,
-                            child: const Icon(
-                              Icons.music_note,
-                              size: 100,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // JUDUL, ARTIS & TOMBOL AKSI (Layout Metrolist)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        // CUSTOM TOP BAR
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                item.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                              IconButton(
+                                icon: Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 36,
+                                  color: colors.textPrimary,
                                 ),
+                                onPressed: () => Navigator.pop(context),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                item.artist ?? 'Unknown Artist',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        // Tombol Add to Queue
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.add_to_queue,
-                              color: Colors.black87,
-                              size: 20,
-                            ),
-                            onPressed: () {},
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Tombol Favorite
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.favorite_border,
-                              color: Colors.black87,
-                              size: 20,
-                            ),
-                            onPressed: () {},
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // WAVY SEEK BAR & WAKTU
-                  StreamBuilder<PlaybackState>(
-                    stream: audioHandler.playbackState,
-                    builder: (context, stateSnapshot) {
-                      final state = stateSnapshot.data;
-                      final position = state?.updatePosition ?? Duration.zero;
-                      final duration = item.duration ?? Duration.zero;
-
-                      final double progress = duration.inMilliseconds > 0
-                          ? position.inMilliseconds / duration.inMilliseconds
-                          : 0.0;
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          children: [
-                            WavySeekBar(
-                              progress: progress,
-                              onSeek: (newProgress) {
-                                final newMillis =
-                                    (newProgress * duration.inMilliseconds)
-                                        .toInt();
-                                audioHandler.seek(
-                                  Duration(milliseconds: newMillis),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _formatDuration(position),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                                Text(
-                                  _formatDuration(duration),
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // TOMBOL KONTROL UTAMA (Gaya Metrolist)
-                  StreamBuilder<PlaybackState>(
-                    stream: audioHandler.playbackState,
-                    builder: (context, stateSnapshot) {
-                      final playing = stateSnapshot.data?.playing ?? false;
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Tombol Previous
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                iconSize: 24,
-                                padding: const EdgeInsets.all(12),
-                                icon: const Icon(
-                                  Icons.skip_previous,
-                                  color: Colors.black87,
-                                ),
-                                onPressed: () =>
-                                    (audioHandler as LyraAudioHandler)
-                                        .skipToPrevious(),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Tombol Play/Pause (Kapsul)
-                            Expanded(
-                              child: InkWell(
-                                onTap: playing
-                                    ? audioHandler.pause
-                                    : audioHandler.play,
-                                borderRadius: BorderRadius.circular(30),
-                                child: Container(
-                                  height: 60,
-                                  decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFFD1D6F4,
-                                    ), // Warna pastel kebiruan
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        playing
-                                            ? Icons.pause
-                                            : Icons.play_arrow,
-                                        color: Colors.black87,
-                                        size: 28,
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Playing from ${item.extras?['sourceType'] ?? ''}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: colors.textSecondary,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        playing ? 'Pause' : 'Play',
-                                        style: const TextStyle(
-                                          color: Colors.black87,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                                    ),
+                                    Text(
+                                      item.extras?['sourceName'] ?? 'Unknown',
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.more_vert,
+                                  color: colors.textPrimary,
+                                ),
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ALBUM ART (Dengan AnimatedScale)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: StreamBuilder<PlaybackState>(
+                            stream: audioHandler.playbackState,
+                            builder: (context, stateSnapshot) {
+                              final playing =
+                                  stateSnapshot.data?.playing ?? false;
+                              return AnimatedScale(
+                                scale: playing ? 1.0 : 0.9,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOutCubic,
+                                child: Container(
+                                  width: double.infinity,
+                                  height:
+                                      MediaQuery.of(context).size.width * 0.75,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.15,
                                         ),
+                                        blurRadius: 30,
+                                        offset: const Offset(0, 15),
                                       ),
                                     ],
                                   ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(24),
+                                    child: QueryArtworkWidget(
+                                      id: albumId,
+                                      type: ArtworkType.ALBUM,
+                                      size: 800,
+                                      artworkBorder: BorderRadius.circular(24),
+                                      nullArtworkWidget: Container(
+                                        color: colors.textSecondary.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        child: Icon(
+                                          Icons.music_note,
+                                          size: 100,
+                                          color: colors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Tombol Next
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                iconSize: 24,
-                                padding: const EdgeInsets.all(12),
-                                icon: const Icon(
-                                  Icons.skip_next,
-                                  color: Colors.black87,
-                                ),
-                                onPressed: () =>
-                                    (audioHandler as LyraAudioHandler)
-                                        .skipToNext(),
-                              ),
-                            ),
-                          ],
+                              );
+                            },
+                          ),
                         ),
-                      );
-                    },
-                  ),
 
-                  const SizedBox(height: 32),
+                        const SizedBox(height: 32),
 
-                  // MENU IKON BAWAH (Speed, Timer, dll)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildBottomIcon(Icons.speed),
-                        _buildBottomIcon(Icons.timer_outlined),
-                        _buildBottomIcon(Icons.shuffle),
-                        _buildBottomIcon(Icons.equalizer),
-                        _buildBottomIcon(Icons.repeat),
+                        // JUDUL & ARTIS
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    MarqueeText(
+                                      text: item.title,
+                                      style: TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      item.artist ?? 'Unknown Artist',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: colors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: colors.textSecondary.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.favorite_border,
+                                    color: colors.textPrimary,
+                                    size: 20,
+                                  ),
+                                  onPressed: () {},
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const Spacer(),
+
+                        // WAVY SEEK BAR
+                        StreamBuilder<Duration>(
+                          stream: AudioService.position,
+                          builder: (context, posSnapshot) {
+                            final position = posSnapshot.data ?? Duration.zero;
+                            final duration = item.duration ?? Duration.zero;
+
+                            final double progress = duration.inMilliseconds > 0
+                                ? position.inMilliseconds /
+                                      duration.inMilliseconds
+                                : 0.0;
+
+                            return StreamBuilder<PlaybackState>(
+                              stream: audioHandler.playbackState,
+                              builder: (context, stateSnapshot) {
+                                final playing =
+                                    stateSnapshot.data?.playing ?? false;
+
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      WavySeekBar(
+                                        progress: progress,
+                                        isPlaying: playing,
+                                        activeColor: accentColor,
+                                        inactiveColor: colors.textSecondary
+                                            .withValues(alpha: 0.2),
+                                        thumbColor: accentColor,
+                                        thumbInnerColor: colors.pageBackground,
+                                        onSeek: (newProgress) {
+                                          final newMillis =
+                                              (newProgress *
+                                                      duration.inMilliseconds)
+                                                  .toInt();
+                                          audioHandler.seek(
+                                            Duration(milliseconds: newMillis),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            _formatDuration(position),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: colors.textSecondary,
+                                            ),
+                                          ),
+                                          Text(
+                                            _formatDuration(duration),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: colors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // TOMBOL KONTROL UTAMA
+                        StreamBuilder<PlaybackState>(
+                          stream: audioHandler.playbackState,
+                          builder: (context, stateSnapshot) {
+                            final playing =
+                                stateSnapshot.data?.playing ?? false;
+
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  PressableScale(
+                                    onTap: () {
+                                      audioHandler.skipToPrevious();
+                                    },
+                                    child: GlassContainer(
+                                      width: 48,
+                                      height: 48,
+                                      radius: 24,
+                                      child: Icon(
+                                        Icons.skip_previous_rounded,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: PressableScale(
+                                      onTap: () {
+                                        playing
+                                            ? audioHandler.pause()
+                                            : audioHandler.play();
+                                      },
+                                      child: Container(
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          color: accentColor.withValues(
+                                            alpha: 0.18,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            30,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              playing
+                                                  ? Icons.pause_rounded
+                                                  : Icons.play_arrow_rounded,
+                                              color: accentColor,
+                                              size: 28,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              playing ? 'Pause' : 'Play',
+                                              style: TextStyle(
+                                                color: accentColor,
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  PressableScale(
+                                    onTap: () {
+                                      audioHandler.skipToNext();
+                                    },
+                                    child: GlassContainer(
+                                      width: 48,
+                                      height: 48,
+                                      radius: 24,
+                                      child: Icon(
+                                        Icons.skip_next_rounded,
+                                        color: colors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // MENU IKON BAWAH (Shuffle & Repeat dengan Kaca)
+                        StreamBuilder<PlaybackState>(
+                          stream: audioHandler.playbackState,
+                          builder: (context, snapshot) {
+                            final state = snapshot.data;
+                            final isShuffleOn =
+                                state?.shuffleMode ==
+                                AudioServiceShuffleMode.all;
+                            final repeatMode =
+                                state?.repeatMode ??
+                                AudioServiceRepeatMode.none;
+
+                            IconData repeatIcon = Icons.repeat;
+                            bool isRepeatOn = false;
+                            if (repeatMode == AudioServiceRepeatMode.all) {
+                              repeatIcon = Icons.repeat_on_rounded;
+                              isRepeatOn = true;
+                            } else if (repeatMode ==
+                                AudioServiceRepeatMode.one) {
+                              repeatIcon = Icons.repeat_one_on_rounded;
+                              isRepeatOn = true;
+                            }
+
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  PressableScale(
+                                    onTap: () {
+                                      final nextMode = isShuffleOn
+                                          ? AudioServiceShuffleMode.none
+                                          : AudioServiceShuffleMode.all;
+                                      audioHandler.setShuffleMode(nextMode);
+                                    },
+                                    child: GlassContainer(
+                                      width: 44,
+                                      height: 44,
+                                      radius: 14,
+                                      child: Icon(
+                                        Icons.shuffle_rounded,
+                                        color: isShuffleOn
+                                            ? accentColor
+                                            : colors.textPrimary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                  PressableScale(
+                                    onTap: () {
+                                      AudioServiceRepeatMode nextMode =
+                                          AudioServiceRepeatMode.all;
+                                      if (repeatMode ==
+                                          AudioServiceRepeatMode.all) {
+                                        nextMode = AudioServiceRepeatMode.one;
+                                      } else if (repeatMode ==
+                                          AudioServiceRepeatMode.one) {
+                                        nextMode = AudioServiceRepeatMode.none;
+                                      }
+                                      audioHandler.setRepeatMode(nextMode);
+                                    },
+                                    child: GlassContainer(
+                                      width: 44,
+                                      height: 44,
+                                      radius: 14,
+                                      child: Icon(
+                                        repeatIcon,
+                                        color: isRepeatOn
+                                            ? accentColor
+                                            : colors.textPrimary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                );
+              },
             );
           },
         ),
       ),
-    );
-  }
-
-  Widget _buildBottomIcon(IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Icon(icon, color: Colors.black87, size: 20),
     );
   }
 
@@ -407,105 +567,5 @@ class PlayerPage extends StatelessWidget {
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
-  }
-}
-
-// ==========================================
-// CUSTOM WIDGET: WAVY SEEK BAR (GELOMBANG)
-// ==========================================
-class WavySeekBar extends StatelessWidget {
-  final double progress;
-  final ValueChanged<double> onSeek;
-
-  const WavySeekBar({super.key, required this.progress, required this.onSeek});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GestureDetector(
-          onTapDown: (details) =>
-              _handleSeek(details.localPosition.dx, constraints.maxWidth),
-          onHorizontalDragUpdate: (details) =>
-              _handleSeek(details.localPosition.dx, constraints.maxWidth),
-          child: CustomPaint(
-            size: Size(constraints.maxWidth, 40),
-            painter: _WavyPainter(progress: progress),
-          ),
-        );
-      },
-    );
-  }
-
-  void _handleSeek(double dx, double width) {
-    double newProgress = (dx / width).clamp(0.0, 1.0);
-    onSeek(newProgress);
-  }
-}
-
-class _WavyPainter extends CustomPainter {
-  final double progress;
-  _WavyPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintInactive = Paint()
-      ..color = Colors.grey.shade300
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    final paintActive = Paint()
-      ..color = Colors.black87
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    final pathInactive = Path();
-    final pathActive = Path();
-
-    final waveHeight = 6.0;
-    final waveLength = 20.0;
-    final centerY = size.height / 2;
-
-    // Titik tengah untuk thumb
-    double thumbX = size.width * progress;
-    double thumbY = centerY;
-
-    for (double x = 0; x <= size.width; x++) {
-      double y =
-          centerY + math.sin((x / waveLength) * 2 * math.pi) * waveHeight;
-
-      if (x == 0) {
-        pathInactive.moveTo(x, y);
-        pathActive.moveTo(x, y);
-      } else {
-        pathInactive.lineTo(x, y);
-        if (x <= thumbX) {
-          pathActive.lineTo(x, y);
-          thumbY = y; // Simpan posisi Y terakhir untuk thumb
-        }
-      }
-    }
-
-    canvas.drawPath(pathInactive, paintInactive);
-    canvas.drawPath(pathActive, paintActive);
-
-    // Gambar titik (thumb) di ujung gelombang yang aktif
-    final paintThumb = Paint()
-      ..color = Colors.black87
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(thumbX, thumbY), 7.0, paintThumb);
-
-    // Cincin putih di tengah thumb agar terlihat menonjol
-    final paintThumbInner = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(thumbX, thumbY), 2.5, paintThumbInner);
-  }
-
-  @override
-  bool shouldRepaint(covariant _WavyPainter oldDelegate) {
-    return oldDelegate.progress != progress;
   }
 }
