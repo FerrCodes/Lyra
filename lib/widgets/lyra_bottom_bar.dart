@@ -50,6 +50,23 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     super.dispose();
   }
 
+  // Mini player: gradient album kalau ada lagu, glass kalau belum ada.
+  Widget _miniShell({
+    required MediaItem? item,
+    required double radius,
+    required Widget child,
+  }) {
+    if (item == null) {
+      return GlassContainer(height: 54, radius: radius, child: child);
+    }
+    return AlbumGradientContainer(
+      albumId: int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0,
+      height: 54,
+      radius: radius,
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<String>(searchQueryProvider, (_, next) {
@@ -210,8 +227,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                       MaterialPageRoute(builder: (_) => const PlayerPage()),
                     );
                   },
-                  child: GlassContainer(
-                    height: 54,
+                  child: _miniShell(
+                    item: item,
                     radius: 30,
                     child: Stack(
                       children: [
@@ -219,11 +236,16 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Row(
                             children: [
-                              Expanded(child: MiniPlayerContent(item: item)),
+                              Expanded(
+                                child: MiniPlayerContent(
+                                  item: item,
+                                  onGradient: true,
+                                ),
+                              ),
                               IconButton(
                                 icon: Icon(
                                   Icons.skip_next_rounded,
-                                  color: colors.textPrimary,
+                                  color: Colors.white,
                                   size: 28,
                                 ),
                                 onPressed: () =>
@@ -345,26 +367,6 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              PressableScale(
-                onTap: () {
-                  if (widget.onHomeTap != null) {
-                    widget.onHomeTap!();
-                  } else {
-                    widget.onTabChanged(0);
-                  }
-                },
-                child: GlassContainer(
-                  width: 54,
-                  height: 54,
-                  radius: 32,
-                  child: Icon(
-                    Icons.arrow_upward_rounded,
-                    color: colors.accent,
-                    size: 28,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
               Expanded(
                 child: PressableScale(
                   onTap: () {
@@ -373,8 +375,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                       MaterialPageRoute(builder: (_) => const PlayerPage()),
                     );
                   },
-                  child: GlassContainer(
-                    height: 54,
+                  child: _miniShell(
+                    item: item,
                     radius: 32,
                     child: Stack(
                       children: [
@@ -396,6 +398,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                                   child: MiniPlayerContent(
                                     item: item,
                                     isCompact: true,
+                                    onGradient: true,
                                   ),
                                 ),
                         ),
@@ -453,11 +456,11 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
           child: Container(
             height: 2.5,
             width: double.infinity,
-            color: colors.textPrimary.withValues(alpha: 0.1),
+            color: Colors.white.withValues(alpha: 0.2),
             alignment: Alignment.centerLeft,
             child: FractionallySizedBox(
               widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(color: colors.textPrimary),
+              child: Container(color: Colors.white),
             ),
           ),
         );
@@ -536,16 +539,20 @@ class _PressableScaleState extends State<PressableScale> {
 class MiniPlayerContent extends StatelessWidget {
   final MediaItem item;
   final bool isCompact;
+  final bool onGradient;
 
   const MiniPlayerContent({
     super.key,
     required this.item,
     this.isCompact = false,
+    this.onGradient = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = context.lyra;
+    final primary = onGradient ? Colors.white : colors.textPrimary;
+    final secondary = onGradient ? Colors.white70 : colors.textSecondary;
 
     return Row(
       children: [
@@ -573,12 +580,8 @@ class MiniPlayerContent extends StatelessWidget {
               nullArtworkWidget: Container(
                 width: isCompact ? 38 : 44,
                 height: isCompact ? 38 : 44,
-                color: colors.textSecondary.withValues(alpha: 0.2),
-                child: Icon(
-                  Icons.music_note_rounded,
-                  color: colors.textPrimary,
-                  size: 20,
-                ),
+                color: secondary.withValues(alpha: 0.2),
+                child: Icon(Icons.music_note_rounded, color: primary, size: 20),
               ),
             ),
           ),
@@ -594,14 +597,14 @@ class MiniPlayerContent extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: isCompact ? 13 : 14,
-                  color: colors.textPrimary,
+                  color: primary,
                 ),
               ),
               MarqueeText(
                 text: item.artist ?? 'Unknown',
                 style: TextStyle(
                   fontSize: isCompact ? 11 : 12,
-                  color: colors.textSecondary,
+                  color: secondary,
                 ),
               ),
             ],
@@ -614,7 +617,7 @@ class MiniPlayerContent extends StatelessWidget {
             return IconButton(
               icon: Icon(
                 playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                color: colors.textPrimary,
+                color: primary,
                 size: isCompact ? 24 : 28,
               ),
               onPressed: playing ? audioHandler.pause : audioHandler.play,
@@ -622,6 +625,127 @@ class MiniPlayerContent extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+// CONTAINER GRADIENT MINI PLAYER (warna mengikuti sampul album)
+class AlbumGradientContainer extends StatefulWidget {
+  final int albumId;
+  final double height;
+  final double radius;
+  final Widget child;
+
+  const AlbumGradientContainer({
+    super.key,
+    required this.albumId,
+    required this.height,
+    required this.radius,
+    required this.child,
+  });
+
+  @override
+  State<AlbumGradientContainer> createState() => _AlbumGradientContainerState();
+}
+
+class _AlbumGradientContainerState extends State<AlbumGradientContainer> {
+  // Cache per albumId supaya tidak ekstraksi ulang tiap ganti lagu / rebuild.
+  static final Map<int, List<Color>> _cache = {};
+  static const List<Color> _fallback = [Color(0xFF3A3A4A), Color(0xFF1E1E28)];
+
+  List<Color> _colors = _fallback;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(covariant AlbumGradientContainer old) {
+    super.didUpdateWidget(old);
+    if (old.albumId != widget.albumId) _resolve();
+  }
+
+  void _resolve() {
+    final id = widget.albumId;
+    final cached = _cache[id];
+    if (cached != null) {
+      _colors = cached;
+      return;
+    }
+    // Pertahankan warna lama dulu; AnimatedContainer akan menggesernya
+    // dengan halus begitu warna baru siap.
+    _extract(id);
+  }
+
+  Future<void> _extract(int id) async {
+    List<Color> result = _fallback;
+    try {
+      final bytes = await OnAudioQuery().queryArtwork(
+        id,
+        ArtworkType.ALBUM,
+        size: 200,
+        quality: 80,
+      );
+      if (bytes != null && bytes.isNotEmpty) {
+        final scheme = await ColorScheme.fromImageProvider(
+          provider: MemoryImage(bytes),
+          brightness: Brightness.dark,
+        );
+        final hsl = HSLColor.fromColor(scheme.primary);
+        final sat = hsl.saturation.clamp(0.35, 0.75).toDouble();
+        // Digelapkan supaya teks putih selalu terbaca.
+        result = [
+          hsl.withSaturation(sat).withLightness(0.34).toColor(),
+          hsl.withSaturation(sat).withLightness(0.18).toColor(),
+        ];
+      }
+    } catch (_) {
+      result = _fallback;
+    }
+    _cache[id] = result;
+    if (mounted && widget.albumId == id) {
+      setState(() => _colors = result);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: widget.height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.radius),
+        boxShadow: [
+          BoxShadow(
+            color: _colors.last.withValues(alpha: 0.45),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(widget.radius),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _colors,
+            ),
+          ),
+          foregroundDecoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.08),
+              width: 1,
+            ),
+          ),
+          child: widget.child,
+        ),
+      ),
     );
   }
 }

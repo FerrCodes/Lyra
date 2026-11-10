@@ -76,6 +76,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   late PlayHistoryRecorder _recorder;
   int _currentTab = 0;
   final ValueNotifier<bool> _isScrolled = ValueNotifier<bool>(false);
+  // Akumulasi jarak scroll searah, dipakai untuk mendeteksi arah scroll.
+  double _scrollAccum = 0.0;
   String _currentSortFilter = 'Name';
   final ScrollController _mainScrollController = ScrollController();
   // Simpan offset berdasarkan tab DAN route, bukan satu nilai global.
@@ -162,10 +164,42 @@ class _HomePageState extends ConsumerState<HomePage> {
     final activeRoute = _activeRouteForTab(tabIndex);
     if (activeRoute != null && !identical(route, activeRoute)) return;
 
-    final pixels = notification.metrics.pixels;
-    final nextIsScrolled = _isScrolled.value ? pixels > 15 : pixels > 40;
-    if (nextIsScrolled != _isScrolled.value) {
-      _isScrolled.value = nextIsScrolled;
+    final metrics = notification.metrics;
+    final pixels = metrics.pixels;
+
+    // Di dekat paling atas selalu tampil bar normal.
+    if (pixels <= 24) {
+      _scrollAccum = 0.0;
+      if (_isScrolled.value) _isScrolled.value = false;
+      return;
+    }
+
+    if (notification is! ScrollUpdateNotification) return;
+
+    // Abaikan bounce/overscroll (iOS) supaya bar tidak berkedip di ujung list.
+    if (pixels < metrics.minScrollExtent || pixels > metrics.maxScrollExtent) {
+      return;
+    }
+
+    final delta = notification.scrollDelta ?? 0.0;
+    if (delta == 0.0) return;
+
+    // Arah berbalik -> mulai hitung ulang.
+    if (_scrollAccum != 0.0 && _scrollAccum.sign != delta.sign) {
+      _scrollAccum = 0.0;
+    }
+    _scrollAccum += delta;
+
+    // Ambang kecil supaya getaran jari tidak memicu perubahan.
+    const threshold = 12.0;
+    if (_scrollAccum > threshold && !_isScrolled.value) {
+      // Scroll ke bawah -> mini player lebar + tombol search.
+      _isScrolled.value = true;
+      _scrollAccum = 0.0;
+    } else if (_scrollAccum < -threshold && _isScrolled.value) {
+      // Scroll ke atas -> kembali ke bar normal.
+      _isScrolled.value = false;
+      _scrollAccum = 0.0;
     }
   }
 
