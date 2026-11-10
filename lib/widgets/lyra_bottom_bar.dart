@@ -8,6 +8,7 @@ import '../ui/search_page.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../theme/lyra_colors.dart';
 import 'glass_container.dart';
+import 'marquee_text.dart';
 
 class LyraBottomBar extends ConsumerStatefulWidget {
   final int currentIndex;
@@ -588,20 +589,16 @@ class MiniPlayerContent extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                item.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              MarqueeText(
+                text: item.title,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: isCompact ? 13 : 14,
                   color: colors.textPrimary,
                 ),
               ),
-              Text(
-                item.artist ?? 'Unknown',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              MarqueeText(
+                text: item.artist ?? 'Unknown',
                 style: TextStyle(
                   fontSize: isCompact ? 11 : 12,
                   color: colors.textSecondary,
