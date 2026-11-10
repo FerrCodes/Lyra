@@ -11,7 +11,6 @@ import '../../theme/lyra_colors.dart';
 import '../../widgets/lyra_bottom_bar.dart';
 import '../../audio/lyra_audio_handler.dart';
 import '../playlist/widgets/playlist_cover.dart';
-import 'package:audio_service/audio_service.dart';
 
 class DashboardView extends ConsumerWidget {
   final ScrollController controller;
@@ -188,97 +187,6 @@ class DashboardView extends ConsumerWidget {
                 ),
               ),
             const SizedBox(height: 5),
-            // LANJUTKAN
-            _buildHistorySection(
-              context: context,
-              title: 'Lanjutkan',
-              dbStream: db.watchLastPlayed().map((h) => h == null ? [] : [h]),
-              itemBuilder: (history) => GestureDetector(
-                onTap: () => _playFromHistory(history),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colors.textSecondary.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ARTWORK
-                        Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: QueryArtworkWidget(
-                              id: int.tryParse(history.albumId) ?? 0,
-                              type: ArtworkType.ALBUM,
-                              size: 150,
-                              artworkWidth: 80,
-                              artworkHeight: 80,
-                              nullArtworkWidget: Container(
-                                width: 80,
-                                height: 80,
-                                color: colors.textSecondary.withValues(
-                                  alpha: 0.1,
-                                ),
-                                child: Icon(
-                                  Icons.music_note,
-                                  color: colors.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  history.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: colors.textPrimary,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  history.artist,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: colors.textSecondary,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Align(
-                          alignment: Alignment
-                              .bottomRight, // Paksa ikon ke kanan bawah
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 2),
-                            child: _ContinuePlayPause(
-                              path: history.path,
-                              onPlayFromStart: () => _playFromHistory(history),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
             // PLAYLIST FAVORIT
             _buildPlaylistSection(
               context: context,
@@ -640,61 +548,6 @@ class DashboardView extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ContinuePlayPause extends StatelessWidget {
-  final String path;
-  final VoidCallback onPlayFromStart;
-
-  const _ContinuePlayPause({required this.path, required this.onPlayFromStart});
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.lyra;
-    return StreamBuilder<MediaItem?>(
-      stream: audioHandler.mediaItem,
-      builder: (context, itemSnapshot) {
-        final isCurrent = itemSnapshot.data?.id == path;
-        return StreamBuilder<PlaybackState>(
-          stream: audioHandler.playbackState,
-          builder: (context, stateSnapshot) {
-            final playing = stateSnapshot.data?.playing ?? false;
-            final isPlayingThis = isCurrent && playing;
-
-            return PressableScale(
-              onTap: () {
-                if (isCurrent) {
-                  final handler = audioHandler as LyraAudioHandler;
-                  if (playing) {
-                    handler.pause();
-                  } else {
-                    handler.play();
-                  }
-                } else {
-                  onPlayFromStart();
-                }
-              },
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colors.accent.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isPlayingThis
-                      ? Icons.pause_rounded
-                      : Icons.play_arrow_rounded,
-                  color: colors.accent,
-                  size: 26,
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

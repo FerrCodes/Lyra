@@ -437,7 +437,6 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
 
   // WIDGET PROGRESS BAR MINI PLAYER
   Widget _buildProgressBar(MediaItem item) {
-    final colors = context.lyra;
     // Gunakan AudioService.position, bukan playbackState
     return StreamBuilder<Duration>(
       stream: AudioService.position,

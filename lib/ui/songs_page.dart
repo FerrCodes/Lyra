@@ -231,6 +231,8 @@ class SongsPageState extends ConsumerState<SongsPage> {
           .toList(),
       0,
       albumIds: {for (var s in _displayedSongs) s.path: s.albumId.toString()},
+      sourceType: 'Songs',
+      sourceName: 'Semua Lagu',
     );
     widget.onPlayTriggered?.call();
   }
@@ -681,6 +683,8 @@ class SongsPageState extends ConsumerState<SongsPage> {
                             for (var s in _displayedSongs)
                               s.path: s.albumId.toString(),
                           },
+                          sourceType: 'Songs',
+                          sourceName: 'Semua Lagu',
                         );
                         widget.onPlayTriggered?.call();
                       },
