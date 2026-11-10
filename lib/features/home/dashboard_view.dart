@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../database/database.dart';
 import '../../main.dart';
-import '../../models/song.dart' as local;
 import '../../providers/database_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/songs_provider.dart';
@@ -32,7 +31,14 @@ class DashboardView extends ConsumerWidget {
   }
 
   // Fungsi Helper: Putar dari List Song (Drift)
-  void _playSongs(List<Song> songs, int startIndex, {bool shuffle = false}) {
+  void _playSongs(
+    List<Song> songs,
+    int startIndex, {
+    bool shuffle = false,
+    required String sourceType,
+    required String sourceName,
+    Map<String, String>? albumIds,
+  }) {
     if (songs.isEmpty) return;
     final handler = audioHandler as LyraAudioHandler;
     List<Song> listToPlay = List.from(songs);
@@ -44,50 +50,34 @@ class DashboardView extends ConsumerWidget {
     handler.playQueue(
       listToPlay,
       startIndex,
-      sourceType: 'Beranda',
-      sourceName: 'Home',
-    );
-  }
-
-  // Fungsi Helper: Putar dari List local.Song (MediaStore)
-  void _playLocalSongs(
-    List<local.Song> songs,
-    int startIndex, {
-    bool shuffle = false,
-  }) {
-    if (songs.isEmpty) return;
-    _playSongs(
-      songs
-          .map(
-            (s) => Song(
-              id: s.id,
-              title: s.title,
-              artist: s.artist,
-              album: s.album,
-              path: s.path,
-              durationMs: s.durationMs,
-              addedAt: DateTime.now(),
-            ),
-          )
-          .toList(),
-      startIndex,
-      shuffle: shuffle,
+      albumIds: albumIds,
+      sourceType: sourceType,
+      sourceName: sourceName,
     );
   }
 
   // Fungsi Helper: Putar 1 lagu dari PlayHistory
-  void _playFromHistory(PlayHistoryData history) {
-    _playSongs([
-      Song(
-        id: history.songId,
-        title: history.title,
-        artist: history.artist,
-        album: history.album,
-        path: history.path,
-        durationMs: history.durationMs,
-        addedAt: DateTime.now(),
-      ),
-    ], 0);
+  void _playFromHistory(
+    PlayHistoryData history, {
+    String sourceName = 'Lanjutkan',
+  }) {
+    _playSongs(
+      [
+        Song(
+          id: history.songId,
+          title: history.title,
+          artist: history.artist,
+          album: history.album,
+          path: history.path,
+          durationMs: history.durationMs,
+          addedAt: DateTime.now(),
+        ),
+      ],
+      0,
+      sourceType: 'Beranda',
+      sourceName: sourceName,
+      albumIds: {history.path: history.albumId},
+    );
   }
 
   @override
@@ -95,11 +85,13 @@ class DashboardView extends ConsumerWidget {
     final colors = context.lyra;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final db = ref.watch(databaseProvider);
-    final allSongs = ref.watch(allSongsProvider).value ?? [];
+    final songsAsync = ref.watch(allSongsProvider);
+    final allSongs = songsAsync.value ?? [];
+    final albumById = {for (final s in allSongs) s.id: s.albumId};
 
     return Stack(
       children: [
-        // 1. LATAR ATAS DINAMIS
+        // LATAR ATAS DINAMIS
         Positioned(
           top: 0,
           left: 0,
@@ -121,7 +113,7 @@ class DashboardView extends ConsumerWidget {
           ),
         ),
 
-        // 2. KONTEN UTAMA
+        // KONTEN UTAMA
         ListView(
           controller: controller,
           padding: EdgeInsets.only(
@@ -168,9 +160,8 @@ class DashboardView extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 28),
-
             // KARTU PENGGUNA BARU (Jika belum ada lagu)
-            if (allSongs.isEmpty)
+            if (songsAsync.hasValue && allSongs.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
@@ -184,16 +175,7 @@ class DashboardView extends ConsumerWidget {
                       Icon(Icons.library_music, size: 60, color: colors.accent),
                       const SizedBox(height: 16),
                       Text(
-                        'Selamat Datang di Lyra!',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: colors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Belum ada lagu di perangkatmu. Tambahkan lagu ke folder musik HP, lalu tarik halaman ini ke bawah untuk memuat ulang.',
+                        'Tidak ada lagu yang ditemukan.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: colors.textSecondary,
@@ -204,36 +186,7 @@ class DashboardView extends ConsumerWidget {
                   ),
                 ),
               ),
-
-            // AKSES CEPAT
-            if (allSongs.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildQuickAction(
-                        'Putar Semua',
-                        Icons.play_circle_fill_rounded,
-                        colors.accent,
-                        () => _playLocalSongs(allSongs, 0),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildQuickAction(
-                        'Putar Acak',
-                        Icons.shuffle_rounded,
-                        colors.textPrimary,
-                        () => _playLocalSongs(allSongs, 0, shuffle: true),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-            ],
-
+            const SizedBox(height: 28),
             // LANJUTKAN
             _buildHistorySection(
               context: context,
@@ -322,15 +275,6 @@ class DashboardView extends ConsumerWidget {
               ),
             ),
 
-            // DENGARKAN LAGI
-            _buildHistorySection(
-              context: context,
-              title: 'Dengarkan Lagi',
-              dbStream: db.watchRecentlyPlayed(limit: 6),
-              itemBuilder: (history) =>
-                  _buildHistoryShelfItem(history, colors, isDark),
-            ),
-
             // FAVORIT
             _buildSongSection(
               context: context,
@@ -338,9 +282,18 @@ class DashboardView extends ConsumerWidget {
               dbStream: db.watchFavorites(),
               colors: colors,
               isDark: isDark,
-              onPlay: (index, songs) => _playSongs(songs, index),
+              albumById: albumById,
+              onPlay: (index, songs) => _playSongs(
+                songs,
+                index,
+                sourceType: 'Favorit',
+                sourceName: 'Favorit',
+                albumIds: {
+                  for (final s in songs)
+                    if (albumById[s.id] != null) s.path: albumById[s.id]!,
+                },
+              ),
             ),
-
             // PLAYLIST FAVORIT
             _buildPlaylistSection(
               context: context,
@@ -349,7 +302,6 @@ class DashboardView extends ConsumerWidget {
               colors: colors,
               isDark: isDark,
             ),
-
             // PLAYLIST KAMU
             _buildPlaylistSection(
               context: context,
@@ -362,55 +314,14 @@ class DashboardView extends ConsumerWidget {
               colors: colors,
               isDark: isDark,
             ),
-
-            // ALBUM PILIHAN
-            if (allSongs.isNotEmpty)
-              _buildCategorySection(
-                context: context,
-                title: 'Album Pilihan',
-                items: allSongs.map((s) => s.album).toSet().take(6).toList(),
-                colors: colors,
-                isDark: isDark,
-                itemBuilder: (albumName, index) {
-                  final albumSongs = allSongs
-                      .where((s) => s.album == albumName)
-                      .toList();
-                  return _buildCategoryCard(
-                    title: albumName,
-                    subtitle: '${albumSongs.length} Lagu',
-                    albumId: albumSongs.first.albumId,
-                    colors: colors,
-                    isDark: isDark,
-                    isCircle: false,
-                    onTap: () => _playLocalSongs(albumSongs, 0),
-                  );
-                },
-              ),
-
-            // ARTIS
-            if (allSongs.isNotEmpty)
-              _buildCategorySection(
-                context: context,
-                title: 'Artis',
-                items: allSongs.map((s) => s.artist).toSet().take(6).toList(),
-                colors: colors,
-                isDark: isDark,
-                itemBuilder: (artistName, index) {
-                  final artistSongs = allSongs
-                      .where((s) => s.artist == artistName)
-                      .toList();
-                  return _buildCategoryCard(
-                    title: artistName,
-                    subtitle: '${artistSongs.length} Lagu',
-                    albumId: artistSongs.first.albumId,
-                    colors: colors,
-                    isDark: isDark,
-                    isCircle: true,
-                    onTap: () => _playLocalSongs(artistSongs, 0),
-                  );
-                },
-              ),
-
+            // DENGARKAN LAGI
+            _buildHistorySection(
+              context: context,
+              title: 'Dengarkan Lagi',
+              dbStream: db.watchRecentlyPlayed(limit: 6),
+              itemBuilder: (history) =>
+                  _buildHistoryShelfItem(history, colors, isDark),
+            ),
             // SERING DIPUTAR
             _buildHistorySection(
               context: context,
@@ -429,43 +340,6 @@ class DashboardView extends ConsumerWidget {
     );
   }
 
-  // ==========================================
-  // HELPER WIDGETS
-  // ==========================================
-
-  Widget _buildQuickAction(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return PressableScale(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Bagian Playlist (Horizontal)
   Widget _buildPlaylistSection({
     required BuildContext context,
@@ -478,8 +352,9 @@ class DashboardView extends ConsumerWidget {
       stream: dbStream,
       builder: (context, snapshot) {
         final data = snapshot.data ?? [];
-        if (data.isEmpty)
-          return const SizedBox.shrink(); // Sembunyikan jika kosong
+        if (data.isEmpty) {
+          return const SizedBox.shrink();
+        } // Sembunyikan jika kosong
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -560,6 +435,7 @@ class DashboardView extends ConsumerWidget {
     required Stream<List<Song>> dbStream,
     required LyraColors colors,
     required bool isDark,
+    required Map<String, String> albumById,
     required void Function(int index, List<Song> songs) onPlay,
   }) {
     return StreamBuilder<List<Song>>(
@@ -592,7 +468,7 @@ class DashboardView extends ConsumerWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: QueryArtworkWidget(
-                              id: int.tryParse(song.id) ?? 0,
+                              id: int.tryParse(albumById[song.id] ?? '') ?? 0,
                               type: ArtworkType.ALBUM,
                               size: 150,
                               artworkWidth: 130,
@@ -683,36 +559,6 @@ class DashboardView extends ConsumerWidget {
     );
   }
 
-  // Bagian Kategori Dinamis (Album/Artis)
-  Widget _buildCategorySection({
-    required BuildContext context,
-    required String title,
-    required List<String> items,
-    required LyraColors colors,
-    required bool isDark,
-    required Widget Function(String name, int index) itemBuilder,
-  }) {
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildTitle(title, colors),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 185,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: items.length,
-            itemBuilder: (context, index) => itemBuilder(items[index], index),
-          ),
-        ),
-        const SizedBox(height: 28),
-      ],
-    );
-  }
-
   // Helper: Judul Bagian
   Widget _buildTitle(String title, LyraColors colors) {
     return Padding(
@@ -736,7 +582,10 @@ class DashboardView extends ConsumerWidget {
     bool showPlayCount = false,
   }) {
     return PressableScale(
-      onTap: () => _playFromHistory(history),
+      onTap: () => _playFromHistory(
+        history,
+        sourceName: showPlayCount ? 'Sering Diputar' : 'Dengarkan Lagi',
+      ),
       child: Container(
         width: 130,
         margin: const EdgeInsets.only(right: 16),
@@ -784,63 +633,6 @@ class DashboardView extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: colors.textSecondary, fontSize: 12),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Helper: Item Kategori (Album/Artis)
-  Widget _buildCategoryCard({
-    required String title,
-    required String subtitle,
-    required String albumId,
-    required LyraColors colors,
-    required bool isDark,
-    required bool isCircle,
-    required VoidCallback onTap,
-  }) {
-    return PressableScale(
-      onTap: onTap,
-      child: Container(
-        width: isCircle ? 110 : 130,
-        margin: const EdgeInsets.only(right: 16),
-        child: Column(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(isCircle ? 55 : 16),
-              child: QueryArtworkWidget(
-                id: int.tryParse(albumId) ?? 0,
-                type: ArtworkType.ALBUM,
-                size: 150,
-                artworkWidth: isCircle ? 110 : 130,
-                artworkHeight: isCircle ? 110 : 130,
-                nullArtworkWidget: Container(
-                  color: colors.textSecondary.withValues(alpha: 0.1),
-                  child: Icon(
-                    isCircle ? Icons.person : Icons.album,
-                    size: 40,
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              maxLines: 1,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: colors.textPrimary,
-                fontSize: 14,
-              ),
-            ),
-            Text(
-              subtitle,
-              style: TextStyle(color: colors.textSecondary, fontSize: 12),
-            ),
           ],
         ),
       ),

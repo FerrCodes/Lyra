@@ -182,8 +182,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               child: Stack(
                                 children: [
                                   Container(
-                                    width: 130,
-                                    height: 130,
+                                    width: 140,
+                                    height: 140,
                                     decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
                                     ),
@@ -241,7 +241,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   color: Colors.black87,
                                 ),
                                 decoration: InputDecoration(
-                                  labelText: 'Nama Pengguna',
+                                  labelText: 'Masukan Nama',
                                   labelStyle: TextStyle(
                                     color: Colors.grey.shade600,
                                     fontWeight: FontWeight.w500,
