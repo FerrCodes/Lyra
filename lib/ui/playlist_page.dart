@@ -6,7 +6,7 @@ import '../database/database.dart';
 import '../providers/database_provider.dart';
 import 'playlist_detail_page.dart';
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+import '../services/media_store_service.dart';
 import '../features/playlist/widgets/playlist_cover.dart';
 
 // Kabel untuk dipanggil dari home_page.dart
@@ -123,9 +123,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const SizedBox(
-                        width: 48,
-                      ), // Spacer untuk menyeimbangkan judul
+                      const SizedBox(width: 48),
                       const Text(
                         'Buat Playlist Baru',
                         style: TextStyle(
@@ -172,15 +170,24 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // 2. AREA FOTO & TOMBOL PENSIL
+                  // AREA FOTO & TOMBOL PENSIL
                   GestureDetector(
                     onTap: () async {
-                      final ImagePicker picker = ImagePicker();
-                      final XFile? image = await picker.pickImage(
-                        source: ImageSource.gallery,
-                      );
-                      if (image != null) {
-                        setModalState(() => tempImagePath = image.path);
+                      try {
+                        // Panggil Galeri Native via Kotlin
+                        final String? imagePath =
+                            await MediaStoreService.pickImageFromGallery();
+
+                        if (imagePath != null) {
+                          // Gunakan setModalState agar UI di dalam bottom sheet ter-update
+                          setModalState(() => tempImagePath = imagePath);
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Gagal membuka galeri: $e')),
+                          );
+                        }
                       }
                     },
                     child: Stack(

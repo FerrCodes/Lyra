@@ -59,3 +59,9 @@ subprojects {
         }
     }
 }
+
+dependencies {
+    // Library untuk membaca dan menulis metadata (ID3 tags)
+    implementation("com.github.Adonai:jaudiotagger:2.0.3")
+    implementation("com.mpatric:mp3agic:0.9.1")
+}

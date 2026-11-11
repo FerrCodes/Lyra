@@ -2,6 +2,7 @@ import '../main.dart';
 import '../database/database.dart';
 import 'package:flutter/material.dart';
 import '../models/song.dart' as local;
+import '../ui/track_details_page.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import 'package:share_plus/share_plus.dart';
@@ -381,7 +382,12 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     title: const Text('Track details'),
                     onTap: () {
                       Navigator.pop(context);
-                      _showTrackDetails(song);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TrackDetailsPage(song: song),
+                        ),
+                      );
                     },
                   ),
                   ListTile(
@@ -402,7 +408,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     title: const Text('Artist'),
                     onTap: () {
                       Navigator.pop(context);
-                      // Buka halaman artis
                       Navigator.of(this.context).push(
                         MaterialPageRoute(
                           builder: (_) =>
@@ -415,7 +420,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     leading: const Icon(Icons.share, color: Colors.black87),
                     title: const Text('Share'),
                     onTap: () {
-                      // Panggil fungsi share
                       SharePlus.instance.share(
                         ShareParams(
                           text: '${song.title} - ${song.artist}',
@@ -431,40 +435,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
           ),
         );
       },
-    );
-  }
-
-  void _showTrackDetails(local.Song song) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Track details'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Title: ${song.title}',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text('Artist: ${song.artist}'),
-            const SizedBox(height: 4),
-            Text('Album: ${song.album}'),
-            const SizedBox(height: 4),
-            Text(
-              'Path: ${song.path}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
-          ),
-        ],
-      ),
     );
   }
 
