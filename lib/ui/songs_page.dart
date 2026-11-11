@@ -10,6 +10,8 @@ import '../services/media_store_service.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../features/library/pages/album_detail_page.dart';
+import '../features/library/pages/artist_detail_page.dart';
 import '../features/playlist/widgets/playlist_track_list.dart';
 
 final GlobalKey<SongsPageState> songsPageKey = GlobalKey<SongsPageState>();
@@ -387,9 +389,10 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     title: const Text('Album'),
                     onTap: () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fitur Album segera hadir'),
+                      Navigator.of(this.context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              AlbumDetailPage(albumKey: song.albumId),
                         ),
                       );
                     },
@@ -399,9 +402,11 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     title: const Text('Artist'),
                     onTap: () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fitur Artist segera hadir'),
+                      // Buka halaman artis
+                      Navigator.of(this.context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ArtistDetailPage(artistName: song.artist),
                         ),
                       );
                     },
@@ -655,91 +660,97 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     // CEK LAGU AKTIF MENGGUNAKAN DATA DARI STREAMBUILDER DI ATAS
                     final isPlaying = currentMediaItem?.id == song.path;
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.only(left: 16, right: 8),
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: QueryArtworkWidget(
-                          id: int.parse(
-                            song.albumId,
-                          ), // Konversi kembali ke integer
-                          type: ArtworkType.ALBUM,
-                          size: 200, // Resolusi gambar yang diambil
-                          artworkHeight: 50,
-                          artworkWidth: 50,
-                          artworkBorder: BorderRadius.circular(8),
-                          nullArtworkWidget: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            // Ini adalah ikon default jika lagu tidak punya foto album
-                            child: const Icon(
-                              Icons.music_note,
-                              color: Colors.grey,
+                    return Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.only(
+                          left: 16,
+                          right: 8,
+                        ),
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: QueryArtworkWidget(
+                            id: int.parse(
+                              song.albumId,
+                            ), // Konversi kembali ke integer
+                            type: ArtworkType.ALBUM,
+                            size: 200, // Resolusi gambar yang diambil
+                            artworkHeight: 50,
+                            artworkWidth: 50,
+                            artworkBorder: BorderRadius.circular(8),
+                            nullArtworkWidget: Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade300,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              // Ini adalah ikon default jika lagu tidak punya foto album
+                              child: const Icon(
+                                Icons.music_note,
+                                color: Colors.grey,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      title: Text(
-                        song.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: isPlaying ? Colors.blue : Colors.black87,
+                        title: Text(
+                          song.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: isPlaying ? Colors.blue : Colors.black87,
+                          ),
                         ),
-                      ),
-                      subtitle: Text(
-                        song.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isPlaying) ...[
-                            const EqualizerAnimation(),
-                            const SizedBox(width: 8),
+                        subtitle: Text(
+                          song.artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isPlaying) ...[
+                              const EqualizerAnimation(),
+                              const SizedBox(width: 8),
+                            ],
+                            IconButton(
+                              icon: const Icon(
+                                Icons.more_vert,
+                                color: Colors.grey,
+                              ),
+                              onPressed: () => _showSongOptions(song, isFav),
+                            ),
                           ],
-                          IconButton(
-                            icon: const Icon(
-                              Icons.more_vert,
-                              color: Colors.grey,
-                            ),
-                            onPressed: () => _showSongOptions(song, isFav),
-                          ),
-                        ],
+                        ),
+                        onTap: () async {
+                          final handler = audioHandler as LyraAudioHandler;
+                          handler.playQueue(
+                            _displayedSongs
+                                .map(
+                                  (s) => Song(
+                                    id: s.id,
+                                    title: s.title,
+                                    artist: s.artist,
+                                    album: s.album,
+                                    path: s.path,
+                                    durationMs: s.durationMs,
+                                    addedAt: DateTime.now(),
+                                  ),
+                                )
+                                .toList(),
+                            index,
+                            albumIds: {
+                              for (var s in _displayedSongs)
+                                s.path: s.albumId.toString(),
+                            },
+                            sourceType: 'Songs',
+                            sourceName: 'Semua Lagu',
+                          );
+                          widget.onPlayTriggered?.call();
+                        },
                       ),
-                      onTap: () async {
-                        final handler = audioHandler as LyraAudioHandler;
-                        handler.playQueue(
-                          _displayedSongs
-                              .map(
-                                (s) => Song(
-                                  id: s.id,
-                                  title: s.title,
-                                  artist: s.artist,
-                                  album: s.album,
-                                  path: s.path,
-                                  durationMs: s.durationMs,
-                                  addedAt: DateTime.now(),
-                                ),
-                              )
-                              .toList(),
-                          index,
-                          albumIds: {
-                            for (var s in _displayedSongs)
-                              s.path: s.albumId.toString(),
-                          },
-                          sourceType: 'Songs',
-                          sourceName: 'Semua Lagu',
-                        );
-                        widget.onPlayTriggered?.call();
-                      },
                     );
                   },
                 );
