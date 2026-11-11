@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/song.dart' as local;
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
+import 'package:share_plus/share_plus.dart';
 import '../providers/database_provider.dart';
 import '../services/media_store_service.dart';
 import 'package:audio_service/audio_service.dart';
@@ -346,7 +347,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       );
                     },
                   ),
-                  const Divider(height: 1),
                   ListTile(
                     leading: const Icon(
                       Icons.playlist_add,
@@ -410,7 +410,13 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     leading: const Icon(Icons.share, color: Colors.black87),
                     title: const Text('Share'),
                     onTap: () {
-                      Navigator.pop(context);
+                      // Panggil fungsi share
+                      SharePlus.instance.share(
+                        ShareParams(
+                          text: '${song.title} - ${song.artist}',
+                          subject: song.title,
+                        ),
+                      );
                     },
                   ),
                   const SizedBox(height: 8),
@@ -474,6 +480,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       isScrollControlled: true,
       useSafeArea: true,
@@ -488,11 +495,21 @@ class SongsPageState extends ConsumerState<SongsPage> {
             ),
             child: SingleChildScrollView(
               child: Padding(
-                // <--- 2. TAMBAHKAN PADDING BAWAH AGAR TIDAK TERTUTUP BOTTOM BAR
                 padding: const EdgeInsets.only(bottom: 80),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Center(
+                      child: Container(
+                        margin: const EdgeInsets.only(top: 12, bottom: 10),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade500,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                     const Padding(
                       padding: EdgeInsets.all(16.0),
                       child: Text(
@@ -584,12 +601,12 @@ class SongsPageState extends ConsumerState<SongsPage> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  'Izin Penyimpanan Dibutuhkan',
+                  'Izin Music dan Audio dibutuhkan.',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Lyra membutuhkan izin untuk membaca lagu di HP-mu.',
+                  'Membutuhkan izin untuk mencari semua lagu.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -607,7 +624,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
         return Center(child: Text('Gagal memuat lagu: $err'));
       },
       data: (songs) {
-        // 2Sinkronkan data provider ke variabel lokal
+        // Sinkronkan data provider ke variabel lokal
         _allSongs = songs;
         _displayedSongs = _sortedCopy(songs);
 
@@ -635,7 +652,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                   itemBuilder: (context, index) {
                     final song = _displayedSongs[index];
                     final isFav = _favorites.any((f) => f.id == song.id);
-
                     // CEK LAGU AKTIF MENGGUNAKAN DATA DARI STREAMBUILDER DI ATAS
                     final isPlaying = currentMediaItem?.id == song.path;
 
@@ -730,7 +746,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
               },
             ),
 
-            // (Sisa kode Alphabet Scroller A-Z milikmu biarkan saja di bawah sini)
+            // Alphabet Scroller A-Z
             Positioned(
               right: 4,
               top: MediaQuery.of(context).padding.top + 120,

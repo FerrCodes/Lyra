@@ -616,7 +616,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             children: [
               Center(
                 child: Container(
-                  margin: const EdgeInsets.only(top: 12, bottom: 16),
+                  margin: const EdgeInsets.only(top: 12, bottom: 10),
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(

@@ -17,7 +17,7 @@ class MediaStoreService {
   /// Mengambil semua lagu dari HP via Kotlin
   static Future<List<Map<String, dynamic>>> getSongs() async {
     try {
-      // 1. NULL SAFETY: Gunakan tipe data nullable (?)
+      // NULL SAFETY: Gunakan tipe data nullable (?)
       final List<dynamic>? result = await _channel.invokeMethod('getSongs');
 
       // Cek jika Kotlin mengembalikan null
@@ -27,7 +27,7 @@ class MediaStoreService {
 
       return result.map((e) => Map<String, dynamic>.from(e)).toList();
     } on PlatformException catch (e) {
-      // 2. ERROR HANDLING: Lemparkan custom exception beserta kodenya
+      // ERROR HANDLING: Lemparkan custom exception beserta kodenya
       // Agar UI bisa mendeteksi jika error == 'PERMISSION_DENIED'
       throw MediaStoreException(
         e.message ?? 'Gagal mengambil lagu tanpa pesan error.',

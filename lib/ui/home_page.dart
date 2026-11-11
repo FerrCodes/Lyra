@@ -237,7 +237,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 // Handle Bar
                 Center(
                   child: Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    margin: const EdgeInsets.only(top: 12, bottom: 10),
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(

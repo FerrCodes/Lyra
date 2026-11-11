@@ -110,7 +110,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                 children: [
                   Center(
                     child: Container(
-                      margin: const EdgeInsets.only(bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 10),
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
