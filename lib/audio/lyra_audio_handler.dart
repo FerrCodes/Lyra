@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import '../database/database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -159,35 +159,43 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     if (albumId == null || albumId == '0') return;
 
     try {
-      final audioQuery = OnAudioQuery();
-      Uint8List? artBytes = await audioQuery.queryArtwork(
-        int.parse(albumId),
-        ArtworkType.ALBUM,
-        format: ArtworkFormat.JPEG,
-        size: 500,
-      );
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/album_art_$albumId.jpg');
 
-      if (artBytes != null) {
-        final tempDir = await getTemporaryDirectory();
-        final file = File('${tempDir.path}/album_art_$albumId.jpg');
-        await file.writeAsBytes(artBytes);
+      // MEMORY MANAGEMENT: Cek apakah gambar sudah ada di cache HP
+      if (!await file.exists()) {
+        // Jika belum ada, baru ambil dari MediaStore
+        final audioQuery = OnAudioQuery();
+        Uint8List? artBytes = await audioQuery.queryArtwork(
+          int.parse(albumId),
+          ArtworkType.ALBUM,
+          format: ArtworkFormat.JPEG,
+          size: 500,
+        );
 
-        // Perbarui MediaItem yang sedang diputar dengan gambar
-        if (mediaItem.value?.id == item.id) {
-          final updatedItem = item.copyWith(artUri: Uri.file(file.path));
-          mediaItem.add(updatedItem);
+        if (artBytes != null) {
+          await file.writeAsBytes(artBytes);
+        } else {
+          return; // Gambar tidak ditemukan di MediaStore
+        }
+      }
 
-          // Update juga di antrean agar sinkron
-          final newQueue = List<MediaItem>.from(queue.value);
-          final index = newQueue.indexWhere((e) => e.id == item.id);
-          if (index != -1) {
-            newQueue[index] = updatedItem;
-            queue.add(newQueue);
-          }
+      // Perbarui MediaItem yang sedang diputar dengan gambar
+      if (mediaItem.value?.id == item.id) {
+        final updatedItem = item.copyWith(artUri: Uri.file(file.path));
+        mediaItem.add(updatedItem);
+
+        // Update juga di antrean agar sinkron
+        final newQueue = List<MediaItem>.from(queue.value);
+        final index = newQueue.indexWhere((e) => e.id == item.id);
+        if (index != -1) {
+          newQueue[index] = updatedItem;
+          queue.add(newQueue);
         }
       }
     } catch (e) {
-      // Abaikan error gambar
+      // ERROR HANDLING: Tampilkan error di console agar bisa dilacak
+      debugPrint('Gagal memuat artwork untuk album $albumId: $e');
     }
   }
 
@@ -252,7 +260,15 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToPrevious() async {
-    if (_player.hasPrevious) await _player.seekToPrevious();
+    // Jika lagu sudah berjalan lebih dari 10 detik, ulangi dari awal
+    if (_player.position > const Duration(seconds: 10)) {
+      await _player.seek(Duration.zero);
+    } else {
+      // Jika masih di bawah 10 detik, pindah ke lagu sebelumnya
+      if (_player.hasPrevious) {
+        await _player.seekToPrevious();
+      }
+    }
   }
 
   @override

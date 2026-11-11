@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:audio_service/audio_service.dart';
-import '../database/database.dart';
 import '../main.dart';
+import '../database/database.dart';
+import 'package:flutter/material.dart';
 import '../models/song.dart' as local;
-import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
+import '../providers/database_provider.dart';
+import '../services/media_store_service.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/playlist/widgets/playlist_track_list.dart';
 
 final GlobalKey<SongsPageState> songsPageKey = GlobalKey<SongsPageState>();
@@ -569,7 +570,42 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
     return songsAsyncValue.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Gagal memuat lagu: $err')),
+      error: (err, stack) {
+        // Jika error karena izin ditolak
+        if (err is MediaStoreException && err.code == 'PERMISSION_DENIED') {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.folder_off_rounded,
+                  size: 60,
+                  color: Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Izin Penyimpanan Dibutuhkan',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Lyra membutuhkan izin untuk membaca lagu di HP-mu.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () =>
+                      ref.invalidate(allSongsProvider), // Coba muat ulang
+                  child: const Text('Coba Lagi'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Error umum (selain izin)
+        return Center(child: Text('Gagal memuat lagu: $err'));
+      },
       data: (songs) {
         // 2Sinkronkan data provider ke variabel lokal
         _allSongs = songs;

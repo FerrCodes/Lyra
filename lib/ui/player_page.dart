@@ -13,6 +13,7 @@ import '../providers/database_provider.dart';
 import '../providers/songs_provider.dart';
 import '../database/database.dart';
 import '../models/song.dart' as local;
+import '../widgets/media_icons.dart';
 
 class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key});
@@ -446,7 +447,19 @@ class _PlayerPageState extends State<PlayerPage> {
                                 children: [
                                   PressableScale(
                                     onTap: () {
-                                      audioHandler.skipToPrevious();
+                                      // Ambil posisi lagu saat ini
+                                      final currentPos =
+                                          stateSnapshot.data?.updatePosition ??
+                                          Duration.zero;
+
+                                      if (currentPos >
+                                          const Duration(seconds: 10)) {
+                                        // Jika sudah lewat 10 detik, ulangi lagu dari awal
+                                        audioHandler.seek(Duration.zero);
+                                      } else {
+                                        // Jika masih di bawah 10 detik, pindah ke lagu sebelumnya
+                                        audioHandler.skipToPrevious();
+                                      }
                                     },
                                     child: GlassContainer(
                                       width: 48,
@@ -525,27 +538,22 @@ class _PlayerPageState extends State<PlayerPage> {
                         const SizedBox(height: 32),
 
                         // MENU IKON BAWAH (Shuffle & Repeat dengan Kaca)
+                        // MENU IKON BAWAH (Shuffle & Repeat dengan Kaca)
                         StreamBuilder<PlaybackState>(
                           stream: audioHandler.playbackState,
                           builder: (context, snapshot) {
                             final state = snapshot.data;
+
+                            // TAMBAHKAN KEMBALI 3 VARIABEL INI:
                             final isShuffleOn =
                                 state?.shuffleMode ==
                                 AudioServiceShuffleMode.all;
                             final repeatMode =
                                 state?.repeatMode ??
                                 AudioServiceRepeatMode.none;
-
-                            IconData repeatIcon = Icons.repeat;
-                            bool isRepeatOn = false;
-                            if (repeatMode == AudioServiceRepeatMode.all) {
-                              repeatIcon = Icons.repeat_on_rounded;
-                              isRepeatOn = true;
-                            } else if (repeatMode ==
-                                AudioServiceRepeatMode.one) {
-                              repeatIcon = Icons.repeat_one_on_rounded;
-                              isRepeatOn = true;
-                            }
+                            final isRepeatOn =
+                                repeatMode == AudioServiceRepeatMode.all ||
+                                repeatMode == AudioServiceRepeatMode.one;
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(
@@ -555,6 +563,7 @@ class _PlayerPageState extends State<PlayerPage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                 children: [
+                                  // --- TOMBOL SHUFFLE ---
                                   PressableScale(
                                     onTap: () {
                                       final nextMode = isShuffleOn
@@ -566,15 +575,19 @@ class _PlayerPageState extends State<PlayerPage> {
                                       width: 44,
                                       height: 44,
                                       radius: 14,
-                                      child: Icon(
-                                        Icons.shuffle_rounded,
-                                        color: isShuffleOn
-                                            ? accentColor
-                                            : colors.textPrimary,
-                                        size: 20,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: CustomShuffleIcon(
+                                          isOn: isShuffleOn,
+                                          color: isShuffleOn
+                                              ? accentColor
+                                              : colors.textPrimary,
+                                        ),
                                       ),
                                     ),
                                   ),
+
+                                  // --- TOMBOL REPEAT ---
                                   PressableScale(
                                     onTap: () {
                                       AudioServiceRepeatMode nextMode =
@@ -592,12 +605,19 @@ class _PlayerPageState extends State<PlayerPage> {
                                       width: 44,
                                       height: 44,
                                       radius: 14,
-                                      child: Icon(
-                                        repeatIcon,
-                                        color: isRepeatOn
-                                            ? accentColor
-                                            : colors.textPrimary,
-                                        size: 20,
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: CustomRepeatIcon(
+                                          isAll:
+                                              repeatMode ==
+                                              AudioServiceRepeatMode.all,
+                                          isOne:
+                                              repeatMode ==
+                                              AudioServiceRepeatMode.one,
+                                          color: isRepeatOn
+                                              ? accentColor
+                                              : colors.textPrimary,
+                                        ),
                                       ),
                                     ),
                                   ),
