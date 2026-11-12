@@ -18,6 +18,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   // Simpan map albumId untuk diakses saat lagu berganti
   Map<String, String> _currentAlbumIds = {};
+  bool _mutatingQueue = false;
 
   LyraAudioHandler() {
     _sessionInitFuture = _initAudioSession();
@@ -31,6 +32,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     );
 
     _indexSub = _player.currentIndexStream.listen((index) {
+      if (_mutatingQueue) return;
       if (index != null && index >= 0 && index < queue.value.length) {
         final currentItem = queue.value[index];
         mediaItem.add(currentItem);
@@ -154,7 +156,71 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
+  // Sinkronkan mediaItem + state dengan posisi pemutar saat ini
+  void _resyncCurrent() {
+    final i = _player.currentIndex;
+    final q = queue.value;
+    if (i != null && i >= 0 && i < q.length) {
+      mediaItem.add(q[i]);
+      _fetchAndUpdateArtwork(q[i]);
+    }
+    _broadcastState(_player.playbackEvent);
+  }
+
+  /// Pindahkan lagu. newIndex = posisi AKHIR (sudah disesuaikan).
+  Future<void> moveQueueItem(int oldIndex, int newIndex) async {
+    final q = List<MediaItem>.from(queue.value);
+    if (oldIndex < 0 || oldIndex >= q.length) return;
+    if (newIndex < 0 || newIndex >= q.length || oldIndex == newIndex) return;
+
+    _mutatingQueue = true;
+    try {
+      await _player.moveAudioSource(oldIndex, newIndex);
+      final item = q.removeAt(oldIndex);
+      q.insert(newIndex, item);
+      queue.add(q);
+    } finally {
+      _mutatingQueue = false;
+      _resyncCurrent();
+    }
+  }
+
+  /// Hapus lagu. Mengembalikan false bila ditolak (lagu sedang diputar).
+  Future<bool> removeTrackFromQueue(int index) async {
+    final q = List<MediaItem>.from(queue.value);
+    if (index < 0 || index >= q.length) return false;
+    if (index == _player.currentIndex) return false;
+
+    _mutatingQueue = true;
+    try {
+      await _player.removeAudioSourceAt(index);
+      q.removeAt(index);
+      queue.add(q);
+      return true;
+    } finally {
+      _mutatingQueue = false;
+      _resyncCurrent();
+    }
+  }
+
+  /// Dipakai untuk Undo: sisipkan kembali lagu di indeks semula.
+  Future<void> insertTrackToQueue(int index, MediaItem item) async {
+    final q = List<MediaItem>.from(queue.value);
+    final at = index.clamp(0, q.length);
+
+    _mutatingQueue = true;
+    try {
+      await _player.insertAudioSource(at, AudioSource.file(item.id));
+      q.insert(at, item);
+      queue.add(q);
+    } finally {
+      _mutatingQueue = false;
+      _resyncCurrent();
+    }
+  }
+
   // Fungsi baru untuk mengambil gambar secara async dan memperbarui notifikasi
+
   Future<void> _fetchAndUpdateArtwork(MediaItem item) async {
     final albumId = item.extras?['albumId'];
     if (albumId == null || albumId == '0') return;

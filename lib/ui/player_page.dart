@@ -14,6 +14,7 @@ import '../providers/songs_provider.dart';
 import '../database/database.dart';
 import '../models/song.dart' as local;
 import '../widgets/media_icons.dart';
+import 'queue_page.dart';
 
 class PlayerPage extends StatefulWidget {
   const PlayerPage({super.key});
@@ -153,14 +154,6 @@ class _PlayerPageState extends State<PlayerPage> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.keyboard_arrow_down,
-                                  size: 36,
-                                  color: colors.textPrimary,
-                                ),
-                                onPressed: () => Navigator.pop(context),
-                              ),
                               Expanded(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
@@ -186,13 +179,6 @@ class _PlayerPageState extends State<PlayerPage> {
                                     ),
                                   ],
                                 ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.more_vert,
-                                  color: colors.textPrimary,
-                                ),
-                                onPressed: () {},
                               ),
                             ],
                           ),
@@ -541,13 +527,10 @@ class _PlayerPageState extends State<PlayerPage> {
                         const SizedBox(height: 32),
 
                         // MENU IKON BAWAH (Shuffle & Repeat dengan Kaca)
-                        // MENU IKON BAWAH (Shuffle & Repeat dengan Kaca)
                         StreamBuilder<PlaybackState>(
                           stream: audioHandler.playbackState,
                           builder: (context, snapshot) {
                             final state = snapshot.data;
-
-                            // TAMBAHKAN KEMBALI 3 VARIABEL INI:
                             final isShuffleOn =
                                 state?.shuffleMode ==
                                 AudioServiceShuffleMode.all;
@@ -566,6 +549,25 @@ class _PlayerPageState extends State<PlayerPage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                 children: [
+                                  PressableScale(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => const QueuePage(),
+                                        ),
+                                      );
+                                    },
+                                    child: GlassContainer(
+                                      width: 44,
+                                      height: 44,
+                                      radius: 14,
+                                      child: Icon(
+                                        Icons.queue_music_rounded,
+                                        color: colors.textPrimary,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
                                   // --- TOMBOL SHUFFLE ---
                                   PressableScale(
                                     onTap: () {

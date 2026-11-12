@@ -673,7 +673,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   }
 
   void _showInfoBottomSheet() {
-    // 1. Hitung total detik dari semua lagu
+    // Hitung total detik dari semua lagu
     int totalSeconds = _songsInPlaylist.fold(
       0,
       (sum, song) => sum + (song.durationMs ~/ 1000),
@@ -713,7 +713,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: Colors.grey.shade500,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
