@@ -109,6 +109,8 @@ class _PlayerPageState extends State<PlayerPage> {
 
             final albumId =
                 int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0;
+            final songId =
+                int.tryParse(item.extras?['songId']?.toString() ?? '') ?? 0;
 
             // Memicu fetch warna jika albumId berubah
             if (albumId != _lastAlbumId) {
@@ -229,8 +231,9 @@ class _PlayerPageState extends State<PlayerPage> {
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(24),
                                     child: QueryArtworkWidget(
-                                      id: albumId,
-                                      type: ArtworkType.ALBUM,
+                                      key: ValueKey('audio-player-$songId'),
+                                      id: songId,
+                                      type: ArtworkType.AUDIO,
                                       size: 800,
                                       artworkBorder: BorderRadius.circular(24),
                                       nullArtworkWidget: Container(

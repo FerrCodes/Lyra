@@ -570,8 +570,9 @@ class MiniPlayerContent extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: QueryArtworkWidget(
-              id: int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0,
-              type: ArtworkType.ALBUM,
+              key: ValueKey('audio-mini-${item.extras?['songId']}'),
+              id: int.tryParse(item.extras?['songId']?.toString() ?? '') ?? 0,
+              type: ArtworkType.AUDIO,
               size: 200,
               artworkHeight: isCompact ? 38 : 44,
               artworkWidth: isCompact ? 38 : 44,

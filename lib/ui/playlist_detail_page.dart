@@ -15,7 +15,6 @@ import '../../features/playlist/widgets/playlist_track_list.dart';
 import '../../features/playlist/sheets/edit_playlist_sheet.dart';
 import '../providers/songs_provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import '../models/song.dart' as local;
 import '../widgets/lyra_header.dart';
 import 'package:audio_service/audio_service.dart';
 
@@ -212,22 +211,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
   // === FUNGSI BOTTOM SHEET OPSI LAGU ===
   void _showSongOptions(Song song) {
-    // Cari albumId SEBELUM memunculkan bottom sheet
-    final albumIdStr = (ref.read(allSongsProvider).value ?? [])
-        .firstWhere(
-          (element) => element.id == song.id,
-          orElse: () => local.Song(
-            id: '',
-            title: '',
-            artist: '',
-            album: '',
-            path: '',
-            durationMs: 0,
-            albumId: '0',
-          ),
-        )
-        .albumId;
-
     showModalBottomSheet(
       context: context,
       useRootNavigator: true,
@@ -254,8 +237,9 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: QueryArtworkWidget(
-                      id: int.tryParse(albumIdStr) ?? 0,
-                      type: ArtworkType.ALBUM,
+                      key: ValueKey('audio-sheet-${song.id}'),
+                      id: int.parse(song.id),
+                      type: ArtworkType.AUDIO,
                       size: 200,
                       artworkHeight: 50,
                       artworkWidth: 50,
@@ -1041,8 +1025,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
-    // 👇 TAMBAHKAN ANIMATED BUILDER DI SINI
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -1286,11 +1268,9 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Icon(
-                                          // Ikon berubah jadi solid jika favorit
                                           isFav
                                               ? Icons.star_rounded
                                               : Icons.star_border,
-                                          // Warna kuning/oranye jika favorit
                                           color: isFav
                                               ? Colors.orange
                                               : Colors.black87,

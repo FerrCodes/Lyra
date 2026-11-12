@@ -10,11 +10,17 @@ import '../widgets/lyra_bottom_bar.dart';
 import 'edit_metadata_sheet.dart';
 import '../services/media_store_service.dart';
 
-// 1. UBAH MENJADI ConsumerWidget
-class TrackDetailsPage extends ConsumerWidget {
+class TrackDetailsPage extends ConsumerStatefulWidget {
   final local.Song song;
 
   const TrackDetailsPage({super.key, required this.song});
+
+  @override
+  ConsumerState<TrackDetailsPage> createState() => _TrackDetailsPageState();
+}
+
+class _TrackDetailsPageState extends ConsumerState<TrackDetailsPage> {
+  int _refreshKey = 0;
 
   String _formatDuration(int ms) {
     final duration = Duration(milliseconds: ms);
@@ -45,19 +51,18 @@ class TrackDetailsPage extends ConsumerWidget {
   }
 
   @override
-  // 2. TAMBAHKAN WidgetRef ref DI SINI
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = context.lyra;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // 3. PANTAU DATA TERBARU DARI PROVIDER
+    // PANTAU DATA TERBARU DARI PROVIDER
     final allSongs = ref.watch(allSongsProvider).value ?? [];
     final currentSong = allSongs.firstWhere(
-      (s) => s.path == song.path,
-      orElse: () => song,
+      (s) => s.path == widget.song.path,
+      orElse: () => widget.song,
     );
 
-    final albumIdInt = int.tryParse(currentSong.albumId) ?? 0;
+    final audioIdInt = int.tryParse(currentSong.id) ?? 0;
 
     return Scaffold(
       backgroundColor: colors.pageBackground,
@@ -68,7 +73,7 @@ class TrackDetailsPage extends ConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).padding.top + 72,
+                    top: MediaQuery.of(context).padding.top + 50,
                     left: 16,
                     right: 16,
                   ),
@@ -82,7 +87,7 @@ class TrackDetailsPage extends ConsumerWidget {
                           color: colors.textPrimary,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 30),
 
                       // ALBUM ART DENGAN IKON EDIT
                       Stack(
@@ -107,8 +112,11 @@ class TrackDetailsPage extends ConsumerWidget {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(24),
                               child: QueryArtworkWidget(
-                                id: albumIdInt,
-                                type: ArtworkType.ALBUM,
+                                key: ValueKey(
+                                  'audio-${currentSong.id}-$_refreshKey',
+                                ),
+                                id: audioIdInt,
+                                type: ArtworkType.AUDIO,
                                 size: 600,
                                 artworkBorder: BorderRadius.circular(24),
                                 nullArtworkWidget: Container(
@@ -142,7 +150,6 @@ class TrackDetailsPage extends ConsumerWidget {
                                     final String? imagePath =
                                         await MediaStoreService.pickImageFromGallery();
 
-                                    // 3. Jika user memilih foto (tidak batal)
                                     if (imagePath != null && context.mounted) {
                                       ScaffoldMessenger.of(
                                         context,
@@ -151,19 +158,28 @@ class TrackDetailsPage extends ConsumerWidget {
                                           content: Text('Menyimpan cover...'),
                                         ),
                                       );
-
-                                      // 4. Simpan ke file MP3
+                                      // Simpan ke file MP3
                                       await MediaStoreService.updateAlbumCover(
                                         id: currentSong.id,
                                         imagePath: imagePath,
                                       );
-
-                                      // 5. Refresh UI
+                                      // JEDA SEBENTAR
                                       await Future.delayed(
                                         const Duration(milliseconds: 500),
                                       );
+                                      // BERSIHKAN CACHE GAMBAR FLUTTER
+                                      PaintingBinding.instance.imageCache
+                                          .clear();
+                                      PaintingBinding.instance.imageCache
+                                          .clearLiveImages();
+                                      // REFRESH DATA
                                       ref.invalidate(allSongsProvider);
-
+                                      // PAKSA UI UNTUK REBUILD GAMBAR
+                                      if (mounted) {
+                                        setState(() {
+                                          _refreshKey++;
+                                        });
+                                      }
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
@@ -242,7 +258,7 @@ class TrackDetailsPage extends ConsumerWidget {
               // KARTU INFORMASI (GUNAKAN currentSong)
               SliverToBoxAdapter(
                 child: Container(
-                  padding: const EdgeInsets.only(top: 32, bottom: 100),
+                  padding: const EdgeInsets.only(top: 32, bottom: 5),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                     borderRadius: const BorderRadius.vertical(

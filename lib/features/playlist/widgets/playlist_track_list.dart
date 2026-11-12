@@ -220,14 +220,12 @@ class PlaylistTrackList extends StatelessWidget {
   }
 
   Widget _buildArtwork(Song song, int index) {
-    final String albumIdStr = albumIds[song.id] ?? '0';
-    final int albumId = int.tryParse(albumIdStr) ?? 0;
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: QueryArtworkWidget(
-        id: albumId,
-        type: ArtworkType.ALBUM,
+        key: ValueKey('audio-track-${song.id}'),
+        id: int.parse(song.id),
+        type: ArtworkType.AUDIO,
         size: 200,
         artworkHeight: 50,
         artworkWidth: 50,

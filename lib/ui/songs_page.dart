@@ -268,8 +268,9 @@ class SongsPageState extends ConsumerState<SongsPage> {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: QueryArtworkWidget(
-                            id: int.parse(song.albumId),
-                            type: ArtworkType.ALBUM,
+                            key: ValueKey('audio-sheet-${song.id}'),
+                            id: int.parse(song.id),
+                            type: ArtworkType.AUDIO,
                             size: 200,
                             artworkHeight: 40,
                             artworkWidth: 40,
@@ -640,11 +641,10 @@ class SongsPageState extends ConsumerState<SongsPage> {
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: QueryArtworkWidget(
-                            id: int.parse(
-                              song.albumId,
-                            ), // Konversi kembali ke integer
-                            type: ArtworkType.ALBUM,
-                            size: 200, // Resolusi gambar yang diambil
+                            key: ValueKey('audio-list-${song.id}'),
+                            id: int.parse(song.id),
+                            type: ArtworkType.AUDIO,
+                            size: 200,
                             artworkHeight: 50,
                             artworkWidth: 50,
                             artworkBorder: BorderRadius.circular(8),
@@ -655,7 +655,6 @@ class SongsPageState extends ConsumerState<SongsPage> {
                                 color: Colors.grey.shade300,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              // Ini adalah ikon default jika lagu tidak punya foto album
                               child: const Icon(
                                 Icons.music_note,
                                 color: Colors.grey,

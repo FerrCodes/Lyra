@@ -128,8 +128,9 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
         duration: Duration(milliseconds: s.durationMs),
         extras: {
           'albumId': _currentAlbumIds[s.path] ?? '0',
-          'sourceType': sourceType ?? 'Unknown', // Simpan tipe sumber
-          'sourceName': sourceName ?? 'Unknown', // Simpan nama sumber
+          'songId': s.id,
+          'sourceType': sourceType ?? 'Unknown',
+          'sourceName': sourceName ?? 'Unknown',
         },
       );
     }).toList();
