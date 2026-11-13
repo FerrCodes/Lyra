@@ -18,8 +18,9 @@ import 'queue_page.dart';
 
 class PlayerPage extends StatefulWidget {
   final VoidCallback? onClose;
+  final Animation<double>? panelAnimation;
 
-  const PlayerPage({super.key, this.onClose});
+  const PlayerPage({super.key, this.onClose, this.panelAnimation});
 
   @override
   State<PlayerPage> createState() => _PlayerPageState();
@@ -186,9 +187,9 @@ class _PlayerPageState extends State<PlayerPage> {
                           ),
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 17),
 
-                        // ALBUM ART (Dengan AnimatedScale)
+                        // ALBUM ART (Dengan Parallax Scale)
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: StreamBuilder<PlaybackState>(
@@ -196,46 +197,45 @@ class _PlayerPageState extends State<PlayerPage> {
                             builder: (context, stateSnapshot) {
                               final playing =
                                   stateSnapshot.data?.playing ?? false;
+                              final baseScale = playing ? 1.06 : 0.89;
+
+                              // Jika ada animasi panel, bungkus dengan AnimatedBuilder
+                              if (widget.panelAnimation != null) {
+                                return AnimatedBuilder(
+                                  animation: widget.panelAnimation!,
+                                  builder: (context, child) {
+                                    // Nilai 0.0 (tertutup) = skala 0.7
+                                    // Nilai 1.0 (terbuka) = skala 1.0
+                                    final dragScale =
+                                        0.7 +
+                                        (0.3 * widget.panelAnimation!.value);
+
+                                    return Transform.scale(
+                                      scale: baseScale * dragScale,
+                                      child: child,
+                                    );
+                                  },
+                                  child: _buildAlbumArt(
+                                    context,
+                                    colors,
+                                    isDark,
+                                    albumId,
+                                    songId,
+                                  ),
+                                );
+                              }
+
+                              // Fallback jika dibuka lewat PlayerRoute (bukan panel)
                               return AnimatedScale(
-                                scale: playing ? 1.0 : 0.9,
+                                scale: baseScale,
                                 duration: const Duration(milliseconds: 300),
                                 curve: Curves.easeOutCubic,
-                                child: Container(
-                                  width: double.infinity,
-                                  height:
-                                      MediaQuery.of(context).size.width * 0.75,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.15,
-                                        ),
-                                        blurRadius: 30,
-                                        offset: const Offset(0, 15),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(24),
-                                    child: QueryArtworkWidget(
-                                      key: ValueKey('audio-player-$songId'),
-                                      id: songId,
-                                      type: ArtworkType.AUDIO,
-                                      size: 800,
-                                      artworkBorder: BorderRadius.circular(24),
-                                      nullArtworkWidget: Container(
-                                        color: colors.textSecondary.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        child: Icon(
-                                          Icons.music_note,
-                                          size: 100,
-                                          color: colors.textPrimary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                child: _buildAlbumArt(
+                                  context,
+                                  colors,
+                                  isDark,
+                                  albumId,
+                                  songId,
                                 ),
                               );
                             },
@@ -376,6 +376,7 @@ class _PlayerPageState extends State<PlayerPage> {
                                     children: [
                                       WavySeekBar(
                                         progress: progress,
+                                        duration: duration,
                                         isPlaying: playing,
                                         activeColor: accentColor,
                                         inactiveColor: colors.textSecondary
@@ -642,6 +643,49 @@ class _PlayerPageState extends State<PlayerPage> {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlbumArt(
+    BuildContext context,
+    LyraColors colors,
+    bool isDark,
+    int albumId,
+    int songId,
+  ) {
+    return AspectRatio(
+      aspectRatio: 1.0,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: QueryArtworkWidget(
+            key: ValueKey('audio-player-$songId'),
+            id: songId,
+            type: ArtworkType.AUDIO,
+            size: 800,
+            artworkBorder: BorderRadius.circular(24),
+            nullArtworkWidget: Container(
+              color: colors.textSecondary.withValues(alpha: 0.2),
+              child: Icon(
+                Icons.music_note,
+                size: 100,
+                color: colors.textPrimary,
+              ),
+            ),
+          ),
         ),
       ),
     );

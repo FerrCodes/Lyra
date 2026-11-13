@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class WavySeekBar extends StatefulWidget {
   final double progress;
+  final Duration duration; // <-- TAMBAHAN
   final ValueChanged<double> onSeek;
   final bool isPlaying;
   final Color activeColor;
@@ -14,6 +16,7 @@ class WavySeekBar extends StatefulWidget {
   const WavySeekBar({
     super.key,
     required this.progress,
+    required this.duration, // <-- TAMBAHAN
     required this.onSeek,
     required this.isPlaying,
     required this.activeColor,
@@ -29,7 +32,7 @@ class WavySeekBar extends StatefulWidget {
 class _WavySeekBarState extends State<WavySeekBar>
     with TickerProviderStateMixin {
   late AnimationController _phaseController;
-  late AnimationController _dragController;
+  late AnimationController _interactionController;
   double? _dragProgress;
 
   @override
@@ -37,11 +40,11 @@ class _WavySeekBarState extends State<WavySeekBar>
     super.initState();
     _phaseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(milliseconds: 2200),
     );
-    _dragController = AnimationController(
+    _interactionController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 250),
     );
     _updatePlayState();
   }
@@ -65,15 +68,16 @@ class _WavySeekBarState extends State<WavySeekBar>
   @override
   void dispose() {
     _phaseController.dispose();
-    _dragController.dispose();
+    _interactionController.dispose();
     super.dispose();
   }
 
   void _startDrag(double dx, double width) {
+    HapticFeedback.selectionClick(); // Getar halus
     setState(() {
       _dragProgress = (dx / width).clamp(0.0, 1.0);
     });
-    _dragController.forward();
+    _interactionController.forward();
   }
 
   void _updateDrag(double dx, double width) {
@@ -83,18 +87,33 @@ class _WavySeekBarState extends State<WavySeekBar>
   }
 
   void _endDrag() {
-    widget.onSeek(_dragProgress ?? widget.progress);
-    setState(() {
-      _dragProgress = null;
+    final targetProgress = _dragProgress ?? widget.progress;
+    widget.onSeek(targetProgress);
+
+    _interactionController.reverse();
+
+    // Optimistic Progress: Tahan jarum selama 500ms agar audio sempat menyusul
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _dragProgress = null;
+        });
+      }
     });
-    _dragController.reverse();
   }
 
   void _cancelDrag() {
     setState(() {
       _dragProgress = null;
     });
-    _dragController.reverse();
+    _interactionController.reverse();
+  }
+
+  String _formatDuration(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(d.inMinutes.remainder(60));
+    final seconds = twoDigits(d.inSeconds.remainder(60));
+    return '$minutes:$seconds';
   }
 
   @override
@@ -102,36 +121,82 @@ class _WavySeekBarState extends State<WavySeekBar>
     return LayoutBuilder(
       builder: (context, constraints) {
         final currentProgress = _dragProgress ?? widget.progress;
+        final width = constraints.maxWidth;
+
+        final thumbX = width * currentProgress;
+        final previewTime = widget.duration * currentProgress;
 
         return GestureDetector(
-          onHorizontalDragStart: (d) =>
-              _startDrag(d.localPosition.dx, constraints.maxWidth),
-          onHorizontalDragUpdate: (d) =>
-              _updateDrag(d.localPosition.dx, constraints.maxWidth),
+          onHorizontalDragStart: (d) => _startDrag(d.localPosition.dx, width),
+          onHorizontalDragUpdate: (d) => _updateDrag(d.localPosition.dx, width),
           onHorizontalDragEnd: (_) => _endDrag(),
           onHorizontalDragCancel: _cancelDrag,
-          onTapDown: (d) =>
-              _startDrag(d.localPosition.dx, constraints.maxWidth),
+          onTapDown: (d) => _startDrag(d.localPosition.dx, width),
           onTapUp: (_) => _endDrag(),
           onTapCancel: _cancelDrag,
-          child: RepaintBoundary(
-            child: AnimatedBuilder(
-              animation: Listenable.merge([_phaseController, _dragController]),
-              builder: (context, child) {
-                return CustomPaint(
-                  size: Size(constraints.maxWidth, 40),
-                  painter: _WavyPainter(
-                    progress: currentProgress,
-                    phase: _phaseController.value,
-                    dragAnimValue: _dragController.value,
-                    activeColor: widget.activeColor,
-                    inactiveColor: widget.inactiveColor,
-                    thumbColor: widget.thumbColor,
-                    thumbInnerColor: widget.thumbInnerColor,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // GELOMBANG ASLI (Tidak diubah sama sekali)
+              RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([
+                    _phaseController,
+                    _interactionController,
+                  ]),
+                  builder: (context, child) {
+                    return CustomPaint(
+                      size: Size(width, 40),
+                      painter: _WavyPainter(
+                        progress: currentProgress,
+                        phase: _phaseController.value,
+                        interactionValue: _interactionController.value,
+                        activeColor: widget.activeColor,
+                        inactiveColor: widget.inactiveColor,
+                        thumbColor: widget.thumbColor,
+                        thumbInnerColor: widget.thumbInnerColor,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // TIME PREVIEW MELAYANG
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                left: (thumbX - 30).clamp(0.0, width - 60),
+                top: _dragProgress != null ? -30 : -20,
+                child: IgnorePointer(
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: _dragProgress != null ? 1.0 : 0.0,
+                    child: AnimatedScale(
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutBack,
+                      scale: _dragProgress != null ? 1.0 : 0.5,
+                      child: Container(
+                        width: 60,
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        decoration: BoxDecoration(
+                          color: widget.activeColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _formatDuration(previewTime),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -142,7 +207,7 @@ class _WavySeekBarState extends State<WavySeekBar>
 class _WavyPainter extends CustomPainter {
   final double progress;
   final double phase;
-  final double dragAnimValue;
+  final double interactionValue;
   final Color activeColor;
   final Color inactiveColor;
   final Color thumbColor;
@@ -151,7 +216,7 @@ class _WavyPainter extends CustomPainter {
   _WavyPainter({
     required this.progress,
     required this.phase,
-    required this.dragAnimValue,
+    required this.interactionValue,
     required this.activeColor,
     required this.inactiveColor,
     required this.thumbColor,
@@ -160,68 +225,124 @@ class _WavyPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Animasi amplitudo (6 -> 2) dan radius (7 -> 9)
-    final waveHeight = lerpDouble(6.0, 2.0, dragAnimValue)!;
-    final thumbRadius = lerpDouble(7.0, 9.0, dragAnimValue)!;
-
-    final paintInactive = Paint()
-      ..color = inactiveColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    final paintActive = Paint()
-      ..color = activeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0
-      ..strokeCap = StrokeCap.round;
-
-    final pathInactive = Path();
-    final pathActive = Path();
-
-    final waveLength = 20.0;
     final centerY = size.height / 2;
+    final trackHeight = 3.0;
+
+    // Konfigurasi Gelombang ASLI
+    final maxAmplitude = 2.5;
+    final waveLength = 48.0;
+    final taperDistance = 64.0;
+
+    // Hanya mendatar jika sedang ditarik (interactionValue == 1)
+    final currentAmplitude = maxAmplitude * (1.0 - interactionValue);
+
+    // Animasi Thumb ASLI
+    final baseThumbSize = 14.0;
+    final thumbCurrentWidth = lerpDouble(
+      baseThumbSize,
+      trackHeight * 1.2,
+      interactionValue,
+    )!;
+    final thumbCurrentHeight = lerpDouble(
+      baseThumbSize,
+      20.0,
+      interactionValue,
+    )!;
 
     double thumbX = size.width * progress;
     double thumbY = centerY;
 
-    for (double x = 0; x <= size.width; x++) {
-      double y =
-          centerY +
-          math.sin((x / waveLength) * 2 * math.pi + phase * 2 * math.pi) *
-              waveHeight;
-
-      if (x == 0) {
-        pathInactive.moveTo(x, y);
-        pathActive.moveTo(x, y);
-      } else {
-        pathInactive.lineTo(x, y);
-        if (x <= thumbX) {
-          pathActive.lineTo(x, y);
-          thumbY = y;
-        }
-      }
+    // 1. Garis Inactive
+    if (thumbX < size.width) {
+      final paintInactive = Paint()
+        ..color = inactiveColor
+        ..strokeWidth = trackHeight
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(
+        Offset(thumbX, centerY),
+        Offset(size.width, centerY),
+        paintInactive,
+      );
     }
 
-    canvas.drawPath(pathInactive, paintInactive);
-    canvas.drawPath(pathActive, paintActive);
+    // 2. Gelombang Active
+    if (thumbX > 0) {
+      final paintActive = Paint()
+        ..shader = LinearGradient(
+          colors: [activeColor.withValues(alpha: 0.35), activeColor],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ).createShader(Rect.fromLTWH(0, 0, thumbX, size.height))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = trackHeight
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
 
+      final pathActive = Path();
+      final samplesPerCycle = 20.0;
+      final periodPx = waveLength;
+      final waveStep = (periodPx / samplesPerCycle).clamp(1.2, trackHeight);
+
+      double yAt(double x) {
+        final s = math.sin(
+          (x / waveLength) * 2 * math.pi + phase * 2 * math.pi,
+        );
+        final taper = (x / taperDistance).clamp(0.0, 1.0);
+        final finalAmp = currentAmplitude * taper;
+        return centerY + finalAmp * s;
+      }
+
+      double prevX = 0;
+      double prevY = yAt(prevX);
+      pathActive.moveTo(prevX, prevY);
+
+      double x = prevX + waveStep;
+      while (x < thumbX) {
+        final y = yAt(x);
+        final mX = (prevX + x) * 0.5;
+        final mY = (prevY + y) * 0.5;
+        pathActive.quadraticBezierTo(prevX, prevY, mX, mY);
+        prevX = x;
+        prevY = y;
+        x += waveStep;
+      }
+
+      final endY = yAt(thumbX);
+      pathActive.quadraticBezierTo(prevX, prevY, thumbX, endY);
+      thumbY = endY;
+
+      canvas.drawPath(pathActive, paintActive);
+    }
+
+    // 3. Thumb Utama (Kapsul)
     final paintThumb = Paint()
       ..color = thumbColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(thumbX, thumbY), thumbRadius, paintThumb);
+    final rRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(thumbX, thumbY),
+        width: thumbCurrentWidth,
+        height: thumbCurrentHeight,
+      ),
+      Radius.circular(thumbCurrentWidth / 2),
+    );
+    canvas.drawRRect(rRect, paintThumb);
 
-    final paintThumbInner = Paint()
+    // 4. Inner Highlight (Saran GPT: Titik tengah yang kontras)
+    final paintInner = Paint()
       ..color = thumbInnerColor
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(thumbX, thumbY), 2.5, paintThumbInner);
+    canvas.drawCircle(Offset(thumbX, thumbY), 3.0, paintInner);
   }
 
   @override
   bool shouldRepaint(covariant _WavyPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.phase != phase ||
-        oldDelegate.dragAnimValue != dragAnimValue ||
-        oldDelegate.activeColor != activeColor;
+        oldDelegate.interactionValue != interactionValue ||
+        oldDelegate.activeColor != activeColor ||
+        oldDelegate.inactiveColor != inactiveColor ||
+        oldDelegate.thumbColor != thumbColor ||
+        oldDelegate.thumbInnerColor != thumbInnerColor;
   }
 }

@@ -99,6 +99,17 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
       onVerticalDragUpdate: _onMiniDragUpdate,
       onVerticalDragEnd: _onMiniDragEnd,
       onVerticalDragCancel: _onMiniDragCancel,
+      onHorizontalDragEnd: (details) {
+        if (details.primaryVelocity != null) {
+          if (details.primaryVelocity! < -300) {
+            // Swipe ke Kiri (kecepatan negatif) -> Lagu Selanjutnya
+            (audioHandler as LyraAudioHandler).skipToNext();
+          } else if (details.primaryVelocity! > 300) {
+            // Swipe ke Kanan (kecepatan positif) -> Lagu Sebelumnya
+            (audioHandler as LyraAudioHandler).skipToPrevious();
+          }
+        }
+      },
       child: AlbumGradientContainer(
         albumId: int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0,
         height: 54,
@@ -471,6 +482,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     // Gunakan AudioService.position, bukan playbackState
     return StreamBuilder<Duration>(
       stream: AudioService.position,
+      initialData: audioHandler.playbackState.value.updatePosition,
       builder: (context, snapshot) {
         final position = snapshot.data ?? Duration.zero;
         final duration = item.duration ?? Duration.zero;

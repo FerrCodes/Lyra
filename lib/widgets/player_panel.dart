@@ -119,7 +119,10 @@ class PlayerPanel extends StatelessWidget {
               opening: false,
               screenHeight: MediaQuery.of(context).size.height,
             ),
-            child: PlayerPage(onClose: controller.close),
+            child: PlayerPage(
+              onClose: controller.close,
+              panelAnimation: controller.animation,
+            ),
           ),
         ),
       ),
