@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_provider.dart';
 import '../services/play_history_recorder.dart';
 import '../features/home/dashboard_view.dart';
+import '../widgets/player_panel.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -72,10 +73,14 @@ class _NestedNavigatorObserver extends NavigatorObserver {
   }
 }
 
-class _HomePageState extends ConsumerState<HomePage> {
+class _HomePageState extends ConsumerState<HomePage>
+    with SingleTickerProviderStateMixin {
   late PlayHistoryRecorder _recorder;
   int _currentTab = 0;
   final ValueNotifier<bool> _isScrolled = ValueNotifier<bool>(false);
+  late final PlayerPanelController _playerPanel = PlayerPanelController(this);
+  bool _playerBuilt = false;
+
   // Akumulasi jarak scroll searah, dipakai untuk mendeteksi arah scroll.
   double _scrollAccum = 0.0;
   String _currentSortFilter = 'Name';
@@ -384,6 +389,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     super.initState();
     _recorder = PlayHistoryRecorder(ref.read(databaseProvider), ref);
     _recorder.start();
+
+    // Bangun panel player begitu terlihat pertama kali.
+    _playerPanel.isVisible.addListener(() {
+      if (_playerPanel.isVisible.value && !_playerBuilt && mounted) {
+        setState(() => _playerBuilt = true);
+      }
+    });
+    // Siapkan panel di belakang layar supaya tarikan pertama tidak patah-patah.
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted && !_playerBuilt) setState(() => _playerBuilt = true);
+    });
   }
 
   @override
@@ -391,6 +407,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _recorder.dispose();
     _isScrolled.dispose();
     _mainScrollController.dispose();
+    _playerPanel.dispose();
     super.dispose();
   }
 
@@ -403,7 +420,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (_currentTab == 3 && !_isLibraryRoot) hideHeader = true;
     if (_currentTab == 4) hideHeader = true;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    final page = AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Theme.of(context).brightness == Brightness.dark
@@ -557,6 +574,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 builder: (context, isScrolled, _) => LyraBottomBar(
                   currentIndex: _currentTab,
                   isScrolled: isScrolled,
+                  playerPanel: _playerPanel,
                   onHomeTap: () {
                     // Jika sedang di halaman detail (bukan root)
                     bool isInsideDetail = false;
@@ -650,8 +668,24 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               ),
             ),
+
+            // PANEL PLAYER PENUH (ditarik dari mini player)
+            if (_playerBuilt)
+              Positioned.fill(child: PlayerPanel(controller: _playerPanel)),
           ],
         ),
+      ),
+    );
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: _playerPanel.isVisible,
+      child: page,
+      builder: (context, panelVisible, child) => PopScope(
+        canPop: !panelVisible,
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) _playerPanel.close();
+        },
+        child: child!,
       ),
     );
   }

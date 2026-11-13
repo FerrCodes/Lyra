@@ -9,12 +9,15 @@ import 'package:on_audio_query/on_audio_query.dart';
 import '../theme/lyra_colors.dart';
 import 'glass_container.dart';
 import 'marquee_text.dart';
+import 'package:flutter/gestures.dart';
+import 'player_panel.dart';
 
 class LyraBottomBar extends ConsumerStatefulWidget {
   final int currentIndex;
   final Function(int) onTabChanged;
   final bool isScrolled;
   final VoidCallback? onHomeTap;
+  final PlayerPanelController? playerPanel;
 
   const LyraBottomBar({
     super.key,
@@ -22,6 +25,7 @@ class LyraBottomBar extends ConsumerStatefulWidget {
     required this.onTabChanged,
     required this.isScrolled,
     this.onHomeTap,
+    this.playerPanel,
   });
 
   @override
@@ -50,6 +54,37 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     super.dispose();
   }
 
+  // === TARIK MINI PLAYER KE ATAS -> BUKA PANEL PLAYER ===
+  void _onMiniDragUpdate(DragUpdateDetails d) {
+    final h = MediaQuery.of(context).size.height;
+    widget.playerPanel?.dragBy(-d.delta.dy / h);
+  }
+
+  void _onMiniDragEnd(DragEndDetails d) {
+    widget.playerPanel?.settle(
+      d.velocity.pixelsPerSecond.dy,
+      opening: true,
+      screenHeight: MediaQuery.of(context).size.height,
+    );
+  }
+
+  void _onMiniDragCancel() {
+    widget.playerPanel?.settle(
+      0,
+      opening: true,
+      screenHeight: MediaQuery.of(context).size.height,
+    );
+  }
+
+  void _openPlayer() {
+    final panel = widget.playerPanel;
+    if (panel != null) {
+      panel.open();
+    } else {
+      Navigator.push(context, PlayerRoute());
+    }
+  }
+
   // Mini player: gradient album kalau ada lagu, glass kalau belum ada.
   Widget _miniShell({
     required MediaItem? item,
@@ -59,11 +94,17 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     if (item == null) {
       return GlassContainer(height: 54, radius: radius, child: child);
     }
-    return AlbumGradientContainer(
-      albumId: int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0,
-      height: 54,
-      radius: radius,
-      child: child,
+    return GestureDetector(
+      dragStartBehavior: DragStartBehavior.down,
+      onVerticalDragUpdate: _onMiniDragUpdate,
+      onVerticalDragEnd: _onMiniDragEnd,
+      onVerticalDragCancel: _onMiniDragCancel,
+      child: AlbumGradientContainer(
+        albumId: int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0,
+        height: 54,
+        radius: radius,
+        child: child,
+      ),
     );
   }
 
@@ -221,12 +262,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
             children: [
               if (item != null) ...[
                 PressableScale(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PlayerPage()),
-                    );
-                  },
+                  onTap: _openPlayer,
                   child: _miniShell(
                     item: item,
                     radius: 30,
@@ -369,12 +405,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
             children: [
               Expanded(
                 child: PressableScale(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PlayerPage()),
-                    );
-                  },
+                  onTap: _openPlayer,
                   child: _miniShell(
                     item: item,
                     radius: 32,
@@ -588,26 +619,28 @@ class MiniPlayerContent extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              MarqueeText(
-                text: item.title,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: isCompact ? 13 : 14,
-                  color: primary,
+          child: IgnorePointer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                MarqueeText(
+                  text: item.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: isCompact ? 13 : 14,
+                    color: primary,
+                  ),
                 ),
-              ),
-              MarqueeText(
-                text: item.artist ?? 'Unknown',
-                style: TextStyle(
-                  fontSize: isCompact ? 11 : 12,
-                  color: secondary,
+                MarqueeText(
+                  text: item.artist ?? 'Unknown',
+                  style: TextStyle(
+                    fontSize: isCompact ? 11 : 12,
+                    color: secondary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         StreamBuilder<PlaybackState>(
@@ -649,7 +682,6 @@ class AlbumGradientContainer extends StatefulWidget {
 }
 
 class _AlbumGradientContainerState extends State<AlbumGradientContainer> {
-  // Cache per albumId supaya tidak ekstraksi ulang tiap ganti lagu / rebuild.
   static final Map<int, List<Color>> _cache = {};
   static const List<Color> _fallback = [Color(0xFF3A3A4A), Color(0xFF1E1E28)];
 
@@ -674,8 +706,6 @@ class _AlbumGradientContainerState extends State<AlbumGradientContainer> {
       _colors = cached;
       return;
     }
-    // Pertahankan warna lama dulu; AnimatedContainer akan menggesernya
-    // dengan halus begitu warna baru siap.
     _extract(id);
   }
 
@@ -695,7 +725,6 @@ class _AlbumGradientContainerState extends State<AlbumGradientContainer> {
         );
         final hsl = HSLColor.fromColor(scheme.primary);
         final sat = hsl.saturation.clamp(0.35, 0.75).toDouble();
-        // Digelapkan supaya teks putih selalu terbaca.
         result = [
           hsl.withSaturation(sat).withLightness(0.34).toColor(),
           hsl.withSaturation(sat).withLightness(0.18).toColor(),
@@ -746,6 +775,125 @@ class _AlbumGradientContainerState extends State<AlbumGradientContainer> {
           child: widget.child,
         ),
       ),
+    );
+  }
+}
+
+// ROUTE PLAYER: slide-up halus. Bisa ditarik naik dari mini player
+// dan ditarik turun dari halaman player.
+class PlayerRoute extends PageRoute<void> {
+  PlayerRoute({this.interactiveStart = false});
+
+  final bool interactiveStart;
+
+  @override
+  Color? get barrierColor => null;
+  @override
+  String? get barrierLabel => null;
+  @override
+  bool get barrierDismissible => false;
+  @override
+  bool get maintainState => true;
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 420);
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 380);
+
+  @override
+  TickerFuture didPush() {
+    super.didPush();
+    final c = controller!;
+    if (interactiveStart) {
+      c.stop();
+      return TickerFuture.complete();
+    }
+    return c.animateTo(1.0, curve: Curves.easeOutCubic);
+  }
+
+  @override
+  bool didPop(void result) {
+    final popped = super.didPop(result);
+    final c = controller;
+    if (c != null && c.isAnimating) {
+      final ms =
+          (reverseTransitionDuration.inMilliseconds * c.value.clamp(0.3, 1.0))
+              .round();
+      c.animateBack(
+        0.0,
+        duration: Duration(milliseconds: ms),
+        curve: Curves.easeInCubic,
+      );
+    }
+    return popped;
+  }
+
+  void dragBy(double fraction) {
+    final c = controller;
+    if (c == null) return;
+    c.value = (c.value + fraction).clamp(0.0, 1.0).toDouble();
+  }
+
+  void settle(double velocityY, {required bool opening}) {
+    final c = controller;
+    if (c == null || !isActive) return;
+    final bool open;
+    if (velocityY > 300) {
+      open = false;
+    } else if (opening) {
+      open = c.value > 0.005;
+    } else if (velocityY < -300) {
+      open = true;
+    } else {
+      open = c.value > 0.95;
+    }
+
+    if (open) {
+      final ms = (transitionDuration.inMilliseconds * (1 - c.value))
+          .round()
+          .clamp(150, 420)
+          .toInt();
+      c.animateTo(
+        1.0,
+        duration: Duration(milliseconds: ms),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      navigator?.pop();
+    }
+  }
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onVerticalDragUpdate: (d) {
+        final h = MediaQuery.of(context).size.height;
+        dragBy(-d.delta.dy / h);
+      },
+      onVerticalDragEnd: (d) =>
+          settle(d.velocity.pixelsPerSecond.dy, opening: false),
+      onVerticalDragCancel: () => settle(0, opening: false),
+      child: const PlayerPage(),
+    );
+  }
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(animation),
+      child: child,
     );
   }
 }

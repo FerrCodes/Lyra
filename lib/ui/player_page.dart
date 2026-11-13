@@ -17,7 +17,9 @@ import '../widgets/media_icons.dart';
 import 'queue_page.dart';
 
 class PlayerPage extends StatefulWidget {
-  const PlayerPage({super.key});
+  final VoidCallback? onClose;
+
+  const PlayerPage({super.key, this.onClose});
 
   @override
   State<PlayerPage> createState() => _PlayerPageState();
@@ -96,7 +98,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: widget.onClose ?? () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: colors.accent,
                         foregroundColor: Colors.white,
