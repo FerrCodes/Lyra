@@ -137,7 +137,20 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
       );
     }).toList();
 
-    final audioSources = songs.map((s) => AudioSource.file(s.path)).toList();
+    final audioSources = songs.map((s) {
+      // Karena s adalah Song versi Drift (tidak punya contentUri),
+      // kita bentuk URI-nya secara manual menggunakan ID lagu.
+      // Tapi agar aman untuk lagu lama, kita cek apakah ID-nya angka.
+      final songIdNum = int.tryParse(s.id);
+      if (songIdNum != null) {
+        // Membentuk: content://media/external/audio/media/[ID]
+        final uri = Uri.parse('content://media/external/audio/media/${s.id}');
+        return AudioSource.uri(uri);
+      }
+
+      // Fallback jika ID bukan angka (misal data lama)
+      return AudioSource.file(s.path);
+    }).toList();
 
     try {
       await _player.setAudioSources(audioSources, initialIndex: initialIndex);
@@ -210,7 +223,17 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
     _mutatingQueue = true;
     try {
-      await _player.insertAudioSource(at, AudioSource.file(item.id));
+      // Ambil contentUri dari extras, fallback ke item.id (path)
+      final songId = item.extras?['songId']?.toString();
+      final songIdNum = int.tryParse(songId ?? '');
+
+      final source = (songIdNum != null)
+          ? AudioSource.uri(
+              Uri.parse('content://media/external/audio/media/$songId'),
+            )
+          : AudioSource.file(item.id);
+
+      await _player.insertAudioSource(at, source);
       q.insert(at, item);
       queue.add(q);
     } finally {

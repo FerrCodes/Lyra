@@ -1,0 +1,4 @@
+-dontwarn javax.swing.**
+-dontwarn java.awt.**
+-dontwarn org.jaudiotagger.**
+-keep class org.jaudiotagger.** { *; }

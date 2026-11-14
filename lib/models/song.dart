@@ -6,6 +6,7 @@ class Song {
   final int durationMs;
   final String albumId;
   final String path;
+  final String contentUri;
 
   Song({
     required this.id,
@@ -15,6 +16,7 @@ class Song {
     required this.durationMs,
     required this.albumId,
     required this.path,
+    this.contentUri = '',
   });
 
   factory Song.fromMap(Map<String, dynamic> map) {
@@ -28,6 +30,7 @@ class Song {
       albumId: map['albumId']?.toString() ?? '0',
       // Amankan Angka: Konversi ke num dulu, baru ke int. Jika null, jadikan 0
       durationMs: (map['duration'] as num?)?.toInt() ?? 0,
+      contentUri: map['contentUri']?.toString() ?? '',
     );
   }
 
