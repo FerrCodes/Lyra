@@ -8,7 +8,8 @@ import '../main.dart';
 import '../theme/lyra_colors.dart';
 
 class QueuePage extends StatefulWidget {
-  const QueuePage({super.key});
+  final ScrollController? scrollController;
+  const QueuePage({super.key, this.scrollController});
 
   @override
   State<QueuePage> createState() => _QueuePageState();
@@ -18,6 +19,13 @@ class _QueuePageState extends State<QueuePage> {
   final LyraAudioHandler _handler = audioHandler as LyraAudioHandler;
   late List<MediaItem> _items;
   StreamSubscription<List<MediaItem>>? _sub;
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  // 3. Stream dibuat sekali di field, bukan di dalam build
+  late final Stream<(int?, bool)> _stateStream = _handler.playbackState
+      .map((s) => (s.queueIndex, s.shuffleMode == AudioServiceShuffleMode.all))
+      .distinct();
 
   @override
   void initState() {
@@ -25,6 +33,20 @@ class _QueuePageState extends State<QueuePage> {
     _items = List.of(_handler.queue.value);
     _sub = _handler.queue.listen((q) {
       if (mounted) setState(() => _items = List.of(q));
+    });
+
+    // 5. Auto-scroll diperbaiki agar mempertimbangkan tinggi header
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentIndex = _handler.playbackState.value.queueIndex;
+      if (currentIndex != null &&
+          widget.scrollController != null &&
+          widget.scrollController!.hasClients) {
+        final offset = ((currentIndex - 1) * 70.0).clamp(
+          0.0,
+          widget.scrollController!.position.maxScrollExtent,
+        );
+        widget.scrollController!.jumpTo(offset);
+      }
     });
   }
 
@@ -34,7 +56,6 @@ class _QueuePageState extends State<QueuePage> {
     super.dispose();
   }
 
-  // Key unik walau lagu yang sama muncul lebih dari sekali
   List<Key> _buildKeys() {
     final seen = <String, int>{};
     return _items.map((m) {
@@ -44,7 +65,7 @@ class _QueuePageState extends State<QueuePage> {
   }
 
   void _onReorder(int oldIndex, int newIndex) {
-    if (newIndex > oldIndex) newIndex -= 1; // konvensi ReorderableListView
+    if (newIndex > oldIndex) newIndex -= 1;
     if (oldIndex == newIndex) return;
     HapticFeedback.selectionClick();
     setState(() {
@@ -54,11 +75,22 @@ class _QueuePageState extends State<QueuePage> {
     _handler.moveQueueItem(oldIndex, newIndex);
   }
 
-  void _remove(int index) {
-    final item = _items[index];
-    setState(() => _items.removeAt(index)); // wajib sinkron untuk Dismissible
+  // 4. _remove sekarang menerima MediaItem dan mencari index secara dinamis
+  Future<void> _remove(MediaItem item) async {
+    final index = _items.indexOf(item);
+    if (index == -1) return; // Jika item sudah tidak ada, batalkan
 
-    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _items.removeAt(index));
+
+    final ok = await _handler.removeTrackFromQueue(index);
+    if (!mounted) return;
+    if (!ok) {
+      setState(() => _items.insert(index, item));
+      return;
+    }
+
+    final messenger = _messengerKey.currentState;
+    if (messenger == null) return;
     messenger.clearSnackBars();
     messenger.showSnackBar(
       SnackBar(
@@ -71,7 +103,8 @@ class _QueuePageState extends State<QueuePage> {
         ),
         action: SnackBarAction(
           label: 'Undo',
-          onPressed: () => _handler.insertQueueItem(index, item),
+          onPressed: () =>
+              _handler.insertTrackToQueue(index.clamp(0, _items.length), item),
         ),
       ),
     );
@@ -81,7 +114,6 @@ class _QueuePageState extends State<QueuePage> {
   Widget build(BuildContext context) {
     final colors = context.lyra;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final top = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -93,32 +125,60 @@ class _QueuePageState extends State<QueuePage> {
             ? Brightness.light
             : Brightness.dark,
       ),
-      child: Scaffold(
-        backgroundColor: colors.pageBackground,
-        body: Column(
-          children: [
-            SizedBox(height: top + 8),
-            _buildHeader(colors),
-            Expanded(
-              child: StreamBuilder<(int?, bool)>(
-                stream: _handler.playbackState
-                    .map(
-                      (s) => (
-                        s.queueIndex,
-                        s.shuffleMode == AudioServiceShuffleMode.all,
-                      ),
-                    )
-                    .distinct(),
-                builder: (context, snap) {
-                  final currentIndex = snap.data?.$1;
-                  final shuffleOn = snap.data?.$2 ?? false;
-                  return _buildList(colors, currentIndex, shuffleOn);
-                },
+      child: ScaffoldMessenger(
+        key: _messengerKey,
+        child: Scaffold(
+          backgroundColor:
+              Colors.transparent, // Transparan agar sudut melengkung terlihat
+          body: Container(
+            decoration: BoxDecoration(
+              color: colors.pageBackground,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
               ),
             ),
-          ],
+            child: StreamBuilder<(int?, bool)>(
+              stream: _stateStream,
+              builder: (context, snap) {
+                final currentIndex = snap.data?.$1;
+                final shuffleOn = snap.data?.$2 ?? false;
+                return _buildList(colors, currentIndex, shuffleOn);
+              },
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTop(LyraColors colors, bool shuffleOn) {
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          width: 32,
+          height: 4,
+          decoration: BoxDecoration(
+            color: colors.textSecondary.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        _buildHeader(colors),
+        if (shuffleOn)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              'Mode acak aktif. Matikan acak untuk menggeser urutan.',
+              style: TextStyle(fontSize: 12, color: colors.textPrimary),
+            ),
+          ),
+      ],
     );
   }
 
@@ -156,59 +216,53 @@ class _QueuePageState extends State<QueuePage> {
 
   Widget _buildList(LyraColors colors, int? currentIndex, bool shuffleOn) {
     if (_items.isEmpty) {
-      return Center(
-        child: Text(
-          'Antrean kosong',
-          style: TextStyle(color: colors.textSecondary, fontSize: 16),
-        ),
+      return ListView(
+        controller: widget.scrollController,
+        children: [
+          _buildTop(colors, shuffleOn),
+          Padding(
+            padding: const EdgeInsets.all(40),
+            child: Center(
+              child: Text(
+                'Antrean kosong',
+                style: TextStyle(color: colors.textSecondary, fontSize: 16),
+              ),
+            ),
+          ),
+        ],
       );
     }
 
     final keys = _buildKeys();
 
-    return Column(
-      children: [
-        if (shuffleOn)
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: colors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Text(
-              'Mode acak aktif. Matikan acak untuk menggeser urutan.',
-              style: TextStyle(fontSize: 12, color: colors.textPrimary),
-            ),
-          ),
-        Expanded(
-          child: ReorderableListView.builder(
-            buildDefaultDragHandles: false,
-            padding: const EdgeInsets.only(bottom: 40),
-            itemCount: _items.length,
-            onReorder: _onReorder,
-            proxyDecorator: (child, index, animation) => Material(
-              color: Colors.transparent,
-              elevation: 6,
-              borderRadius: BorderRadius.circular(16),
-              child: child,
-            ),
-            itemBuilder: (context, index) {
-              final item = _items[index];
-              final isCurrent = index == currentIndex;
-              return _buildTile(
-                key: keys[index],
-                colors: colors,
-                item: item,
-                index: index,
-                isCurrent: isCurrent,
-                canDrag: !shuffleOn,
-              );
-            },
-          ),
-        ),
-      ],
+    return ReorderableListView.builder(
+      scrollController: widget.scrollController,
+      header: _buildTop(colors, shuffleOn),
+      itemExtent: 70,
+      buildDefaultDragHandles: false,
+      padding: EdgeInsets.only(
+        bottom: 24 + MediaQuery.of(context).padding.bottom,
+      ),
+      itemCount: _items.length,
+      onReorder: _onReorder,
+      proxyDecorator: (child, index, animation) => Material(
+        color: Colors.transparent,
+        elevation: 6,
+        borderRadius: BorderRadius.circular(16),
+        child: child,
+      ),
+      itemBuilder: (context, index) {
+        final item = _items[index];
+        final isCurrent = index == currentIndex;
+        return _buildTile(
+          key: keys[index],
+          colors: colors,
+          item: item,
+          index: index,
+          isCurrent: isCurrent,
+          canDrag: !shuffleOn,
+        );
+      },
     );
   }
 
@@ -224,6 +278,7 @@ class _QueuePageState extends State<QueuePage> {
         int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0;
 
     final tile = Container(
+      // key: key,` dihapus dari sini
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
       decoration: BoxDecoration(
@@ -259,6 +314,7 @@ class _QueuePageState extends State<QueuePage> {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   item.title,
@@ -312,15 +368,13 @@ class _QueuePageState extends State<QueuePage> {
       child: tile,
     );
 
-    // Lagu yang sedang diputar tidak boleh di-swipe
-    if (isCurrent) {
-      return KeyedSubtree(key: key, child: content);
-    }
-
+    // Selalu kembalikan Dismissible, atur direction berdasarkan isCurrent
     return Dismissible(
       key: key,
-      direction: DismissDirection.horizontal,
-      onDismissed: (_) => _remove(index),
+      direction: isCurrent
+          ? DismissDirection.none
+          : DismissDirection.horizontal,
+      onDismissed: (_) => _remove(item), // <-- Mengirim item, bukan index
       background: _swipeBackground(colors, Alignment.centerLeft),
       secondaryBackground: _swipeBackground(colors, Alignment.centerRight),
       child: content,

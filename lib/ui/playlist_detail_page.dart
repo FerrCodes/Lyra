@@ -38,6 +38,8 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   bool _isSelectionMode = false;
   Set<String> _selectedSongIds = {};
   String _searchQuery = '';
+  Map<String, String> _albumIdsCache = const {};
+  List<dynamic>? _lastAllSongs;
 
   @override
   void initState() {
@@ -995,6 +997,16 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     );
   }
 
+  Map<String, String> _albumIdsFor(List<dynamic> all) {
+    if (!identical(all, _lastAllSongs)) {
+      _lastAllSongs = all;
+      _albumIdsCache = {
+        for (final s in all) s.id as String: s.albumId as String,
+      };
+    }
+    return _albumIdsCache;
+  }
+
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
 
@@ -1079,10 +1091,9 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   PlaylistTrackList(
                     displayedSongs: _displayedSongs,
-                    albumIds: {
-                      for (var s in (ref.watch(allSongsProvider).value ?? []))
-                        s.id: s.albumId,
-                    },
+                    albumIds: _albumIdsFor(
+                      ref.watch(allSongsProvider).value ?? const [],
+                    ),
                     isSelectionMode: _isSelectionMode,
                     selectedSongIds: _selectedSongIds,
                     currentSort: _currentSort,

@@ -197,7 +197,7 @@ class _PlayerPageState extends State<PlayerPage> {
                             builder: (context, stateSnapshot) {
                               final playing =
                                   stateSnapshot.data?.playing ?? false;
-                              final baseScale = playing ? 1.06 : 0.89;
+                              final baseScale = playing ? 1.04 : 0.89;
 
                               // Jika ada animasi panel, bungkus dengan AnimatedBuilder
                               if (widget.panelAnimation != null) {
@@ -554,10 +554,26 @@ class _PlayerPageState extends State<PlayerPage> {
                                 children: [
                                   PressableScale(
                                     onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => const QueuePage(),
-                                        ),
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        builder: (context) {
+                                          return DraggableScrollableSheet(
+                                            initialChildSize: 0.5,
+                                            minChildSize: 0.3,
+                                            maxChildSize: 0.95,
+                                            snap: true,
+                                            expand: false,
+                                            builder:
+                                                (context, scrollController) {
+                                                  return QueuePage(
+                                                    scrollController:
+                                                        scrollController,
+                                                  );
+                                                },
+                                          );
+                                        },
                                       );
                                     },
                                     child: GlassContainer(

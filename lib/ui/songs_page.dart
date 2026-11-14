@@ -1,5 +1,6 @@
 import '../main.dart';
 import '../database/database.dart';
+import '../widgets/song_artwork.dart';
 import 'package:flutter/material.dart';
 import '../models/song.dart' as local;
 import '../ui/track_details_page.dart';
@@ -35,6 +36,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
   String _sortBy = 'Name';
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
+  String? _lastSortBy;
 
   @override
   void initState() {
@@ -601,8 +603,11 @@ class SongsPageState extends ConsumerState<SongsPage> {
       },
       data: (songs) {
         // Sinkronkan data provider ke variabel lokal
-        _allSongs = songs;
-        _displayedSongs = _sortedCopy(songs);
+        if (!identical(_allSongs, songs) || _lastSortBy != _sortBy) {
+          _allSongs = songs;
+          _lastSortBy = _sortBy;
+          _displayedSongs = _sortedCopy(songs);
+        }
 
         if (_allSongs.isEmpty) {
           return const Center(child: Text('Tidak ada lagu ditemukan.'));
@@ -638,27 +643,15 @@ class SongsPageState extends ConsumerState<SongsPage> {
                           left: 16,
                           right: 8,
                         ),
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: QueryArtworkWidget(
-                            key: ValueKey('audio-list-${song.id}'),
-                            id: int.parse(song.id),
-                            type: ArtworkType.AUDIO,
-                            size: 200,
-                            artworkHeight: 50,
-                            artworkWidth: 50,
-                            artworkBorder: BorderRadius.circular(8),
-                            nullArtworkWidget: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.music_note,
-                                color: Colors.grey,
-                              ),
+                        leading: SongArtwork(
+                          id: int.parse(song.id),
+                          size: 50,
+                          radius: 8,
+                          placeholder: Container(
+                            color: Colors.grey.shade300,
+                            child: const Icon(
+                              Icons.music_note,
+                              color: Colors.grey,
                             ),
                           ),
                         ),
