@@ -15,10 +15,38 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   late final StreamSubscription<PlaybackEvent> _playbackSub;
   late final StreamSubscription<int?> _indexSub;
   late final StreamSubscription<Duration?> _durationSub;
-
-  // Simpan map albumId untuk diakses saat lagu berganti
   Map<String, String> _currentAlbumIds = {};
   bool _mutatingQueue = false;
+  Timer? _sleepTimer;
+
+  final ValueNotifier<bool> sleepTimerActiveNotifier = ValueNotifier<bool>(
+    false,
+  );
+  final ValueNotifier<Duration> sleepTimerRemainingNotifier =
+      ValueNotifier<Duration>(Duration.zero);
+
+  void startSleepTimer(Duration duration) {
+    _sleepTimer?.cancel();
+    sleepTimerRemainingNotifier.value = duration;
+    sleepTimerActiveNotifier.value = true;
+
+    _sleepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (sleepTimerRemainingNotifier.value.inSeconds > 0) {
+        sleepTimerRemainingNotifier.value =
+            sleepTimerRemainingNotifier.value - const Duration(seconds: 1);
+      } else {
+        timer.cancel();
+        sleepTimerActiveNotifier.value = false;
+        pause(); // Hentikan lagu saat waktu habis
+      }
+    });
+  }
+
+  void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    sleepTimerActiveNotifier.value = false;
+  }
 
   LyraAudioHandler() {
     _sessionInitFuture = _initAudioSession();
@@ -158,7 +186,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
       mediaItem.add(mediaItems[initialIndex]);
       unawaited(play());
 
-      // 2. Ambil gambar untuk lagu pertama secara background
+      // Ambil gambar untuk lagu pertama secara background
       _fetchAndUpdateArtwork(mediaItems[initialIndex]);
     } catch (e) {
       playbackState.add(
@@ -243,7 +271,6 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   // Fungsi baru untuk mengambil gambar secara async dan memperbarui notifikasi
-
   Future<void> _fetchAndUpdateArtwork(MediaItem item) async {
     final albumId = item.extras?['albumId'];
     if (albumId == null || albumId == '0') return;
@@ -374,4 +401,12 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     await _durationSub.cancel();
     await _player.dispose();
   }
+
+  // FITUR VOLUME UNTUK BOTTOM SHEET
+  Future<void> setVolume(double volume) async {
+    await _player.setVolume(volume);
+  }
+
+  double get volume => _player.volume;
+  Stream<double> get volumeStream => _player.volumeStream;
 }

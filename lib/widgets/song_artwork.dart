@@ -7,6 +7,7 @@ class SongArtwork extends StatefulWidget {
   final int id;
   final double size;
   final double radius;
+  final int loadSize;
   final Widget placeholder;
 
   const SongArtwork({
@@ -15,26 +16,36 @@ class SongArtwork extends StatefulWidget {
     required this.placeholder,
     this.size = 50,
     this.radius = 8,
+    this.loadSize = 200,
   });
 
-  static final LinkedHashMap<int, Uint8List> _cache = LinkedHashMap();
-  static final Map<int, Future<Uint8List>> _pending = {};
+  static final LinkedHashMap<String, Uint8List> _small = LinkedHashMap();
+  static final LinkedHashMap<String, Uint8List> _large = LinkedHashMap();
+  static final Map<String, Future<Uint8List>> _pending = {};
 
-  static Future<Uint8List> _load(int id) {
-    return _pending[id] ??= () async {
+  static String _key(int id, int loadSize) => '$id@$loadSize';
+
+  static LinkedHashMap<String, Uint8List> _cacheFor(int loadSize) =>
+      loadSize > 400 ? _large : _small;
+
+  static Future<Uint8List> _load(int id, int loadSize) {
+    final key = _key(id, loadSize);
+    return _pending[key] ??= () async {
       Uint8List bytes = Uint8List(0); // kosong = tidak ada sampul
       try {
         final r = await OnAudioQuery().queryArtwork(
           id,
           ArtworkType.AUDIO,
           format: ArtworkFormat.JPEG,
-          size: 200,
+          size: loadSize,
         );
         if (r != null) bytes = r;
       } catch (_) {}
-      _cache[id] = bytes;
-      if (_cache.length > 400) _cache.remove(_cache.keys.first);
-      _pending.remove(id);
+      final cache = _cacheFor(loadSize);
+      cache[key] = bytes;
+      final limit = loadSize > 400 ? 12 : 400;
+      if (cache.length > limit) cache.remove(cache.keys.first);
+      _pending.remove(key);
       return bytes;
     }();
   }
@@ -55,19 +66,23 @@ class _SongArtworkState extends State<SongArtwork> {
   @override
   void didUpdateWidget(covariant SongArtwork old) {
     super.didUpdateWidget(old);
-    if (old.id != widget.id) _resolve();
+    if (old.id != widget.id || old.loadSize != widget.loadSize) _resolve();
   }
 
   void _resolve() {
-    final cached = SongArtwork._cache[widget.id];
+    final key = SongArtwork._key(widget.id, widget.loadSize);
+    final cached = SongArtwork._cacheFor(widget.loadSize)[key];
     if (cached != null) {
-      _bytes = cached; // langsung tampil, tanpa kedip
+      _bytes = cached;
       return;
     }
-    _bytes = null;
+    // _bytes lama sengaja dipertahankan sampai gambar baru siap (tanpa kedip)
     final id = widget.id;
-    SongArtwork._load(id).then((b) {
-      if (mounted && widget.id == id) setState(() => _bytes = b);
+    final loadSize = widget.loadSize;
+    SongArtwork._load(id, loadSize).then((b) {
+      if (mounted && widget.id == id && widget.loadSize == loadSize) {
+        setState(() => _bytes = b);
+      }
     });
   }
 
@@ -87,7 +102,9 @@ class _SongArtworkState extends State<SongArtwork> {
                 bytes,
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
-                cacheWidth: (widget.size * dpr).round(),
+                cacheWidth: widget.size.isFinite
+                    ? (widget.size * dpr).round()
+                    : null,
               )
             : widget.placeholder,
       ),

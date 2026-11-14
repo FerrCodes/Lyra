@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../main.dart';
 import '../theme/lyra_colors.dart';
+import '../widgets/song_artwork.dart';
 
 class QueuePage extends StatefulWidget {
   final ScrollController? scrollController;
@@ -22,7 +22,7 @@ class _QueuePageState extends State<QueuePage> {
   final GlobalKey<ScaffoldMessengerState> _messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
-  // 3. Stream dibuat sekali di field, bukan di dalam build
+  // Stream dibuat sekali di field, bukan di dalam build
   late final Stream<(int?, bool)> _stateStream = _handler.playbackState
       .map((s) => (s.queueIndex, s.shuffleMode == AudioServiceShuffleMode.all))
       .distinct();
@@ -35,7 +35,7 @@ class _QueuePageState extends State<QueuePage> {
       if (mounted) setState(() => _items = List.of(q));
     });
 
-    // 5. Auto-scroll diperbaiki agar mempertimbangkan tinggi header
+    // Auto-scroll diperbaiki agar mempertimbangkan tinggi header
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentIndex = _handler.playbackState.value.queueIndex;
       if (currentIndex != null &&
@@ -75,7 +75,6 @@ class _QueuePageState extends State<QueuePage> {
     _handler.moveQueueItem(oldIndex, newIndex);
   }
 
-  // 4. _remove sekarang menerima MediaItem dan mencari index secara dinamis
   Future<void> _remove(MediaItem item) async {
     final index = _items.indexOf(item);
     if (index == -1) return; // Jika item sudah tidak ada, batalkan
@@ -274,11 +273,9 @@ class _QueuePageState extends State<QueuePage> {
     required bool isCurrent,
     required bool canDrag,
   }) {
-    final albumId =
-        int.tryParse(item.extras?['albumId']?.toString() ?? '') ?? 0;
+    final songId = int.tryParse(item.extras?['songId']?.toString() ?? '') ?? 0;
 
     final tile = Container(
-      // key: key,` dihapus dari sini
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
       padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
       decoration: BoxDecoration(
@@ -289,24 +286,15 @@ class _QueuePageState extends State<QueuePage> {
       ),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: QueryArtworkWidget(
-              id: albumId,
-              type: ArtworkType.ALBUM,
-              size: 200,
-              artworkWidth: 48,
-              artworkHeight: 48,
-              artworkFit: BoxFit.cover,
-              keepOldArtwork: true,
-              nullArtworkWidget: Container(
-                width: 48,
-                height: 48,
-                color: colors.textSecondary.withValues(alpha: 0.15),
-                child: Icon(
-                  Icons.music_note_rounded,
-                  color: colors.textSecondary,
-                ),
+          SongArtwork(
+            id: songId,
+            size: 48,
+            radius: 10,
+            placeholder: Container(
+              color: colors.textSecondary.withValues(alpha: 0.15),
+              child: Icon(
+                Icons.music_note_rounded,
+                color: colors.textSecondary,
               ),
             ),
           ),
@@ -374,7 +362,7 @@ class _QueuePageState extends State<QueuePage> {
       direction: isCurrent
           ? DismissDirection.none
           : DismissDirection.horizontal,
-      onDismissed: (_) => _remove(item), // <-- Mengirim item, bukan index
+      onDismissed: (_) => _remove(item), // Mengirim item, bukan index
       background: _swipeBackground(colors, Alignment.centerLeft),
       secondaryBackground: _swipeBackground(colors, Alignment.centerRight),
       child: content,

@@ -15,6 +15,8 @@ import '../database/database.dart';
 import '../models/song.dart' as local;
 import '../widgets/media_icons.dart';
 import 'queue_page.dart';
+import '../audio/lyra_audio_handler.dart';
+import '../widgets/song_artwork.dart';
 
 class PlayerPage extends StatefulWidget {
   final VoidCallback? onClose;
@@ -587,6 +589,74 @@ class _PlayerPageState extends State<PlayerPage> {
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(width: 12),
+                                  // --- TOMBOL SLEEP TIMER (DENGAN INDIKATOR WAKTU) ---
+                                  PressableScale(
+                                    onTap: () => _showSleepTimerSheet(context),
+                                    child: ValueListenableBuilder<bool>(
+                                      valueListenable:
+                                          (audioHandler as LyraAudioHandler)
+                                              .sleepTimerActiveNotifier,
+                                      builder: (context, isActive, _) {
+                                        return ValueListenableBuilder<Duration>(
+                                          valueListenable:
+                                              (audioHandler as LyraAudioHandler)
+                                                  .sleepTimerRemainingNotifier,
+                                          builder: (context, remaining, _) {
+                                            // Format sisa waktu (misal: 29:45 atau 01:15:00)
+                                            String timeText = '';
+                                            if (isActive) {
+                                              final h = remaining.inHours;
+                                              final m = remaining.inMinutes
+                                                  .remainder(60)
+                                                  .toString()
+                                                  .padLeft(2, '0');
+                                              final s = remaining.inSeconds
+                                                  .remainder(60)
+                                                  .toString()
+                                                  .padLeft(2, '0');
+                                              if (h > 0) {
+                                                timeText = '$h:$m:$s';
+                                              } else {
+                                                timeText = '$m:$s';
+                                              }
+                                            }
+                                            return Tooltip(
+                                              message: isActive
+                                                  ? 'Sisa waktu: $timeText'
+                                                  : 'Sleep timer',
+                                              child: GlassContainer(
+                                                width: 44,
+                                                height: 44,
+                                                radius: 14,
+                                                // Beri sedikit padding horizontal jika ada teks
+                                                child: Center(
+                                                  child: isActive
+                                                      ? Text(
+                                                          timeText,
+                                                          style: TextStyle(
+                                                            color: accentColor,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        )
+                                                      : Icon(
+                                                          Icons
+                                                              .bedtime_outlined,
+                                                          color: colors
+                                                              .textPrimary,
+                                                          size: 20,
+                                                        ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
                                   // --- TOMBOL SHUFFLE ---
                                   PressableScale(
                                     onTap: () {
@@ -610,7 +680,7 @@ class _PlayerPageState extends State<PlayerPage> {
                                       ),
                                     ),
                                   ),
-
+                                  const SizedBox(width: 12),
                                   // --- TOMBOL REPEAT ---
                                   PressableScale(
                                     onTap: () {
@@ -642,6 +712,21 @@ class _PlayerPageState extends State<PlayerPage> {
                                               ? accentColor
                                               : colors.textPrimary,
                                         ),
+                                      ),
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  PressableScale(
+                                    onTap: () =>
+                                        _showMoreControlsSheet(context),
+                                    child: GlassContainer(
+                                      width: 44,
+                                      height: 44,
+                                      radius: 14,
+                                      child: Icon(
+                                        Icons.keyboard_arrow_up_rounded,
+                                        color: colors.textPrimary,
+                                        size: 24,
                                       ),
                                     ),
                                   ),
@@ -685,25 +770,308 @@ class _PlayerPageState extends State<PlayerPage> {
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: QueryArtworkWidget(
-            key: ValueKey('audio-player-$songId'),
-            id: songId,
-            type: ArtworkType.AUDIO,
-            size: 800,
-            artworkBorder: BorderRadius.circular(24),
-            nullArtworkWidget: Container(
-              color: colors.textSecondary.withValues(alpha: 0.2),
-              child: Icon(
-                Icons.music_note,
-                size: 100,
-                color: colors.textPrimary,
-              ),
-            ),
+        child: SongArtwork(
+          id: songId,
+          size: double.infinity,
+          radius: 24,
+          loadSize: 800,
+          placeholder: Container(
+            color: colors.textSecondary.withValues(alpha: 0.2),
+            child: Icon(Icons.music_note, size: 100, color: colors.textPrimary),
           ),
         ),
       ),
+    );
+  }
+
+  void _showSleepTimerSheet(BuildContext context) {
+    final colors = context.lyra;
+    final handler = audioHandler as LyraAudioHandler;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colors.pageBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        // Gunakan ValueListenableBuilder agar centang (radio) ikut berubah secara real-time
+        return ValueListenableBuilder<bool>(
+          valueListenable: handler.sleepTimerActiveNotifier,
+          builder: (context, isActive, child) {
+            return ValueListenableBuilder<Duration>(
+              valueListenable: handler.sleepTimerRemainingNotifier,
+              builder: (context, remaining, child) {
+                // Fungsi untuk mengecek apakah opsi ini yang sedang aktif
+                bool isSelected(Duration target) {
+                  if (!isActive) return false;
+                  // Beri toleransi beberapa detik karena timer berjalan mundur
+                  return (remaining.inSeconds - target.inSeconds).abs() <= 5;
+                }
+
+                return SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colors.textSecondary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Sleep timer',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Opsi OFF
+                      _buildRadioTimerOption(
+                        context,
+                        'Off',
+                        !isActive, // Terpilih jika timer mati
+                        () {
+                          handler.cancelSleepTimer();
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+
+                      // Opsi 30 Menit
+                      _buildRadioTimerOption(
+                        context,
+                        '30 minutes',
+                        isSelected(const Duration(minutes: 30)),
+                        () {
+                          handler.startSleepTimer(const Duration(minutes: 30));
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+
+                      // Opsi 1 Jam
+                      _buildRadioTimerOption(
+                        context,
+                        '1 hour',
+                        isSelected(const Duration(hours: 1)),
+                        () {
+                          handler.startSleepTimer(const Duration(hours: 1));
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+
+                      // Opsi 1 Jam 30 Menit
+                      _buildRadioTimerOption(
+                        context,
+                        '1 hour 30 minutes',
+                        isSelected(const Duration(hours: 1, minutes: 30)),
+                        () {
+                          handler.startSleepTimer(
+                            const Duration(hours: 1, minutes: 30),
+                          );
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+
+                      // Opsi 2 Jam
+                      _buildRadioTimerOption(
+                        context,
+                        '2 hours',
+                        isSelected(const Duration(hours: 2)),
+                        () {
+                          handler.startSleepTimer(const Duration(hours: 2));
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+
+                      // Opsi CUSTOM
+                      _buildRadioTimerOption(
+                        context,
+                        'Custom',
+                        isActive &&
+                            !isSelected(const Duration(minutes: 30)) &&
+                            !isSelected(const Duration(hours: 1)) &&
+                            !isSelected(
+                              const Duration(hours: 1, minutes: 30),
+                            ) &&
+                            !isSelected(const Duration(hours: 2)),
+                        () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                            builder: (context, child) {
+                              return Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: ColorScheme.dark(
+                                    primary: colors.accent,
+                                    onPrimary: Colors.white,
+                                    surface: colors.pageBackground,
+                                    onSurface: colors.textPrimary,
+                                  ),
+                                ),
+                                child: child!,
+                              );
+                            },
+                          );
+                          if (time != null) {
+                            final now = TimeOfDay.now();
+                            final difference = Duration(
+                              hours: time.hour - now.hour,
+                              minutes: time.minute - now.minute,
+                            );
+                            if (difference.isNegative) {
+                              handler.startSleepTimer(
+                                difference + const Duration(days: 1),
+                              );
+                            } else {
+                              handler.startSleepTimer(difference);
+                            }
+                            if (context.mounted) Navigator.pop(context);
+                          }
+                        },
+                        colors,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRadioTimerOption(
+    BuildContext context,
+    String title,
+    bool isSelected,
+    VoidCallback onTap,
+    LyraColors colors,
+  ) {
+    return ListTile(
+      leading: Radio<bool>(
+        value: true,
+        groupValue: isSelected,
+        activeColor: colors.accent,
+        onChanged: (_) => onTap(),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isSelected ? colors.accent : colors.textPrimary,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  void _showMoreControlsSheet(BuildContext context) {
+    final colors = context.lyra;
+    final handler = audioHandler as LyraAudioHandler;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent, // Agar sudut melengkung terlihat
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.4, // Muncul 40% layar di awal
+          minChildSize: 0.2,
+          maxChildSize: 0.9, // Bisa ditarik sampai 90% layar
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: colors.pageBackground,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(24),
+                children: [
+                  // Handle Bar
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.textSecondary.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // --- FITUR VOLUME ---
+                  StreamBuilder<double>(
+                    stream: handler.volumeStream,
+                    builder: (context, snapshot) {
+                      final currentVolume = snapshot.data ?? 1.0;
+                      return Row(
+                        children: [
+                          Icon(
+                            currentVolume == 0
+                                ? Icons.volume_off_rounded
+                                : Icons.volume_down_rounded,
+                            color: colors.textSecondary,
+                          ),
+                          Expanded(
+                            child: Slider(
+                              value: currentVolume,
+                              activeColor: colors.accent,
+                              inactiveColor: colors.textSecondary.withValues(
+                                alpha: 0.2,
+                              ),
+                              onChanged: (value) {
+                                handler.setVolume(value);
+                              },
+                            ),
+                          ),
+                          Icon(
+                            Icons.volume_up_rounded,
+                            color: colors.textSecondary,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+                  Divider(color: colors.textSecondary.withValues(alpha: 0.1)),
+                  const SizedBox(height: 16),
+
+                  // (Di sini tempat untuk fitur masa depan seperti Equalizer, Speed, dll)
+                  Center(
+                    child: Text(
+                      'More controls coming soon...',
+                      style: TextStyle(
+                        color: colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
