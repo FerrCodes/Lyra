@@ -100,4 +100,25 @@ class MediaStoreService {
       throw MediaStoreException(e.message ?? 'Gagal membuka galeri', e.code);
     }
   }
+
+  static Future<bool> openEqualizer() async {
+    try {
+      final bool? result = await _channel.invokeMethod('openEqualizer');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      throw MediaStoreException(e.message ?? 'Gagal membuka equalizer', e.code);
+    }
+  }
+
+  static Future<bool> openBatterySettings() async {
+    try {
+      final bool? result = await _channel.invokeMethod('openBatterySettings');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      throw MediaStoreException(
+        e.message ?? 'Gagal membuka pengaturan baterai',
+        e.code,
+      );
+    }
+  }
 }

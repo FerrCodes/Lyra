@@ -89,6 +89,23 @@ class MainActivity : AudioServiceActivity() {
                         }
                     }.start()
                 }
+             } else if (call.method == "openEqualizer") {
+                try {
+                    val intent = android.content.Intent(android.media.audiofx.AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL)
+                    intent.putExtra(android.media.audiofx.AudioEffect.EXTRA_AUDIO_SESSION, 0)
+                    startActivity(intent)
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("NO_EQUALIZER", "Perangkat tidak mendukung equalizer sistem", null)
+                }
+            } else if (call.method == "openBatterySettings") {
+                try {
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    startActivity(intent)
+                    result.success(true)
+                } catch (e: Exception) {
+                    result.error("NO_SETTINGS", e.message, null)
+                }
             } else {
                 result.notImplemented()
             }
