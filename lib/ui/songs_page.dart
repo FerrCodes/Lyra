@@ -9,6 +9,7 @@ import '../audio/lyra_audio_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/database_provider.dart';
 import '../services/media_store_service.dart';
+import '../preferences/preferences_provider.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +42,10 @@ class SongsPageState extends ConsumerState<SongsPage> {
   @override
   void initState() {
     super.initState();
+    // Pulihkan sort terakhir dari prefs
+    _sortBy = ref.read(lyraPreferencesProvider).loadSongsSort();
+    _lastSortBy =
+        _sortBy; // Biar _sortedCopy() langsung sinkron saat build pertama
     // Hanya mengambil data favorit dari database
     _loadFavorites();
   }
@@ -184,6 +189,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
             _sortBy = title;
             widget.onSortChanged?.call(title);
           });
+          ref.read(lyraPreferencesProvider).saveSongsSort(title);
         },
       ),
     );

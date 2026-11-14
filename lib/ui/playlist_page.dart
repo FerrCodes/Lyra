@@ -8,6 +8,7 @@ import 'playlist_detail_page.dart';
 import 'dart:io';
 import '../services/media_store_service.dart';
 import '../features/playlist/widgets/playlist_cover.dart';
+import '../preferences/preferences_provider.dart';
 
 // Kabel untuk dipanggil dari home_page.dart
 final GlobalKey<PlaylistPageState> playlistPageKey =
@@ -36,7 +37,24 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
   @override
   void initState() {
     super.initState();
+    // Pulihkan preferensi Grid/List terakhir, lalu sinkronkan notifier global.
+    final prefs = ref.read(lyraPreferencesProvider);
+    playlistViewModeNotifier.value = prefs.loadPlaylistIsListView();
+    playlistViewModeNotifier.addListener(_persistViewMode);
     _loadPlaylists();
+  }
+
+  void _persistViewMode() {
+    ref
+        .read(lyraPreferencesProvider)
+        .savePlaylistIsListView(playlistViewModeNotifier.value);
+  }
+
+  @override
+  void dispose() {
+    playlistViewModeNotifier.removeListener(_persistViewMode);
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPlaylists() async {

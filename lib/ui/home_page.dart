@@ -7,6 +7,7 @@ import 'library_page.dart';
 import 'search_page.dart';
 import '../widgets/app_top_bar.dart';
 import '../theme/lyra_colors.dart';
+import '../preferences/preferences_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_provider.dart';
 import '../services/play_history_recorder.dart';
@@ -387,6 +388,8 @@ class _HomePageState extends ConsumerState<HomePage>
   @override
   void initState() {
     super.initState();
+    // Pulihkan teks filter di Top Bar dari prefs
+    _currentSortFilter = ref.read(lyraPreferencesProvider).loadSongsSort();
     _recorder = PlayHistoryRecorder(ref.read(databaseProvider), ref);
     _recorder.start();
 

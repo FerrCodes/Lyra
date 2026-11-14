@@ -16,6 +16,7 @@ import '../../features/playlist/sheets/edit_playlist_sheet.dart';
 import '../providers/songs_provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../widgets/lyra_header.dart';
+import '../preferences/preferences_provider.dart';
 import 'package:audio_service/audio_service.dart';
 
 class PlaylistDetailPage extends ConsumerStatefulWidget {
@@ -47,6 +48,8 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     _currentPlaylistName = widget.playlist.name;
     _currentImagePath = widget.playlist.imagePath;
     _currentDescription = widget.playlist.description;
+    // Pulihkan sort terakhir dari prefs (sebelum _loadSongs dipanggil)
+    _currentSort = ref.read(lyraPreferencesProvider).loadPlaylistDetailSort();
     _loadSongs();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
   }
@@ -668,6 +671,8 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           _currentSort = sortKey;
           _applySort();
         });
+        // Simpan ke prefs
+        ref.read(lyraPreferencesProvider).savePlaylistDetailSort(sortKey);
         // Gunakan bottomSheetContext agar yang tertutup hanya Bottom Sheet-nya
         Navigator.pop(bottomSheetContext);
       },

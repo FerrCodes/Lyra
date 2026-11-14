@@ -8,6 +8,7 @@ import '../theme/lyra_colors.dart';
 import '../widgets/lyra_header.dart';
 import '../services/media_store_service.dart';
 import '../providers/theme_provider.dart';
+import 'about_settings_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -18,7 +19,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   String _cacheSize = 'Menghitung...';
-  bool _isGaplessPlayback = true;
 
   @override
   void initState() {
@@ -146,7 +146,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 right: 16,
               ),
               children: [
-                // 1. TAMPILAN
+                // TAMPILAN
                 _buildSectionTitle('Tampilan', colors),
                 _buildSettingsGroup(
                   colors: colors,
@@ -167,22 +167,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // 2. AUDIO & PEMUTARAN
+                // AUDIO & PEMUTARAN
                 _buildSectionTitle('Audio & Pemutaran', colors),
                 _buildSettingsGroup(
                   colors: colors,
                   isDark: isDark,
                   children: [
-                    _buildSwitchTile(
-                      icon: Icons.graphic_eq,
-                      title: 'Gapless Playback',
-                      subtitle: 'Putar lagu tanpa jeda (Direkomendasikan)',
-                      value: _isGaplessPlayback,
-                      onChanged: (val) =>
-                          setState(() => _isGaplessPlayback = val),
-                      colors: colors,
-                    ),
-                    _buildDivider(colors),
                     _buildArrowTile(
                       icon: Icons.equalizer,
                       title: 'Equalizer Sistem',
@@ -203,7 +193,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // 3. PENGATURAN PERANGKAT
+                // PENGATURAN PERANGKAT
                 _buildSectionTitle('Pengaturan Perangkat', colors),
                 _buildSettingsGroup(
                   colors: colors,
@@ -245,7 +235,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // 4. PENYIMPANAN
+                // PENYIMPANAN
                 _buildSectionTitle('Penyimpanan', colors),
                 _buildSettingsGroup(
                   colors: colors,
@@ -271,8 +261,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const SizedBox(height: 24),
 
-                // 5. TENTANG APLIKASI
-                _buildSectionTitle('Tentang Aplikasi', colors),
+                // TENTANG APLIKASI
+                _buildSectionTitle('Lainnya', colors),
                 _buildSettingsGroup(
                   colors: colors,
                   isDark: isDark,
@@ -280,26 +270,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     _buildArrowTile(
                       icon: Icons.info_outline,
                       title: 'Versi Aplikasi',
-                      subtitle: 'Lyra Music v1.0.0',
-                      onTap: () {},
-                      showArrow: false,
-                      colors: colors,
-                    ),
-                    _buildDivider(colors),
-                    _buildArrowTile(
-                      icon: Icons.code,
-                      title: 'Open Source Licenses',
-                      subtitle: 'Lihat library yang digunakan',
                       onTap: () {
-                        showLicensePage(
-                          context: context,
-                          applicationName: 'Lyra Music',
-                          applicationVersion: '1.0.0',
-                          applicationIcon: Icon(
-                            Icons.library_music_rounded,
-                            size: 60,
-                            color: colors.accent,
-                          ),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AboutPage()),
                         );
                       },
                       colors: colors,
@@ -417,50 +391,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required Function(bool) onChanged,
-    required LyraColors colors,
-  }) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: colors.accent.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, color: colors.accent, size: 20),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
-          color: colors.textPrimary,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(color: colors.textSecondary, fontSize: 12),
-      ),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeThumbColor: colors.accent,
-        activeTrackColor: colors.accent.withValues(alpha: 0.3),
-      ),
-    );
-  }
-
   Widget _buildArrowTile({
     required IconData icon,
     required String title,
-    required String subtitle,
+    String? subtitle,
     required VoidCallback onTap,
     required LyraColors colors,
     bool showArrow = true,
@@ -485,10 +419,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           color: colors.textPrimary,
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(color: colors.textSecondary, fontSize: 12),
-      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: TextStyle(color: colors.textSecondary, fontSize: 12),
+            )
+          : null,
       trailing: showArrow
           ? Icon(
               Icons.arrow_forward_ios,

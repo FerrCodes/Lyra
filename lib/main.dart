@@ -10,11 +10,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/profile_provider.dart';
 import 'theme/lyra_colors.dart';
 import 'providers/theme_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'preferences/preferences_provider.dart';
 
 late final AudioHandler audioHandler;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
   await loadProfileData();
   await initializeDateFormatting('id_ID', null);
   SystemChrome.setSystemUIOverlayStyle(
@@ -46,7 +49,12 @@ Future<void> main() async {
     ),
   );
 
-  runApp(const ProviderScope(child: LyraApp()));
+  runApp(
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const LyraApp(),
+    ),
+  );
 }
 
 class LyraApp extends ConsumerWidget {
