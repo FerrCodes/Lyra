@@ -9,6 +9,9 @@ import '../widgets/lyra_header.dart';
 import '../services/media_store_service.dart';
 import '../providers/theme_provider.dart';
 import 'about_settings_page.dart';
+import '../l10n/app_localizations.dart';
+import '../providers/locale_provider.dart';
+import '../preferences/preferences_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -55,16 +58,67 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       await _calculateCacheSize();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cache berhasil dibersihkan')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.cacheCleared)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
+  }
+
+  String _getLanguageName(BuildContext context, WidgetRef ref) {
+    final currentLang = ref.watch(lyraPreferencesProvider).loadLanguage();
+    if (currentLang == 'system') {
+      return AppLocalizations.of(context)!.systemDefault;
+    }
+    if (currentLang == 'en') return AppLocalizations.of(context)!.english;
+    return AppLocalizations.of(context)!.indonesian;
+  }
+
+  void _showLanguageDialog(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        final currentLang = ref.watch(lyraPreferencesProvider).loadLanguage();
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.systemDefault),
+                trailing: currentLang == 'system'
+                    ? const Icon(Icons.check)
+                    : null,
+                onTap: () {
+                  ref.read(localeProvider.notifier).setLanguage('system');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.indonesian),
+                trailing: currentLang == 'id' ? const Icon(Icons.check) : null,
+                onTap: () {
+                  ref.read(localeProvider.notifier).setLanguage('id');
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context)!.english),
+                trailing: currentLang == 'en' ? const Icon(Icons.check) : null,
+                onTap: () {
+                  ref.read(localeProvider.notifier).setLanguage('en');
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _showThemeDialog() {
@@ -77,7 +131,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                title: const Text('Ikuti Sistem'),
+                title: Text(AppLocalizations.of(context)!.systemDefault),
                 trailing: currentMode == ThemeMode.system
                     ? const Icon(Icons.check)
                     : null,
@@ -89,7 +143,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 },
               ),
               ListTile(
-                title: const Text('Terang'),
+                title: Text(AppLocalizations.of(context)!.light),
                 trailing: currentMode == ThemeMode.light
                     ? const Icon(Icons.check)
                     : null,
@@ -101,7 +155,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 },
               ),
               ListTile(
-                title: const Text('Gelap'),
+                title: Text(AppLocalizations.of(context)!.dark),
                 trailing: currentMode == ThemeMode.dark
                     ? const Icon(Icons.check)
                     : null,
@@ -122,6 +176,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final colors = context.lyra;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final themeMode = ref.watch(themeModeProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -147,20 +202,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               children: [
                 // TAMPILAN
-                _buildSectionTitle('Tampilan', colors),
+                _buildSectionTitle(l10n.display, colors),
                 _buildSettingsGroup(
                   colors: colors,
                   isDark: isDark,
                   children: [
                     _buildArrowTile(
                       icon: Icons.palette_outlined,
-                      title: 'Tema Aplikasi',
+                      title: l10n.theme,
                       subtitle: themeMode == ThemeMode.system
-                          ? 'Ikuti Sistem'
+                          ? l10n.systemDefault
                           : themeMode == ThemeMode.light
-                          ? 'Terang'
-                          : 'Gelap',
+                          ? l10n.light
+                          : l10n.dark,
                       onTap: _showThemeDialog,
+                      colors: colors,
+                    ),
+                    _buildDivider(colors),
+                    _buildArrowTile(
+                      icon: Icons.language,
+                      title: l10n.language,
+                      subtitle: _getLanguageName(context, ref),
+                      onTap: () => _showLanguageDialog(context, ref),
                       colors: colors,
                     ),
                   ],
@@ -168,23 +231,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const SizedBox(height: 24),
 
                 // AUDIO & PEMUTARAN
-                _buildSectionTitle('Audio & Pemutaran', colors),
+                _buildSectionTitle(l10n.audioPlayback, colors),
                 _buildSettingsGroup(
                   colors: colors,
                   isDark: isDark,
                   children: [
                     _buildArrowTile(
                       icon: Icons.equalizer,
-                      title: 'Equalizer Sistem',
-                      subtitle: 'Buka pengaturan suara bawaan HP',
+                      title: l10n.systemEqualizer,
                       onTap: () async {
                         try {
-                          await MediaStoreService.openEqualizer(); // Panggil Kotlin
+                          await MediaStoreService.openEqualizer();
                         } catch (e) {
-                          if (mounted)
+                          if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(e.toString())),
                             );
+                          }
                         }
                       },
                       colors: colors,
@@ -194,37 +257,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const SizedBox(height: 24),
 
                 // PENGATURAN PERANGKAT
-                _buildSectionTitle('Pengaturan Perangkat', colors),
+                _buildSectionTitle(l10n.deviceSettings, colors),
                 _buildSettingsGroup(
                   colors: colors,
                   isDark: isDark,
                   children: [
                     _buildArrowTile(
                       icon: Icons.notifications_active_outlined,
-                      title: 'Notifikasi Lyra',
-                      subtitle: 'Atur cara Lyra mengirim notifikasi',
-                      onTap: () {
-                        // Membuka pengaturan notifikasi via permission_handler
-                        openAppSettings();
-                      },
+                      title: l10n.lyraNotification,
+                      onTap: () => openAppSettings(),
                       colors: colors,
                     ),
                     _buildDivider(colors),
                     _buildArrowTile(
                       icon: Icons.security_outlined,
-                      title: 'Izin Aplikasi',
-                      subtitle: 'Kelola akses file dan media',
+                      title: l10n.appPermissions,
                       onTap: () => openAppSettings(),
                       colors: colors,
                     ),
                     _buildDivider(colors),
                     _buildArrowTile(
                       icon: Icons.battery_charging_full_outlined,
-                      title: 'Baterai & Latar Belakang',
-                      subtitle: 'Izinkan Lyra berjalan saat layar mati',
+                      title: l10n.battery,
                       onTap: () async {
                         try {
-                          await MediaStoreService.openBatterySettings(); // Panggil Kotlin
+                          await MediaStoreService.openBatterySettings();
                         } catch (e) {
                           openAppSettings();
                         }
@@ -236,15 +293,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const SizedBox(height: 24),
 
                 // PENYIMPANAN
-                _buildSectionTitle('Penyimpanan', colors),
+                _buildSectionTitle(l10n.storage, colors),
                 _buildSettingsGroup(
                   colors: colors,
                   isDark: isDark,
                   children: [
                     _buildArrowTile(
                       icon: Icons.storage_outlined,
-                      title: 'Penggunaan Penyimpanan',
-                      subtitle: 'Ukuran cache: $_cacheSize',
+                      title: l10n.storageUsage,
+                      subtitle: l10n.cacheSize(_cacheSize),
                       onTap: () {},
                       showArrow: false,
                       colors: colors,
@@ -252,8 +309,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     _buildDivider(colors),
                     _buildArrowTile(
                       icon: Icons.cleaning_services_outlined,
-                      title: 'Hapus Cache',
-                      subtitle: 'Hapus gambar sementara dan cache lagu',
+                      title: l10n.clearCache,
                       onTap: _clearCache,
                       colors: colors,
                     ),
@@ -262,14 +318,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const SizedBox(height: 24),
 
                 // TENTANG APLIKASI
-                _buildSectionTitle('Lainnya', colors),
+                _buildSectionTitle(l10n.others, colors),
                 _buildSettingsGroup(
                   colors: colors,
                   isDark: isDark,
                   children: [
                     _buildArrowTile(
                       icon: Icons.info_outline,
-                      title: 'Versi Aplikasi',
+                      title: l10n.appVersion,
                       onTap: () {
                         Navigator.push(
                           context,
@@ -318,7 +374,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   Expanded(
                     child: Center(
                       child: Text(
-                        'Pengaturan',
+                        l10n.settings,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -337,7 +393,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  // HELPER WIDGETS (Sama seperti sebelumnya, hanya dirapikan)
+  // HELPER WIDGETS
   Widget _buildSectionTitle(String title, LyraColors colors) {
     return Padding(
       padding: const EdgeInsets.only(left: 8.0, bottom: 8.0),

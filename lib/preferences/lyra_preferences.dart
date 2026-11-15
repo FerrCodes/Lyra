@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Wrapper terpusat untuk semua preferensi Lyra yang disimpan
-/// di SharedPreferences. Semua key menggunakan prefix "lyra_" agar
-/// tidak bentrok dengan library lain.
 class LyraPreferences {
   final SharedPreferences _prefs;
   LyraPreferences(this._prefs);
@@ -13,6 +10,7 @@ class LyraPreferences {
   static const _kPlaylistIsList = 'lyra_playlist_is_list';
   static const _kSongsSort = 'lyra_songs_sort';
   static const _kPlaylistDetailSort = 'lyra_playlist_detail_sort';
+  static const _kLanguage = 'lyra_language';
 
   // === TEMA ===
   ThemeMode loadTheme() {
@@ -39,7 +37,7 @@ class LyraPreferences {
 
   // === PLAYLIST VIEW (Grid/List) ===
   bool loadPlaylistIsListView() {
-    return _prefs.getBool(_kPlaylistIsList) ?? false; // default: Grid
+    return _prefs.getBool(_kPlaylistIsList) ?? false;
   }
 
   Future<void> savePlaylistIsListView(bool isList) async {
@@ -47,7 +45,6 @@ class LyraPreferences {
   }
 
   // === SONGS SORT ===
-  // Nilai valid: 'Name' | 'Artist' | 'Date Added'
   String loadSongsSort() {
     final raw = _prefs.getString(_kSongsSort);
     const valid = {'Name', 'Artist', 'Date Added'};
@@ -60,7 +57,6 @@ class LyraPreferences {
   }
 
   // === PLAYLIST DETAIL SORT ===
-  // Nilai valid: 'Custom order' | 'Name' | 'Artist' | 'Album' | 'Date Added'
   String loadPlaylistDetailSort() {
     final raw = _prefs.getString(_kPlaylistDetailSort);
     const valid = {'Custom order', 'Name', 'Artist', 'Album', 'Date Added'};
@@ -70,5 +66,17 @@ class LyraPreferences {
 
   Future<void> savePlaylistDetailSort(String value) async {
     await _prefs.setString(_kPlaylistDetailSort, value);
+  }
+
+  // === BAHASA ===
+  String loadLanguage() {
+    final raw = _prefs.getString(_kLanguage);
+    const valid = {'system', 'en', 'id'};
+    if (raw != null && valid.contains(raw)) return raw;
+    return 'id'; // Default instalasi pertama: Bahasa Indonesia
+  }
+
+  Future<void> saveLanguage(String value) async {
+    await _prefs.setString(_kLanguage, value);
   }
 }

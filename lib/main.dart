@@ -12,6 +12,9 @@ import 'theme/lyra_colors.dart';
 import 'providers/theme_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'preferences/preferences_provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
+import 'providers/locale_provider.dart';
 
 late final AudioHandler audioHandler;
 
@@ -63,10 +66,23 @@ class LyraApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp(
       title: 'Lyra',
       debugShowCheckedModeBanner: false,
+      locale: locale,
+      localizationsDelegates: const [
+        // <--- TAMBAHKAN
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('id'), // Default fallback
+        Locale('en'),
+      ],
       themeMode: themeMode,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
