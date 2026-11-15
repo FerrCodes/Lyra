@@ -396,6 +396,9 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   // Bersihkan resource saat aplikasi ditutup
   Future<void> disposePlayer() async {
+    _sleepTimer?.cancel();
+    sleepTimerActiveNotifier.dispose();
+    sleepTimerRemainingNotifier.dispose();
     await _playbackSub.cancel();
     await _indexSub.cancel();
     await _durationSub.cancel();
@@ -409,4 +412,8 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   double get volume => _player.volume;
   Stream<double> get volumeStream => _player.volumeStream;
+
+  Future<void> setSpeed(double speed) => _player.setSpeed(speed);
+  double get speed => _player.speed;
+  Stream<double> get speedStream => _player.speedStream;
 }

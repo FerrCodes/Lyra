@@ -33,6 +33,10 @@ class _PlayerPageState extends State<PlayerPage> {
   Color? _dynamicColor;
   int? _lastAlbumId;
 
+  late final Stream<MediaItem?> _distinctMediaItemStream = audioHandler
+      .mediaItem
+      .distinct((a, b) => a?.id == b?.id);
+
   Future<Color> _getDynamicColor(int albumId, Color fallback) async {
     if (_colorCache.containsKey(albumId)) return _colorCache[albumId]!;
 
@@ -85,7 +89,7 @@ class _PlayerPageState extends State<PlayerPage> {
       child: Scaffold(
         backgroundColor: colors.pageBackground,
         body: StreamBuilder<MediaItem?>(
-          stream: audioHandler.mediaItem,
+          stream: _distinctMediaItemStream,
           builder: (context, mediaSnapshot) {
             final item = mediaSnapshot.data;
 
@@ -357,7 +361,9 @@ class _PlayerPageState extends State<PlayerPage> {
                           stream: AudioService.position,
                           builder: (context, posSnapshot) {
                             final position = posSnapshot.data ?? Duration.zero;
-                            final duration = item.duration ?? Duration.zero;
+                            final duration =
+                                audioHandler.mediaItem.value?.duration ??
+                                Duration.zero;
 
                             final double progress = duration.inMilliseconds > 0
                                 ? position.inMilliseconds /
@@ -440,21 +446,7 @@ class _PlayerPageState extends State<PlayerPage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   PressableScale(
-                                    onTap: () {
-                                      // Ambil posisi lagu saat ini
-                                      final currentPos =
-                                          stateSnapshot.data?.updatePosition ??
-                                          Duration.zero;
-
-                                      if (currentPos >
-                                          const Duration(seconds: 10)) {
-                                        // Jika sudah lewat 10 detik, ulangi lagu dari awal
-                                        audioHandler.seek(Duration.zero);
-                                      } else {
-                                        // Jika masih di bawah 10 detik, pindah ke lagu sebelumnya
-                                        audioHandler.skipToPrevious();
-                                      }
-                                    },
+                                    onTap: () => audioHandler.skipToPrevious(),
                                     child: GlassContainer(
                                       width: 48,
                                       height: 48,
@@ -636,7 +628,7 @@ class _PlayerPageState extends State<PlayerPage> {
                                                           timeText,
                                                           style: TextStyle(
                                                             color: accentColor,
-                                                            fontSize: 10,
+                                                            fontSize: 9,
                                                             fontWeight:
                                                                 FontWeight.bold,
                                                           ),
@@ -724,7 +716,7 @@ class _PlayerPageState extends State<PlayerPage> {
                                       height: 44,
                                       radius: 14,
                                       child: Icon(
-                                        Icons.keyboard_arrow_up_rounded,
+                                        Icons.tune_rounded,
                                         color: colors.textPrimary,
                                         size: 24,
                                       ),
@@ -770,16 +762,39 @@ class _PlayerPageState extends State<PlayerPage> {
             ),
           ],
         ),
-        child: SongArtwork(
-          id: songId,
-          size: double.infinity,
-          radius: 24,
-          loadSize: 800,
-          placeholder: Container(
-            color: colors.textSecondary.withValues(alpha: 0.2),
-            child: Icon(Icons.music_note, size: 100, color: colors.textPrimary),
-          ),
-        ),
+        child: songId == 0
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: QueryArtworkWidget(
+                  id: albumId,
+                  type: ArtworkType.ALBUM,
+                  size: 800,
+                  artworkFit: BoxFit.cover,
+                  artworkBorder: BorderRadius.circular(24),
+                  nullArtworkWidget: Container(
+                    color: colors.textSecondary.withValues(alpha: 0.2),
+                    child: Icon(
+                      Icons.music_note,
+                      size: 100,
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                ),
+              )
+            : SongArtwork(
+                id: songId,
+                size: double.infinity,
+                radius: 24,
+                loadSize: 800,
+                placeholder: Container(
+                  color: colors.textSecondary.withValues(alpha: 0.2),
+                  child: Icon(
+                    Icons.music_note,
+                    size: 100,
+                    color: colors.textPrimary,
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -810,140 +825,158 @@ class _PlayerPageState extends State<PlayerPage> {
                 }
 
                 return SafeArea(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 12),
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colors.textSecondary.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(2),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 12),
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colors.textSecondary.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Sleep timer',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: colors.textPrimary,
+                        const SizedBox(height: 16),
+                        Text(
+                          'Sleep timer',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: colors.textPrimary,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      // Opsi OFF
-                      _buildRadioTimerOption(
-                        context,
-                        'Off',
-                        !isActive, // Terpilih jika timer mati
-                        () {
-                          handler.cancelSleepTimer();
-                          Navigator.pop(context);
-                        },
-                        colors,
-                      ),
+                        // Opsi OFF
+                        _buildRadioTimerOption(
+                          context,
+                          'Off',
+                          !isActive, // Terpilih jika timer mati
+                          () {
+                            handler.cancelSleepTimer();
+                            Navigator.pop(context);
+                          },
+                          colors,
+                        ),
 
-                      // Opsi 30 Menit
-                      _buildRadioTimerOption(
-                        context,
-                        '30 minutes',
-                        isSelected(const Duration(minutes: 30)),
-                        () {
-                          handler.startSleepTimer(const Duration(minutes: 30));
-                          Navigator.pop(context);
-                        },
-                        colors,
-                      ),
-
-                      // Opsi 1 Jam
-                      _buildRadioTimerOption(
-                        context,
-                        '1 hour',
-                        isSelected(const Duration(hours: 1)),
-                        () {
-                          handler.startSleepTimer(const Duration(hours: 1));
-                          Navigator.pop(context);
-                        },
-                        colors,
-                      ),
-
-                      // Opsi 1 Jam 30 Menit
-                      _buildRadioTimerOption(
-                        context,
-                        '1 hour 30 minutes',
-                        isSelected(const Duration(hours: 1, minutes: 30)),
-                        () {
-                          handler.startSleepTimer(
-                            const Duration(hours: 1, minutes: 30),
-                          );
-                          Navigator.pop(context);
-                        },
-                        colors,
-                      ),
-
-                      // Opsi 2 Jam
-                      _buildRadioTimerOption(
-                        context,
-                        '2 hours',
-                        isSelected(const Duration(hours: 2)),
-                        () {
-                          handler.startSleepTimer(const Duration(hours: 2));
-                          Navigator.pop(context);
-                        },
-                        colors,
-                      ),
-
-                      // Opsi CUSTOM
-                      _buildRadioTimerOption(
-                        context,
-                        'Custom',
-                        isActive &&
-                            !isSelected(const Duration(minutes: 30)) &&
-                            !isSelected(const Duration(hours: 1)) &&
-                            !isSelected(
-                              const Duration(hours: 1, minutes: 30),
-                            ) &&
-                            !isSelected(const Duration(hours: 2)),
-                        () async {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.now(),
-                            builder: (context, child) {
-                              return Theme(
-                                data: Theme.of(context).copyWith(
-                                  colorScheme: ColorScheme.dark(
-                                    primary: colors.accent,
-                                    onPrimary: Colors.white,
-                                    surface: colors.pageBackground,
-                                    onSurface: colors.textPrimary,
-                                  ),
-                                ),
-                                child: child!,
-                              );
-                            },
-                          );
-                          if (time != null) {
-                            final now = TimeOfDay.now();
-                            final difference = Duration(
-                              hours: time.hour - now.hour,
-                              minutes: time.minute - now.minute,
+                        // Opsi 30 Menit
+                        _buildRadioTimerOption(
+                          context,
+                          '30 minutes',
+                          isSelected(const Duration(minutes: 30)),
+                          () {
+                            handler.startSleepTimer(
+                              const Duration(minutes: 30),
                             );
-                            if (difference.isNegative) {
-                              handler.startSleepTimer(
-                                difference + const Duration(days: 1),
+                            Navigator.pop(context);
+                          },
+                          colors,
+                        ),
+
+                        // Opsi 1 Jam
+                        _buildRadioTimerOption(
+                          context,
+                          '1 hour',
+                          isSelected(const Duration(hours: 1)),
+                          () {
+                            handler.startSleepTimer(const Duration(hours: 1));
+                            Navigator.pop(context);
+                          },
+                          colors,
+                        ),
+
+                        // Opsi 1 Jam 30 Menit
+                        _buildRadioTimerOption(
+                          context,
+                          '1 hour 30 minutes',
+                          isSelected(const Duration(hours: 1, minutes: 30)),
+                          () {
+                            handler.startSleepTimer(
+                              const Duration(hours: 1, minutes: 30),
+                            );
+                            Navigator.pop(context);
+                          },
+                          colors,
+                        ),
+
+                        // Opsi 2 Jam
+                        _buildRadioTimerOption(
+                          context,
+                          '2 hours',
+                          isSelected(const Duration(hours: 2)),
+                          () {
+                            handler.startSleepTimer(const Duration(hours: 2));
+                            Navigator.pop(context);
+                          },
+                          colors,
+                        ),
+
+                        // Opsi CUSTOM
+                        _buildRadioTimerOption(
+                          context,
+                          'Custom',
+                          isActive &&
+                              !isSelected(const Duration(minutes: 30)) &&
+                              !isSelected(const Duration(hours: 1)) &&
+                              !isSelected(
+                                const Duration(hours: 1, minutes: 30),
+                              ) &&
+                              !isSelected(const Duration(hours: 2)),
+                          () async {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.now(),
+                              builder: (context, child) {
+                                final isDark =
+                                    Theme.of(context).brightness ==
+                                    Brightness.dark;
+                                return Theme(
+                                  data: Theme.of(context).copyWith(
+                                    colorScheme: isDark
+                                        ? ColorScheme.dark(
+                                            primary: colors.accent,
+                                            onPrimary: Colors.white,
+                                            surface: colors.pageBackground,
+                                            onSurface: colors.textPrimary,
+                                          )
+                                        : ColorScheme.light(
+                                            primary: colors.accent,
+                                            onPrimary: Colors.white,
+                                            surface: colors.pageBackground,
+                                            onSurface: colors.textPrimary,
+                                          ),
+                                  ),
+                                  child: child!,
+                                );
+                              },
+                            );
+                            if (time != null) {
+                              final now = TimeOfDay.now();
+                              final difference = Duration(
+                                hours: time.hour - now.hour,
+                                minutes: time.minute - now.minute,
                               );
-                            } else {
-                              handler.startSleepTimer(difference);
+                              if (difference == Duration.zero) {
+                                handler.startSleepTimer(
+                                  const Duration(days: 1),
+                                );
+                              } else if (difference.isNegative) {
+                                handler.startSleepTimer(
+                                  difference + const Duration(days: 1),
+                                );
+                              } else {
+                                handler.startSleepTimer(difference);
+                              }
+                              if (context.mounted) Navigator.pop(context);
                             }
-                            if (context.mounted) Navigator.pop(context);
-                          }
-                        },
-                        colors,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                          },
+                          colors,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -962,11 +995,9 @@ class _PlayerPageState extends State<PlayerPage> {
     LyraColors colors,
   ) {
     return ListTile(
-      leading: Radio<bool>(
-        value: true,
-        groupValue: isSelected,
-        activeColor: colors.accent,
-        onChanged: (_) => onTap(),
+      leading: Icon(
+        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        color: isSelected ? colors.accent : colors.textSecondary,
       ),
       title: Text(
         title,
@@ -1018,6 +1049,12 @@ class _PlayerPageState extends State<PlayerPage> {
                   ),
                   const SizedBox(height: 32),
 
+                  Text(
+                    'Volume pemutar',
+                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                  ),
+                  const SizedBox(height: 8),
+
                   // --- FITUR VOLUME ---
                   StreamBuilder<double>(
                     stream: handler.volumeStream,
@@ -1056,15 +1093,53 @@ class _PlayerPageState extends State<PlayerPage> {
                   Divider(color: colors.textSecondary.withValues(alpha: 0.1)),
                   const SizedBox(height: 16),
 
-                  // (Di sini tempat untuk fitur masa depan seperti Equalizer, Speed, dll)
-                  Center(
-                    child: Text(
-                      'More controls coming soon...',
-                      style: TextStyle(
-                        color: colors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
+                  Text(
+                    'Kecepatan',
+                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+
+                  StreamBuilder<double>(
+                    stream: handler.speedStream,
+                    initialData: handler.speed,
+                    builder: (context, snapshot) {
+                      final currentSpeed = snapshot.data ?? 1.0;
+                      return Wrap(
+                        spacing: 8,
+                        children: [0.75, 1.0, 1.25, 1.5].map((speed) {
+                          final isActive = (currentSpeed - speed).abs() < 0.01;
+                          return GestureDetector(
+                            onTap: () => handler.setSpeed(speed),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? colors.accent.withValues(alpha: 0.15)
+                                    : colors.textPrimary.withValues(
+                                        alpha: 0.06,
+                                      ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${speed}x',
+                                style: TextStyle(
+                                  color: isActive
+                                      ? colors.accent
+                                      : colors.textPrimary,
+                                  fontWeight: isActive
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
                 ],
               ),

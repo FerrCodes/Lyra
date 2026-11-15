@@ -11,6 +11,7 @@ import 'glass_container.dart';
 import 'marquee_text.dart';
 import 'package:flutter/gestures.dart';
 import 'player_panel.dart';
+import 'song_artwork.dart';
 
 class LyraBottomBar extends ConsumerStatefulWidget {
   final int currentIndex;
@@ -261,7 +262,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
   Widget _buildDefaultState() {
     return StreamBuilder<MediaItem?>(
       key: const ValueKey('default_state'),
-      stream: audioHandler.mediaItem,
+      stream: audioHandler.mediaItem.distinct((a, b) => a?.id == b?.id),
       builder: (context, snapshot) {
         final item = snapshot.data;
         final colors = context.lyra;
@@ -485,7 +486,10 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
       initialData: audioHandler.playbackState.value.updatePosition,
       builder: (context, snapshot) {
         final position = snapshot.data ?? Duration.zero;
-        final duration = item.duration ?? Duration.zero;
+        final duration =
+            audioHandler.mediaItem.value?.duration ??
+            item.duration ??
+            Duration.zero;
 
         final progress = duration.inMilliseconds > 0
             ? position.inMilliseconds / duration.inMilliseconds
@@ -610,22 +614,13 @@ class MiniPlayerContent extends StatelessWidget {
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: QueryArtworkWidget(
-              key: ValueKey('audio-mini-${item.extras?['songId']}'),
-              id: int.tryParse(item.extras?['songId']?.toString() ?? '') ?? 0,
-              type: ArtworkType.AUDIO,
-              size: 200,
-              artworkHeight: isCompact ? 38 : 44,
-              artworkWidth: isCompact ? 38 : 44,
-              artworkBorder: BorderRadius.circular(10),
-              nullArtworkWidget: Container(
-                width: isCompact ? 38 : 44,
-                height: isCompact ? 38 : 44,
-                color: secondary.withValues(alpha: 0.2),
-                child: Icon(Icons.music_note_rounded, color: primary, size: 20),
-              ),
+          child: SongArtwork(
+            id: int.tryParse(item.extras?['songId']?.toString() ?? '') ?? 0,
+            size: isCompact ? 38 : 44,
+            radius: 10,
+            placeholder: Container(
+              color: secondary.withValues(alpha: 0.2),
+              child: Icon(Icons.music_note_rounded, color: primary, size: 20),
             ),
           ),
         ),

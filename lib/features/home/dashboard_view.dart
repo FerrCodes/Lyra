@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../database/database.dart';
 import '../../main.dart';
+import '../../models/song.dart' as local;
 import '../../providers/database_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/songs_provider.dart';
@@ -60,11 +61,19 @@ class DashboardView extends ConsumerWidget {
   void _playFromHistory(
     PlayHistoryData history, {
     String sourceName = 'Lanjutkan',
+    required List<local.Song> allSongs,
   }) {
+    final songId =
+        allSongs
+            .where((s) => s.path == history.path)
+            .map((s) => s.id)
+            .firstOrNull ??
+        history.songId;
+
     _playSongs(
       [
         Song(
-          id: history.songId,
+          id: songId,
           title: history.title,
           artist: history.artist,
           album: history.album,
@@ -236,6 +245,7 @@ class DashboardView extends ConsumerWidget {
                 colors,
                 isDark,
                 showPlayCount: true,
+                allSongs: allSongs,
               ),
             ),
             // DENGARKAN LAGI
@@ -243,8 +253,12 @@ class DashboardView extends ConsumerWidget {
               context: context,
               title: 'Dengarkan Lagi',
               dbStream: db.watchRecentlyPlayed(limit: 6),
-              itemBuilder: (history) =>
-                  _buildHistoryShelfItem(history, colors, isDark),
+              itemBuilder: (history) => _buildHistoryShelfItem(
+                history,
+                colors,
+                isDark,
+                allSongs: allSongs,
+              ),
             ),
           ],
         ),
@@ -492,11 +506,13 @@ class DashboardView extends ConsumerWidget {
     LyraColors colors,
     bool isDark, {
     bool showPlayCount = false,
+    required List<local.Song> allSongs,
   }) {
     return PressableScale(
       onTap: () => _playFromHistory(
         history,
         sourceName: showPlayCount ? 'Sering Diputar' : 'Dengarkan Lagi',
+        allSongs: allSongs,
       ),
       child: Container(
         width: 130,

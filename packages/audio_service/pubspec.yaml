@@ -50,18 +50,13 @@ dev_dependencies:
   mockito: ^5.0.0
   fake_async: ^1.2.0
   flutter_lints: ^3.0.1
-
+  
 flutter:
   plugin:
     platforms:
       android:
         package: com.ryanheise.audioservice
         pluginClass: AudioServicePlugin
-      ios:
-        pluginClass: AudioServicePlugin
-        sharedDarwinSource: true
-      macos:
-        pluginClass: AudioServicePlugin
-        sharedDarwinSource: true
       web:
         default_package: audio_service_web
+
