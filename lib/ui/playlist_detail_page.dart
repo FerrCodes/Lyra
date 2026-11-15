@@ -14,8 +14,8 @@ import '../../features/playlist/widgets/playlist_header.dart';
 import '../../features/playlist/widgets/playlist_track_list.dart';
 import '../../features/playlist/sheets/edit_playlist_sheet.dart';
 import '../providers/songs_provider.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 import '../widgets/lyra_header.dart';
+import '../widgets/song_artwork.dart';
 import '../preferences/preferences_provider.dart';
 import 'package:audio_service/audio_service.dart';
 
@@ -233,26 +233,13 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
+                  SongArtwork(
+                    id: int.tryParse(song.id) ?? 0,
+                    size: 50,
+                    radius: 8,
+                    placeholder: Container(
                       color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: QueryArtworkWidget(
-                      key: ValueKey('audio-sheet-${song.id}'),
-                      id: int.parse(song.id),
-                      type: ArtworkType.AUDIO,
-                      size: 200,
-                      artworkHeight: 50,
-                      artworkWidth: 50,
-                      artworkBorder: BorderRadius.circular(8),
-                      nullArtworkWidget: const Icon(
-                        Icons.music_note,
-                        color: Colors.grey,
-                      ),
+                      child: const Icon(Icons.music_note, color: Colors.grey),
                     ),
                   ),
                   const SizedBox(width: 12),

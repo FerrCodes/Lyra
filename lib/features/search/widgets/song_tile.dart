@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import '../../../widgets/song_artwork.dart';
 import '../../../models/song.dart' as local;
 import '../../../theme/lyra_colors.dart';
 import '../../../widgets/lyra_bottom_bar.dart'; // Untuk PressableScale
@@ -28,21 +28,16 @@ class SongTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: QueryArtworkWidget(
-                id: int.tryParse(song.albumId) ?? 0,
-                type: ArtworkType.ALBUM,
-                size: 200,
-                artworkWidth: 52,
-                artworkHeight: 52,
-                artworkBorder: BorderRadius.circular(10),
-                nullArtworkWidget: Container(
-                  width: 52,
-                  height: 52,
-                  color: colors.textSecondary.withValues(alpha: 0.15),
-                  child: Icon(Icons.music_note, color: colors.textSecondary),
-                ),
+            SongArtwork(
+              id: int.tryParse(song.id) ?? 0,
+              size: 52,
+              radius: 10,
+              loadSize: 200,
+              placeholder: Container(
+                width: 52,
+                height: 52,
+                color: colors.textSecondary.withValues(alpha: 0.15),
+                child: Icon(Icons.music_note, color: colors.textSecondary),
               ),
             ),
             const SizedBox(width: 12),

@@ -13,13 +13,11 @@ import 'glass_container.dart';
 class AppTopBar extends StatelessWidget {
   final int currentTab;
   final String currentSortFilter;
-  final VoidCallback? onInfoTap;
 
   const AppTopBar({
     super.key,
     required this.currentTab,
     required this.currentSortFilter,
-    this.onInfoTap,
   });
 
   @override
@@ -63,24 +61,16 @@ class AppTopBar extends StatelessWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            GestureDetector(
-              onTap: onInfoTap,
-              behavior: HitTestBehavior.opaque,
-              child: GlassContainer(
-                // Memberikan ruang di dalam kaca agar teks tidak mepet
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                radius: 20, // Sudut melengkung kapsul
-                child: Text(
-                  'LYRA MUSIC',
-                  style: TextStyle(
-                    fontFamily: 'LyraFont',
-                    fontSize: 22, // Sedikit dikecilkan agar pas di dalam kapsul
-                    letterSpacing: -0.5,
-                    color: Colors.black87, // Teks tetap hitam
-                  ),
+            GlassContainer(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              radius: 20, // Sudut melengkung kapsul
+              child: Text(
+                'LYRA MUSIC',
+                style: TextStyle(
+                  fontFamily: 'LyraFont',
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                  color: Colors.black87,
                 ),
               ),
             ),

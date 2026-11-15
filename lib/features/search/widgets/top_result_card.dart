@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import '../../../widgets/song_artwork.dart';
 import '../../../models/song.dart' as local;
 import '../../../theme/lyra_colors.dart';
 import '../../../widgets/lyra_bottom_bar.dart';
@@ -25,24 +25,19 @@ class TopResultCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: QueryArtworkWidget(
-                id: int.tryParse(song.albumId) ?? 0,
-                type: ArtworkType.ALBUM,
-                size: 200,
-                artworkWidth: 96,
-                artworkHeight: 96,
-                artworkBorder: BorderRadius.circular(16),
-                nullArtworkWidget: Container(
-                  width: 96,
-                  height: 96,
-                  color: colors.textSecondary.withValues(alpha: 0.15),
-                  child: Icon(
-                    Icons.music_note,
-                    size: 40,
-                    color: colors.textSecondary,
-                  ),
+            SongArtwork(
+              id: int.tryParse(song.id) ?? 0,
+              size: 96,
+              radius: 16,
+              loadSize: 200,
+              placeholder: Container(
+                width: 96,
+                height: 96,
+                color: colors.textSecondary.withValues(alpha: 0.15),
+                child: Icon(
+                  Icons.music_note,
+                  size: 40,
+                  color: colors.textSecondary,
                 ),
               ),
             ),
