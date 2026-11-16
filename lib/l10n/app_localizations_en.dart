@@ -481,5 +481,66 @@ class AppLocalizationsEn extends AppLocalizations {
   String get locationLabel => 'Location';
 
   @override
-  String get pathCopied => 'Folder path copied to clipboard!';
+  String get profile => 'Profile';
+
+  @override
+  String get defaultProfileName => 'Lyra User';
+
+  @override
+  String get enterName => 'Enter Name';
+
+  @override
+  String get cropProfilePhoto => 'Crop Profile Photo';
+
+  @override
+  String get profileUpdated => 'Profile updated successfully';
+
+  @override
+  String get pickFromGallery => 'Pick from Gallery';
+
+  @override
+  String get removePhoto => 'Remove Photo';
+
+  @override
+  String get noSongPlaying => 'No song playing';
+
+  @override
+  String get backLabel => 'Back';
+
+  @override
+  String playingFrom(String source) {
+    return 'Playing from $source';
+  }
+
+  @override
+  String get sleepTimer => 'Sleep timer';
+
+  @override
+  String timeRemaining(String time) {
+    return 'Time remaining: $time';
+  }
+
+  @override
+  String get offLabel => 'Off';
+
+  @override
+  String get minutes30 => '30 minutes';
+
+  @override
+  String get hour1 => '1 hour';
+
+  @override
+  String get hour1Min30 => '1 hour 30 minutes';
+
+  @override
+  String get hours2 => '2 hours';
+
+  @override
+  String get customLabel => 'Custom';
+
+  @override
+  String get appVolume => 'App Volume';
+
+  @override
+  String get speedLabel => 'Speed';
 }

@@ -959,11 +959,125 @@ abstract class AppLocalizations {
   /// **'Location'**
   String get locationLabel;
 
-  /// No description provided for @pathCopied.
+  /// No description provided for @profile.
   ///
   /// In en, this message translates to:
-  /// **'Folder path copied to clipboard!'**
-  String get pathCopied;
+  /// **'Profile'**
+  String get profile;
+
+  /// No description provided for @defaultProfileName.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyra User'**
+  String get defaultProfileName;
+
+  /// No description provided for @enterName.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Name'**
+  String get enterName;
+
+  /// No description provided for @cropProfilePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop Profile Photo'**
+  String get cropProfilePhoto;
+
+  /// No description provided for @profileUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile updated successfully'**
+  String get profileUpdated;
+
+  /// No description provided for @pickFromGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick from Gallery'**
+  String get pickFromGallery;
+
+  /// No description provided for @removePhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Photo'**
+  String get removePhoto;
+
+  /// No description provided for @noSongPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'No song playing'**
+  String get noSongPlaying;
+
+  /// No description provided for @backLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get backLabel;
+
+  /// No description provided for @playingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing from {source}'**
+  String playingFrom(String source);
+
+  /// No description provided for @sleepTimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep timer'**
+  String get sleepTimer;
+
+  /// No description provided for @timeRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Time remaining: {time}'**
+  String timeRemaining(String time);
+
+  /// No description provided for @offLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get offLabel;
+
+  /// No description provided for @minutes30.
+  ///
+  /// In en, this message translates to:
+  /// **'30 minutes'**
+  String get minutes30;
+
+  /// No description provided for @hour1.
+  ///
+  /// In en, this message translates to:
+  /// **'1 hour'**
+  String get hour1;
+
+  /// No description provided for @hour1Min30.
+  ///
+  /// In en, this message translates to:
+  /// **'1 hour 30 minutes'**
+  String get hour1Min30;
+
+  /// No description provided for @hours2.
+  ///
+  /// In en, this message translates to:
+  /// **'2 hours'**
+  String get hours2;
+
+  /// No description provided for @customLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get customLabel;
+
+  /// No description provided for @appVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'App Volume'**
+  String get appVolume;
+
+  /// No description provided for @speedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get speedLabel;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

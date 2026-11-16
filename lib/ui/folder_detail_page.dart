@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audio_service/audio_service.dart';
 import '../main.dart';
+import '../widgets/lyra_header.dart';
 import '../models/song.dart' as local;
 import '../database/database.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../theme/lyra_colors.dart';
 import '../widgets/song_artwork.dart';
 import '../l10n/app_localizations.dart';
-import '../features/playlist/widgets/playlist_track_list.dart'; // Untuk EqualizerAnimation
+import '../features/playlist/widgets/playlist_track_list.dart';
 
 class FolderDetailPage extends StatelessWidget {
   final String folderName;
@@ -338,56 +339,39 @@ class FolderDetailPage extends StatelessWidget {
 
                   const SizedBox(width: 12),
 
-                  // KAPSUL KANAN (Shuffle + Play)
-                  Container(
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: isDark
-                          ? []
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                    ),
-                    child: Row(
+                  TopBarButton(
+                    isCircle: false,
+                    onTap: () {}, // Dummy karena di dalamnya ada tombol
+                    customChild: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        InkWell(
-                          onTap: () => _playQueue(context, 0, shuffle: true),
-                          borderRadius: const BorderRadius.horizontal(
-                            left: Radius.circular(24),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Icon(
-                              Icons.shuffle_rounded,
-                              color: colors.textPrimary,
-                              size: 20,
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => _playQueue(context, 0, shuffle: true),
+                            child: const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Icon(
+                                Icons.shuffle,
+                                color: Colors.black,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),
-                        InkWell(
-                          onTap: () => _playQueue(context, 0),
-                          borderRadius: const BorderRadius.horizontal(
-                            right: Radius.circular(24),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Icon(
-                              Icons.play_arrow_rounded,
-                              color: colors.textPrimary,
-                              size: 24,
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => _playQueue(context, 0),
+                            child: const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Icon(
+                                Icons.play_arrow,
+                                color: Colors.black,
+                                size: 20,
+                              ),
                             ),
                           ),
                         ),

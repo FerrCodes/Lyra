@@ -15,6 +15,7 @@ import '../database/database.dart';
 import '../models/song.dart' as local;
 import '../widgets/media_icons.dart';
 import 'queue_page.dart';
+import '../l10n/app_localizations.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../widgets/song_artwork.dart';
 
@@ -100,7 +101,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Tidak ada lagu yang diputar',
+                      AppLocalizations.of(context)!.noSongPlaying,
                       style: TextStyle(fontSize: 16, color: colors.textPrimary),
                     ),
                     const SizedBox(height: 16),
@@ -110,7 +111,7 @@ class _PlayerPageState extends State<PlayerPage> {
                         backgroundColor: colors.accent,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Text('Kembali'),
+                      child: Text(AppLocalizations.of(context)!.backLabel),
                     ),
                   ],
                 ),
@@ -168,7 +169,9 @@ class _PlayerPageState extends State<PlayerPage> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      'Playing from ${item.extras?['sourceType'] ?? ''}',
+                                      AppLocalizations.of(context)!.playingFrom(
+                                        item.extras?['sourceType'] ?? '',
+                                      ),
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: colors.textSecondary,
@@ -488,7 +491,13 @@ class _PlayerPageState extends State<PlayerPage> {
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              playing ? 'Pause' : 'Play',
+                                              playing
+                                                  ? AppLocalizations.of(
+                                                      context,
+                                                    )!.pauseLabel
+                                                  : AppLocalizations.of(
+                                                      context,
+                                                    )!.playLabel,
                                               style: TextStyle(
                                                 color: accentColor,
                                                 fontSize: 16,
@@ -615,8 +624,12 @@ class _PlayerPageState extends State<PlayerPage> {
                                             }
                                             return Tooltip(
                                               message: isActive
-                                                  ? 'Sisa waktu: $timeText'
-                                                  : 'Sleep timer',
+                                                  ? AppLocalizations.of(
+                                                      context,
+                                                    )!.timeRemaining(timeText)
+                                                  : AppLocalizations.of(
+                                                      context,
+                                                    )!.sleepTimer,
                                               child: GlassContainer(
                                                 width: 44,
                                                 height: 44,
@@ -840,7 +853,7 @@ class _PlayerPageState extends State<PlayerPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Sleep timer',
+                          AppLocalizations.of(context)!.sleepTimer,
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -852,7 +865,7 @@ class _PlayerPageState extends State<PlayerPage> {
                         // Opsi OFF
                         _buildRadioTimerOption(
                           context,
-                          'Off',
+                          AppLocalizations.of(context)!.offLabel,
                           !isActive, // Terpilih jika timer mati
                           () {
                             handler.cancelSleepTimer();
@@ -860,11 +873,10 @@ class _PlayerPageState extends State<PlayerPage> {
                           },
                           colors,
                         ),
-
                         // Opsi 30 Menit
                         _buildRadioTimerOption(
                           context,
-                          '30 minutes',
+                          AppLocalizations.of(context)!.minutes30,
                           isSelected(const Duration(minutes: 30)),
                           () {
                             handler.startSleepTimer(
@@ -874,11 +886,10 @@ class _PlayerPageState extends State<PlayerPage> {
                           },
                           colors,
                         ),
-
                         // Opsi 1 Jam
                         _buildRadioTimerOption(
                           context,
-                          '1 hour',
+                          AppLocalizations.of(context)!.hour1,
                           isSelected(const Duration(hours: 1)),
                           () {
                             handler.startSleepTimer(const Duration(hours: 1));
@@ -886,11 +897,10 @@ class _PlayerPageState extends State<PlayerPage> {
                           },
                           colors,
                         ),
-
                         // Opsi 1 Jam 30 Menit
                         _buildRadioTimerOption(
                           context,
-                          '1 hour 30 minutes',
+                          AppLocalizations.of(context)!.hour1Min30,
                           isSelected(const Duration(hours: 1, minutes: 30)),
                           () {
                             handler.startSleepTimer(
@@ -900,11 +910,10 @@ class _PlayerPageState extends State<PlayerPage> {
                           },
                           colors,
                         ),
-
                         // Opsi 2 Jam
                         _buildRadioTimerOption(
                           context,
-                          '2 hours',
+                          AppLocalizations.of(context)!.hours2,
                           isSelected(const Duration(hours: 2)),
                           () {
                             handler.startSleepTimer(const Duration(hours: 2));
@@ -912,11 +921,10 @@ class _PlayerPageState extends State<PlayerPage> {
                           },
                           colors,
                         ),
-
                         // Opsi CUSTOM
                         _buildRadioTimerOption(
                           context,
-                          'Custom',
+                          AppLocalizations.of(context)!.customLabel,
                           isActive &&
                               !isSelected(const Duration(minutes: 30)) &&
                               !isSelected(const Duration(hours: 1)) &&
@@ -1050,7 +1058,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   const SizedBox(height: 32),
 
                   Text(
-                    'Volume Aplikasi',
+                    AppLocalizations.of(context)!.appVolume,
                     style: TextStyle(fontSize: 12, color: colors.textSecondary),
                   ),
                   const SizedBox(height: 8),
@@ -1094,7 +1102,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   const SizedBox(height: 16),
 
                   Text(
-                    'Kecepatan',
+                    AppLocalizations.of(context)!.speedLabel,
                     style: TextStyle(fontSize: 12, color: colors.textSecondary),
                   ),
                   const SizedBox(height: 12),

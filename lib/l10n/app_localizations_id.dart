@@ -481,5 +481,66 @@ class AppLocalizationsId extends AppLocalizations {
   String get locationLabel => 'Lokasi';
 
   @override
-  String get pathCopied => 'Lokasi folder disalin ke clipboard!';
+  String get profile => 'Profil';
+
+  @override
+  String get defaultProfileName => 'Pengguna Lyra';
+
+  @override
+  String get enterName => 'Masukan Nama';
+
+  @override
+  String get cropProfilePhoto => 'Potong Foto Profil';
+
+  @override
+  String get profileUpdated => 'Profil berhasil diperbarui';
+
+  @override
+  String get pickFromGallery => 'Ambil dari Galeri';
+
+  @override
+  String get removePhoto => 'Hapus Foto';
+
+  @override
+  String get noSongPlaying => 'Tidak ada lagu yang diputar';
+
+  @override
+  String get backLabel => 'Kembali';
+
+  @override
+  String playingFrom(String source) {
+    return 'Diputar dari $source';
+  }
+
+  @override
+  String get sleepTimer => 'Sleep timer';
+
+  @override
+  String timeRemaining(String time) {
+    return 'Sisa waktu: $time';
+  }
+
+  @override
+  String get offLabel => 'Off';
+
+  @override
+  String get minutes30 => '30 minutes';
+
+  @override
+  String get hour1 => '1 hour';
+
+  @override
+  String get hour1Min30 => '1 hour 30 minutes';
+
+  @override
+  String get hours2 => '2 hours';
+
+  @override
+  String get customLabel => 'Custom';
+
+  @override
+  String get appVolume => 'Volume Aplikasi';
+
+  @override
+  String get speedLabel => 'Kecepatan';
 }

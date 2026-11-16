@@ -1,13 +1,14 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/glass_container.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/profile_provider.dart';
 import '../widgets/default_profile_avatar.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -19,7 +20,7 @@ class ProfilePage extends ConsumerStatefulWidget {
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   String? _currentImagePath;
   String? _originalImagePath;
-  String _originalName = 'Pengguna Lyra';
+  String _originalName = '';
 
   late TextEditingController _nameController;
 
@@ -49,8 +50,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       setState(() {
         _originalImagePath = prefs.getString('profile_image');
         _currentImagePath = _originalImagePath;
-
-        _originalName = prefs.getString('profile_name') ?? 'Pengguna Lyra';
+        _originalName =
+            prefs.getString('profile_name') ??
+            AppLocalizations.of(context)!.defaultProfileName;
         _nameController.text = _originalName;
       });
     }
@@ -66,7 +68,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
           uiSettings: [
             AndroidUiSettings(
-              toolbarTitle: 'Potong Foto Profil',
+              toolbarTitle: AppLocalizations.of(context)!.cropProfilePhoto,
               toolbarColor: const Color(0xFF673AB7),
               toolbarWidgetColor: Colors.white,
               initAspectRatio: CropAspectRatioPreset.square,
@@ -135,8 +137,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil berhasil diperbarui'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.profileUpdated),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -241,7 +243,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                                   color: Colors.black87,
                                 ),
                                 decoration: InputDecoration(
-                                  labelText: 'Masukan Nama',
+                                  labelText: AppLocalizations.of(
+                                    context,
+                                  )!.enterName,
                                   labelStyle: TextStyle(
                                     color: Colors.grey.shade600,
                                     fontWeight: FontWeight.w500,
@@ -373,19 +377,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       ),
                     ),
                   ),
-
-                  const Expanded(
+                  Expanded(
                     child: Center(
                       child: Text(
-                        'Profil',
-                        style: TextStyle(
+                        AppLocalizations.of(context)!.profile,
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                     ),
                   ),
-
                   GestureDetector(
                     onTap: _hasChanges ? _saveChanges : null,
                     child: Container(
@@ -436,7 +438,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               children: [
                 _buildPhotoOption(
                   icon: Icons.add_photo_alternate,
-                  label: 'Ambil dari Galeri',
+                  label: AppLocalizations.of(context)!.pickFromGallery,
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage();
@@ -444,7 +446,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 _buildPhotoOption(
                   icon: Icons.delete_outline,
-                  label: 'Hapus Foto',
+                  label: AppLocalizations.of(context)!.removePhoto,
                   iconColor: Colors.redAccent,
                   onTap: () {
                     Navigator.pop(context);
