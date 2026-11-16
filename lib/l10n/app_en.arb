@@ -12,7 +12,7 @@
   "deviceSettings": "Device Settings",
   "lyraNotification": "Lyra Notifications",
   "lyraNotificationDesc": "Manage how Lyra sends notifications",
-  "appPermissions": "App Permissions",
+  "appPermissions": "Permissions",
   "appPermissionsDesc": "Manage file and media access",
   "battery": "Battery & Background",
   "batteryDesc": "Allow Lyra to run when screen is off",

@@ -146,6 +146,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
         layoutBuilder: (currentChild, previousChildren) {
           return Stack(
             alignment: Alignment.bottomCenter,
+            clipBehavior: Clip.none,
             children: [
               ...previousChildren,
               if (currentChild != null) currentChild,
@@ -352,23 +353,31 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
   Widget _buildTabRow(LyraColors colors) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const hPad = 6.0;
-        const pillInset = 3.0;
+        const hPad = 8.0;
+        const diameter = 54.0; // sama dengan tinggi bar
         final colWidth = (constraints.maxWidth - hPad * 2) / 4;
+        // Lingkaran menempel ke ujung bar di tab pertama dan terakhir,
+        // jarak antar tab dibagi rata di antaranya.
+        final travel = constraints.maxWidth - diameter - hPad * 2;
+        double circleLeft(int i) => hPad + travel * i / 3;
+        // Geser isi tiap tab agar tepat di tengah lingkaran.
+        double shift(int i) =>
+            (hPad + diameter / 2 + travel * i / 3) -
+            (hPad + colWidth * (i + 0.5));
 
         return Stack(
           children: [
             AnimatedPositioned(
               duration: const Duration(milliseconds: 280),
               curve: Curves.easeOutCubic,
-              left: hPad + colWidth * widget.currentIndex + pillInset,
-              top: 5,
-              bottom: 5,
-              width: colWidth - pillInset * 2,
+              left: circleLeft(widget.currentIndex),
+              top: 0,
+              bottom: 0,
+              width: diameter,
               child: Container(
                 decoration: BoxDecoration(
                   color: colors.textPrimary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(24),
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
@@ -377,31 +386,43 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
               child: Row(
                 children: [
                   Expanded(
-                    child: _buildNavIcon(
-                      0,
-                      Icons.home_filled,
-                      AppLocalizations.of(context)!.navHome,
+                    child: Transform.translate(
+                      offset: Offset(shift(0), 0),
+                      child: _buildNavIcon(
+                        0,
+                        Icons.home_filled,
+                        AppLocalizations.of(context)!.navHome,
+                      ),
                     ),
                   ),
                   Expanded(
-                    child: _buildNavIcon(
-                      1,
-                      Icons.music_note_rounded,
-                      AppLocalizations.of(context)!.navSongs,
+                    child: Transform.translate(
+                      offset: Offset(shift(1), 0),
+                      child: _buildNavIcon(
+                        1,
+                        Icons.music_note_rounded,
+                        AppLocalizations.of(context)!.navSongs,
+                      ),
                     ),
                   ),
                   Expanded(
-                    child: _buildNavIcon(
-                      2,
-                      Icons.queue_music_rounded,
-                      AppLocalizations.of(context)!.navPlaylist,
+                    child: Transform.translate(
+                      offset: Offset(shift(2), 0),
+                      child: _buildNavIcon(
+                        2,
+                        Icons.queue_music_rounded,
+                        AppLocalizations.of(context)!.navPlaylist,
+                      ),
                     ),
                   ),
                   Expanded(
-                    child: _buildNavIcon(
-                      3,
-                      Icons.library_music_rounded,
-                      AppLocalizations.of(context)!.navLibrary,
+                    child: Transform.translate(
+                      offset: Offset(shift(3), 0),
+                      child: _buildNavIcon(
+                        3,
+                        Icons.library_music_rounded,
+                        AppLocalizations.of(context)!.navLibrary,
+                      ),
                     ),
                   ),
                 ],

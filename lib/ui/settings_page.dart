@@ -24,6 +24,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   String _cacheSize = 'Menghitung...';
   bool _isLanguageMenuOpen = false;
   final GlobalKey _languageItemKey = GlobalKey();
+  bool _isThemeMenuOpen = false;
+  final GlobalKey _themeItemKey = GlobalKey();
 
   @override
   void initState() {
@@ -235,53 +237,146 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  void _showThemeDialog() {
-    showModalBottomSheet(
+  Future<void> _showThemeMenu(BuildContext context, WidgetRef ref) async {
+    final currentMode = ref.read(themeModeProvider);
+
+    final RenderBox? button =
+        _themeItemKey.currentContext?.findRenderObject() as RenderBox?;
+    if (button == null) return;
+
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
+
+    setState(() => _isThemeMenuOpen = true);
+
+    final result = await showGeneralDialog<ThemeMode>(
       context: context,
-      builder: (context) {
-        final currentMode = ref.read(themeModeProvider);
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(AppLocalizations.of(context)!.systemDefault),
-                trailing: currentMode == ThemeMode.system
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  ref
-                      .read(themeModeProvider.notifier)
-                      .setTheme(ThemeMode.system);
-                  Navigator.pop(context);
-                },
+      barrierDismissible: true,
+      barrierLabel: 'Theme Menu',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 150),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        final colors = context.lyra;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final l10n = AppLocalizations.of(context)!;
+
+        return Stack(
+          children: [
+            Positioned(
+              top: buttonPosition.dy + button.size.height - 12,
+              right:
+                  overlay.size.width -
+                  buttonPosition.dx -
+                  button.size.width +
+                  4,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 200,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colors.textSecondary.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildThemeMenuItem(
+                        context,
+                        ThemeMode.system,
+                        l10n.systemDefault,
+                        currentMode,
+                        colors,
+                      ),
+                      Divider(
+                        color: colors.textSecondary.withValues(alpha: 0.1),
+                        height: 1,
+                      ),
+                      _buildThemeMenuItem(
+                        context,
+                        ThemeMode.light,
+                        l10n.light,
+                        currentMode,
+                        colors,
+                      ),
+                      Divider(
+                        color: colors.textSecondary.withValues(alpha: 0.1),
+                        height: 1,
+                      ),
+                      _buildThemeMenuItem(
+                        context,
+                        ThemeMode.dark,
+                        l10n.dark,
+                        currentMode,
+                        colors,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              ListTile(
-                title: Text(AppLocalizations.of(context)!.light),
-                trailing: currentMode == ThemeMode.light
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  ref
-                      .read(themeModeProvider.notifier)
-                      .setTheme(ThemeMode.light);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: Text(AppLocalizations.of(context)!.dark),
-                trailing: currentMode == ThemeMode.dark
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  ref.read(themeModeProvider.notifier).setTheme(ThemeMode.dark);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
+    );
+
+    if (mounted) setState(() => _isThemeMenuOpen = false);
+
+    if (result != null && result != currentMode) {
+      ref.read(themeModeProvider.notifier).setTheme(result);
+    }
+  }
+
+  Widget _buildThemeMenuItem(
+    BuildContext context,
+    ThemeMode value,
+    String label,
+    ThemeMode currentMode,
+    LyraColors colors,
+  ) {
+    final isSelected = value == currentMode;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.pop(context, value),
+        borderRadius: BorderRadius.circular(12),
+        splashColor: colors.textPrimary.withValues(alpha: 0.1),
+        highlightColor: colors.textPrimary.withValues(alpha: 0.05),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+              if (isSelected) Icon(Icons.check, color: colors.accent, size: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -321,16 +416,73 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   colors: colors,
                   isDark: isDark,
                   children: [
-                    _buildArrowTile(
-                      icon: Icons.palette_outlined,
-                      title: l10n.theme,
-                      subtitle: themeMode == ThemeMode.system
-                          ? l10n.systemDefault
-                          : themeMode == ThemeMode.light
-                          ? l10n.light
-                          : l10n.dark,
-                      onTap: _showThemeDialog,
-                      colors: colors,
+                    GestureDetector(
+                      key: _themeItemKey,
+                      onTap: () => _showThemeMenu(context, ref),
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: colors.accent.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.palette_outlined,
+                                color: colors.accent,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.theme,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    themeMode == ThemeMode.system
+                                        ? l10n.systemDefault
+                                        : themeMode == ThemeMode.light
+                                        ? l10n.light
+                                        : l10n.dark,
+                                    style: TextStyle(
+                                      color: colors.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            AnimatedRotation(
+                              turns: _isThemeMenuOpen ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              child: Icon(
+                                Icons.keyboard_arrow_down,
+                                color: colors.textSecondary.withValues(
+                                  alpha: 0.5,
+                                ),
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     _buildDivider(colors),
                     GestureDetector(
@@ -444,7 +596,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                     _buildDivider(colors),
                     _buildArrowTile(
-                      icon: Icons.security_outlined,
+                      icon: Icons.android,
                       title: l10n.appPermissions,
                       onTap: () => openAppSettings(),
                       colors: colors,

@@ -24,7 +24,6 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
   int _totalFavorites = 0;
   int _totalPlaylists = 0;
   final ScrollController _scrollController = ScrollController();
-
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
 
@@ -244,32 +243,6 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
                   MaterialPageRoute(builder: (_) => const FavoritesPage()),
                 );
               },
-              colors,
-            ),
-            const SizedBox(height: 12),
-            _buildCategoryCard(
-              AppLocalizations.of(context)!.albums,
-              AppLocalizations.of(context)!.albumsCount(totalAlbums),
-              Icons.album,
-              Colors.blueAccent,
-              isDark,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AlbumsPage()),
-              ),
-              colors,
-            ),
-            const SizedBox(height: 12),
-            _buildCategoryCard(
-              AppLocalizations.of(context)!.artists,
-              AppLocalizations.of(context)!.artistsCount(totalArtists),
-              Icons.person,
-              Colors.greenAccent.shade700,
-              isDark,
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ArtistsPage()),
-              ),
               colors,
             ),
             const SizedBox(height: 12),
