@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../../database/database.dart';
@@ -36,11 +37,15 @@ class _AddTracksSheetState extends ConsumerState<AddTracksSheet> {
       builder: (context, scrollController) {
         return allSongsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Gagal memuat lagu: $err')),
+          error: (err, stack) => Center(
+            child: Text(
+              AppLocalizations.of(context)!.failedToLoadSongs(err.toString()),
+            ),
+          ),
           data: (songs) {
             if (songs.isEmpty) {
-              return const Center(
-                child: Text('Belum ada lagu di perangkatmu.'),
+              return Center(
+                child: Text(AppLocalizations.of(context)!.noSongsInDevice),
               );
             }
 
@@ -81,9 +86,9 @@ class _AddTracksSheetState extends ConsumerState<AddTracksSheet> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Pilih Lagu',
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.selectSong,
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -109,7 +114,7 @@ class _AddTracksSheetState extends ConsumerState<AddTracksSheet> {
                       });
                     },
                     decoration: InputDecoration(
-                      hintText: 'Cari lagu atau artis...',
+                      hintText: AppLocalizations.of(context)!.searchSongHint,
                       prefixIcon: const Icon(Icons.search, color: Colors.grey),
                       filled: true,
                       fillColor: Colors.grey.shade100,
@@ -216,7 +221,9 @@ class _AddTracksSheetState extends ConsumerState<AddTracksSheet> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        '${song.title} ditambahkan',
+                                        AppLocalizations.of(
+                                          context,
+                                        )!.songAdded(song.title),
                                       ),
                                       duration: const Duration(seconds: 1),
                                     ),

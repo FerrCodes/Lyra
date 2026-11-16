@@ -16,6 +16,7 @@ import '../../features/playlist/sheets/edit_playlist_sheet.dart';
 import '../providers/songs_provider.dart';
 import '../widgets/lyra_header.dart';
 import '../widgets/song_artwork.dart';
+import '../l10n/app_localizations.dart';
 import '../preferences/preferences_provider.dart';
 import 'package:audio_service/audio_service.dart';
 
@@ -81,9 +82,13 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       setState(() => _isLoading = false);
 
       // Beri tahu user kalau database gagal dimuat
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal memuat lagu: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.gagalMemuatLagu(e.toString()),
+          ),
+        ),
+      );
     }
   }
 
@@ -208,9 +213,13 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       _loadSongs();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menghapus lagu: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.gagalMenghapusLagu(e.toString()),
+          ),
+        ),
+      );
     }
   }
 
@@ -274,19 +283,21 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.playlist_add, color: Colors.black87),
-              title: const Text('Add to Playlist'),
+              title: Text(AppLocalizations.of(context)!.addToPlaylist),
               onTap: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Fitur Add to Playlist segera hadir'),
+                  SnackBar(
+                    content: Text(
+                      AppLocalizations.of(context)!.addToPlaylistComingSoon,
+                    ),
                   ),
                 );
               },
             ),
             ListTile(
               leading: const Icon(Icons.info_outline, color: Colors.black87),
-              title: const Text('Track details'),
+              title: Text(AppLocalizations.of(context)!.trackDetails),
               onTap: () {
                 Navigator.pop(context);
                 _showTrackDetails(song);
@@ -294,9 +305,9 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text(
-                'Delete from Playlist',
-                style: TextStyle(color: Colors.red),
+              title: Text(
+                AppLocalizations.of(context)!.deleteFromPlaylist,
+                style: const TextStyle(color: Colors.red),
               ),
               onTap: () {
                 Navigator.pop(context);
@@ -315,22 +326,24 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Track details'),
+        title: Text(AppLocalizations.of(context)!.trackDetails),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Title: ${song.title}',
+              '${AppLocalizations.of(context)!.titleLabel}: ${song.title}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
-            Text('Artist: ${song.artist}'),
+            Text(
+              '${AppLocalizations.of(context)!.artistLabel}: ${song.artist}',
+            ),
             const SizedBox(height: 4),
-            Text('Album: ${song.album}'),
+            Text('${AppLocalizations.of(context)!.albumLabel}: ${song.album}'),
             const SizedBox(height: 4),
             Text(
-              'Path: ${song.path}',
+              '${AppLocalizations.of(context)!.pathLabel}: ${song.path}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
@@ -338,7 +351,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
+            child: Text(AppLocalizations.of(context)!.closeLabel),
           ),
         ],
       ),
@@ -370,7 +383,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   void _showPlaylistImage() {
     if (_currentImagePath == null || _currentImagePath!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Playlist ini belum memiliki foto.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.playlistNoPhoto)),
       );
       return;
     }
@@ -483,19 +496,31 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildTopAction(Icons.crop_free, 'Lihat Foto', () {
-                            Navigator.of(context, rootNavigator: true).pop();
-                            _showPlaylistImage();
-                          }),
-                          _buildTopAction(Icons.edit, 'Edit Playlist', () {
-                            Navigator.of(context, rootNavigator: true).pop();
-                            _showEditPlaylistBottomSheet();
-                          }),
+                          _buildTopAction(
+                            Icons.crop_free,
+                            AppLocalizations.of(context)!.viewPhoto,
+                            () {
+                              Navigator.of(context, rootNavigator: true).pop();
+                              _showPlaylistImage();
+                            },
+                          ),
+                          _buildTopAction(
+                            Icons.edit,
+                            AppLocalizations.of(context)!.editPlaylist,
+                            () {
+                              Navigator.of(context, rootNavigator: true).pop();
+                              _showEditPlaylistBottomSheet();
+                            },
+                          ),
                         ],
                       ),
                     ),
                     const Divider(height: 1, thickness: 0.5),
-                    _buildListTile(Icons.playlist_play, 'Play Next', () {}),
+                    _buildListTile(
+                      Icons.playlist_play,
+                      AppLocalizations.of(context)!.playNext,
+                      () {},
+                    ),
                     const SizedBox(height: 8),
                   ],
                 ),
@@ -601,10 +626,10 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   ),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Text(
-                  'Urutkan dari:',
+                  AppLocalizations.of(context)!.sortBy,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -614,11 +639,31 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
               ),
               const SizedBox(height: 8),
               // Kirim bottomSheetContext ke fungsi
-              _buildSortOption(bottomSheetContext, 'Urutan khusus'),
-              _buildSortOption(bottomSheetContext, 'Judul'),
-              _buildSortOption(bottomSheetContext, 'Artis'),
-              _buildSortOption(bottomSheetContext, 'Album'),
-              _buildSortOption(bottomSheetContext, 'Terakhir ditambahkan'),
+              _buildSortOption(
+                bottomSheetContext,
+                'Custom order',
+                AppLocalizations.of(context)!.sortCustom,
+              ),
+              _buildSortOption(
+                bottomSheetContext,
+                'Name',
+                AppLocalizations.of(context)!.sortTitle,
+              ),
+              _buildSortOption(
+                bottomSheetContext,
+                'Artist',
+                AppLocalizations.of(context)!.sortArtist,
+              ),
+              _buildSortOption(
+                bottomSheetContext,
+                'Album',
+                AppLocalizations.of(context)!.sortAlbum,
+              ),
+              _buildSortOption(
+                bottomSheetContext,
+                'Date Added',
+                AppLocalizations.of(context)!.sortDateAdded,
+              ),
               const SizedBox(height: 24),
             ],
           ),
@@ -628,22 +673,18 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   }
 
   // parameter bottomSheetContext
-  Widget _buildSortOption(BuildContext bottomSheetContext, String title) {
-    // Mapping nama tampilan ke logika di _applySort
-    String sortKey = title;
-    if (title == 'Urutan khusus') sortKey = 'Custom order';
-    if (title == 'Judul') sortKey = 'Name';
-    if (title == 'Artis') sortKey = 'Artist';
-    if (title == 'Album') sortKey = 'Album';
-    if (title == 'Terakhir ditambahkan') sortKey = 'Date Added';
-
+  Widget _buildSortOption(
+    BuildContext bottomSheetContext,
+    String sortKey,
+    String label,
+  ) {
     // Cek apakah opsi ini yang sedang aktif
     final isSelected = _currentSort == sortKey;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 24),
       title: Text(
-        title,
+        label,
         style: TextStyle(
           fontSize: 16,
           color: isSelected ? Colors.blue.shade700 : Colors.black87,
@@ -677,15 +718,16 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     int hours = totalSeconds ~/ 3600;
     int minutes = (totalSeconds % 3600) ~/ 60;
 
+    final l10n = AppLocalizations.of(context)!;
     String durationText = '';
     if (hours > 0) {
       if (minutes > 0) {
-        durationText = '$hours jam $minutes menit';
+        durationText = l10n.hoursMinutes(hours, minutes);
       } else {
-        durationText = '$hours jam';
+        durationText = l10n.hoursOnly(hours);
       }
     } else {
-      durationText = '$minutes menit';
+      durationText = l10n.minutesOnly(minutes);
     }
 
     showModalBottomSheet(
@@ -712,23 +754,35 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   ),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 child: Text(
-                  'Info Playlist',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  AppLocalizations.of(context)!.playlistInfo,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               _buildInfoRow(
                 Icons.music_note,
-                'Total Lagu',
-                '${_songsInPlaylist.length} lagu',
+                AppLocalizations.of(context)!.totalSongs,
+                AppLocalizations.of(
+                  context,
+                )!.songsCount(_songsInPlaylist.length),
               ),
-              _buildInfoRow(Icons.timer, 'Total Durasi', durationText),
+              _buildInfoRow(
+                Icons.timer,
+                AppLocalizations.of(context)!.totalDuration,
+                durationText,
+              ),
               _buildInfoRow(
                 Icons.calendar_today,
-                'Tanggal Dibuat',
+                AppLocalizations.of(context)!.dateCreated,
                 DateFormat('dd/MM/yyyy').format(widget.playlist.createdAt),
               ),
               // Tampilkan total durasi yang sudah diformat
@@ -798,7 +852,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 controller: searchController,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: 'Cari lagu atau artis...',
+                  hintText: AppLocalizations.of(context)!.searchSongHint,
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -824,8 +878,8 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
-                  'Tutup',
+                child: Text(
+                  AppLocalizations.of(context)!.closeLabel,
                   style: TextStyle(color: Colors.white),
                 ),
               ),
@@ -882,9 +936,11 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  isPlaying ? 'Pause' : 'Play',
+                  isPlaying
+                      ? AppLocalizations.of(context)!.pauseLabel
+                      : AppLocalizations.of(context)!.playLabel,
                   style: const TextStyle(
-                    color: Colors.white, // Teks tetap putih
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -939,14 +995,8 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           ),
           const SizedBox(width: 12),
           _buildActionPill(
-            icon: Icons.filter_list,
-            label: 'Urutkan',
-            onTap: _showSortBottomSheet,
-          ),
-          const SizedBox(width: 8),
-          _buildActionPill(
             icon: Icons.format_list_bulleted,
-            label: 'Sesuaikan',
+            label: AppLocalizations.of(context)!.customizeLabel,
             onTap: () {
               setState(() {
                 _isSelectionMode = true;
@@ -955,14 +1005,20 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
           ),
           const SizedBox(width: 8),
           _buildActionPill(
+            icon: Icons.filter_list,
+            label: AppLocalizations.of(context)!.sortLabel,
+            onTap: _showSortBottomSheet,
+          ),
+          const SizedBox(width: 8),
+          _buildActionPill(
             icon: Icons.search,
-            label: 'Cari',
+            label: AppLocalizations.of(context)!.searchLabel,
             onTap: _showSearchBottomSheet,
           ),
           const SizedBox(width: 8),
           _buildActionPill(
             icon: Icons.info_outline,
-            label: 'Info',
+            label: AppLocalizations.of(context)!.infoLabel,
             onTap: _showInfoBottomSheet,
           ),
           const SizedBox(width: 8),
@@ -1202,7 +1258,9 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${_selectedSongIds.length} selected',
+                                AppLocalizations.of(
+                                  context,
+                                )!.selectedCount(_selectedSongIds.length),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -1344,11 +1402,19 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildBottomAction(Icons.play_arrow, 'Play', () {}),
-                      _buildBottomAction(Icons.add, 'Add', () {}),
+                      _buildBottomAction(
+                        Icons.play_arrow,
+                        AppLocalizations.of(context)!.playLabel,
+                        () {},
+                      ),
+                      _buildBottomAction(
+                        Icons.add,
+                        AppLocalizations.of(context)!.addLabel,
+                        () {},
+                      ),
                       _buildBottomAction(
                         Icons.remove_circle_outline,
-                        'Remove',
+                        AppLocalizations.of(context)!.removeLabel,
                         _removeSelectedSongs,
                       ),
                     ],

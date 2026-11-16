@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../database/database.dart';
 import '../../../providers/database_provider.dart';
 import 'package:flutter/services.dart';
+import '../../../l10n/app_localizations.dart';
 
 class EditPlaylistSheet extends ConsumerStatefulWidget {
   final Playlist playlist;
@@ -74,8 +75,8 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Ganti Foto Playlist',
+                Text(
+                  AppLocalizations.of(context)!.changePlaylistPhoto,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -152,9 +153,9 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Galeri',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.galleryLabel,
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
@@ -181,7 +182,9 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                             ),
                             uiSettings: [
                               AndroidUiSettings(
-                                toolbarTitle: 'Potong Foto',
+                                toolbarTitle: AppLocalizations.of(
+                                  context,
+                                )!.cropPhoto,
                                 toolbarColor: const Color(0xFF673AB7),
                                 toolbarWidgetColor: Colors.white,
                                 initAspectRatio: CropAspectRatioPreset.square,
@@ -216,9 +219,9 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
-                            'Kamera',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context)!.cameraLabel,
+                            style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.black87,
@@ -293,12 +296,15 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                   ),
                 ),
               ),
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Edit Playlist',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    AppLocalizations.of(context)!.editPlaylist,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -390,7 +396,7 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: 'Nama Playlist',
+                  labelText: AppLocalizations.of(context)!.playlistName,
                   filled: true,
                   fillColor: Colors.grey.shade100,
                   border: OutlineInputBorder(
@@ -406,7 +412,7 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                 maxLines: 2,
                 maxLength: 70,
                 decoration: InputDecoration(
-                  labelText: 'Deskripsi (Opsional)',
+                  labelText: AppLocalizations.of(context)!.descriptionOptional,
                   alignLabelWithHint: true,
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -435,9 +441,12 @@ class _EditPlaylistSheetState extends ConsumerState<EditPlaylistSheet> {
                     ),
                   ),
                   onPressed: _savePlaylist,
-                  child: const Text(
-                    'Simpan',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  child: Text(
+                    AppLocalizations.of(context)!.saveLabel,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

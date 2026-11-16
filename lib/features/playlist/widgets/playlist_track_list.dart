@@ -5,6 +5,7 @@ import '../../../main.dart';
 import 'dart:math' as math;
 import 'package:audio_service/audio_service.dart';
 import 'dart:async';
+import '../../../l10n/app_localizations.dart';
 import '../../../widgets/song_artwork.dart';
 
 class PlaylistTrackList extends StatelessWidget {
@@ -38,36 +39,29 @@ class PlaylistTrackList extends StatelessWidget {
     if (displayedSongs.isEmpty) {
       return SliverToBoxAdapter(
         child: Padding(
+          // Padding tetap dipertahankan agar teks tidak mepet ke pinggir layar
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEDEAE3),
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: const Column(
-              children: [
-                Text(
-                  'Belum ada lagu',
-                  style: TextStyle(
-                    color: Color(0xFF34322D),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+          child: Column(
+            children: [
+              Text(
+                AppLocalizations.of(context)!.belumAdaLagu,
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                 ),
-                SizedBox(height: 5),
-                Text(
-                  'Tambahkan beberapa lagu untuk mengisi playlist ini.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF817C73),
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppLocalizations.of(context)!.tambahkanLaguPlaylist,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 13,
+                  height: 1.4,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -79,9 +73,9 @@ class PlaylistTrackList extends StatelessWidget {
         onReorderItem: (oldIndex, newIndex) {
           if (currentSort != 'Custom order') {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ubah ke "Custom order" untuk menggeser lagu'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.customOrderToDrag),
+                duration: const Duration(seconds: 2),
               ),
             );
             return;
@@ -175,7 +169,7 @@ class PlaylistTrackList extends StatelessWidget {
             final isPlaying = currentMediaItem?.id == song.path;
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
@@ -5,7 +6,7 @@ import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 import '../database/database.dart';
 import '../providers/database_provider.dart';
 import 'playlist_detail_page.dart';
-import 'dart:io';
+import '../l10n/app_localizations.dart';
 import '../services/media_store_service.dart';
 import '../features/playlist/widgets/playlist_cover.dart';
 import '../preferences/preferences_provider.dart';
@@ -142,8 +143,8 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const SizedBox(width: 48),
-                      const Text(
-                        'Buat Playlist Baru',
+                      Text(
+                        AppLocalizations.of(context)!.createNewPlaylist,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -159,9 +160,11 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                           final name = nameController.text.trim();
                           if (name.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text(
-                                  'Nama playlist tidak boleh kosong',
+                                  AppLocalizations.of(
+                                    context,
+                                  )!.playlistNameEmpty,
                                 ),
                               ),
                             );
@@ -203,7 +206,13 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Gagal membuka galeri: $e')),
+                            SnackBar(
+                              content: Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.failedToOpenGallery(e.toString()),
+                              ),
+                            ),
                           );
                         }
                       }
@@ -265,7 +274,7 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                     controller: nameController,
                     autofocus: false, // Biarkan user lihat fotonya dulu
                     decoration: InputDecoration(
-                      labelText: 'Nama Playlist',
+                      labelText: AppLocalizations.of(context)!.playlistName,
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
@@ -317,14 +326,9 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildPopoverItem(Icons.sort, 'Urutkan', () {
-                      Navigator.pop(context);
-                      showFilterDialog();
-                    }),
-                    const Divider(height: 1, thickness: 0.5),
                     _buildPopoverItem(
                       Icons.create_new_folder_outlined,
-                      'Buat Playlist',
+                      AppLocalizations.of(context)!.createPlaylist,
                       () {
                         Navigator.pop(context);
                         showCreatePlaylistDialog();
@@ -396,15 +400,28 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildMenuOption(Icons.playlist_play, 'Play', () {
-                        Navigator.pop(context);
-                      }),
-                      _buildMenuOption(Icons.edit_outlined, 'Edit', () {
-                        Navigator.pop(context);
-                      }),
-                      _buildMenuOption(Icons.delete_outline, 'Delete', () {
-                        Navigator.pop(context);
-                      }, isDestructive: true),
+                      _buildMenuOption(
+                        Icons.playlist_play,
+                        AppLocalizations.of(context)!.playLabel,
+                        () {
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _buildMenuOption(
+                        Icons.edit_outlined,
+                        AppLocalizations.of(context)!.editLabel,
+                        () {
+                          Navigator.pop(context);
+                        },
+                      ),
+                      _buildMenuOption(
+                        Icons.delete_outline,
+                        AppLocalizations.of(context)!.deleteLabel,
+                        () {
+                          Navigator.pop(context);
+                        },
+                        isDestructive: true,
+                      ),
                     ],
                   ),
                 ),
@@ -426,12 +443,6 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
         title: Text(title, style: const TextStyle(fontSize: 14)),
         onTap: onTap,
       ),
-    );
-  }
-
-  void showFilterDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fitur filter playlist segera hadir!')),
     );
   }
 
@@ -758,15 +769,15 @@ class PlaylistPageState extends ConsumerState<PlaylistPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'Belum Ada Playlist',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Text(
+            AppLocalizations.of(context)!.noPlaylistYet,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Buat playlist pertamamu untuk\nmengelompokkan lagu favoritmu.',
+          Text(
+            AppLocalizations.of(context)!.createFirstPlaylistDesc,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: const TextStyle(color: Colors.grey),
           ),
         ],
       ),

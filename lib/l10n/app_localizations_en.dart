@@ -182,15 +182,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortName => 'Name';
 
   @override
-  String get sortArtist => 'Artist';
-
-  @override
-  String get sortDateAdded => 'Date Added';
-
-  @override
-  String get playNext => 'Play Next';
-
-  @override
   String willPlayNext(String title) {
     return '$title will play next';
   }
@@ -204,22 +195,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get addToPlaylist => 'Add to Playlist';
-
-  @override
   String get removeFromFavorites => 'Remove from Favorites';
 
   @override
   String get addToFavorites => 'Add to Favorites';
-
-  @override
-  String get trackDetails => 'Track details';
-
-  @override
-  String get albumLabel => 'Album';
-
-  @override
-  String get artistLabel => 'Artist';
 
   @override
   String get shareLabel => 'Share';
@@ -254,4 +233,199 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allSongs => 'All Songs';
+
+  @override
+  String get createNewPlaylist => 'Create New Playlist';
+
+  @override
+  String get playlistNameEmpty => 'Playlist name cannot be empty';
+
+  @override
+  String failedToOpenGallery(String error) {
+    return 'Failed to open gallery: $error';
+  }
+
+  @override
+  String get playlistName => 'Playlist Name';
+
+  @override
+  String get createPlaylist => 'Create Playlist';
+
+  @override
+  String get editLabel => 'Edit';
+
+  @override
+  String get deleteLabel => 'Delete';
+
+  @override
+  String get noPlaylistYet => 'No Playlist Yet';
+
+  @override
+  String get createFirstPlaylistDesc => 'Create your first playlist to\ngroup your favorite songs.';
+
+  @override
+  String get sortBy => 'Sort by:';
+
+  @override
+  String get sortCustom => 'Custom order';
+
+  @override
+  String get sortTitle => 'Title';
+
+  @override
+  String get sortArtist => 'Artist';
+
+  @override
+  String get sortAlbum => 'Album';
+
+  @override
+  String get sortDateAdded => 'Recently added';
+
+  @override
+  String get playlistInfo => 'Playlist Info';
+
+  @override
+  String get totalSongs => 'Total Songs';
+
+  @override
+  String get totalDuration => 'Total Duration';
+
+  @override
+  String get dateCreated => 'Date Created';
+
+  @override
+  String songsCount(int count) {
+    return '$count songs';
+  }
+
+  @override
+  String hoursMinutes(int hours, int minutes) {
+    return '$hours hours $minutes minutes';
+  }
+
+  @override
+  String hoursOnly(int hours) {
+    return '$hours hours';
+  }
+
+  @override
+  String minutesOnly(int minutes) {
+    return '$minutes minutes';
+  }
+
+  @override
+  String get searchSongHint => 'Search song or artist...';
+
+  @override
+  String get closeLabel => 'Close';
+
+  @override
+  String get sortLabel => 'Sort';
+
+  @override
+  String get customizeLabel => 'Customize';
+
+  @override
+  String get searchLabel => 'Search';
+
+  @override
+  String get infoLabel => 'Info';
+
+  @override
+  String get viewPhoto => 'View Photo';
+
+  @override
+  String get editPlaylist => 'Edit Playlist';
+
+  @override
+  String get playNext => 'Play Next';
+
+  @override
+  String get addToPlaylist => 'Add to Playlist';
+
+  @override
+  String get trackDetails => 'Track details';
+
+  @override
+  String get deleteFromPlaylist => 'Delete from Playlist';
+
+  @override
+  String selectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get removeLabel => 'Remove';
+
+  @override
+  String get addLabel => 'Add';
+
+  @override
+  String get playLabel => 'Play';
+
+  @override
+  String get titleLabel => 'Title';
+
+  @override
+  String get artistLabel => 'Artist';
+
+  @override
+  String get albumLabel => 'Album';
+
+  @override
+  String get pathLabel => 'Path';
+
+  @override
+  String gagalMemuatLagu(String error) {
+    return 'Failed to load songs: $error';
+  }
+
+  @override
+  String gagalMenghapusLagu(String error) {
+    return 'Failed to delete songs: $error';
+  }
+
+  @override
+  String get playlistNoPhoto => 'This playlist doesn\'t have a photo yet.';
+
+  @override
+  String get addToPlaylistComingSoon => 'Add to Playlist feature coming soon';
+
+  @override
+  String get changePlaylistPhoto => 'Change Playlist Photo';
+
+  @override
+  String get galleryLabel => 'Gallery';
+
+  @override
+  String get cameraLabel => 'Camera';
+
+  @override
+  String get cropPhoto => 'Crop Photo';
+
+  @override
+  String get descriptionOptional => 'Description (Optional)';
+
+  @override
+  String get saveLabel => 'Save';
+
+  @override
+  String get noSongsInDevice => 'No songs on your device yet.';
+
+  @override
+  String songAdded(String title) {
+    return '$title added';
+  }
+
+  @override
+  String get pauseLabel => 'Pause';
+
+  @override
+  String get belumAdaLagu => 'No songs yet';
+
+  @override
+  String get tambahkanLaguPlaylist => 'Add some songs to fill this playlist.';
+
+  @override
+  String get customOrderToDrag => 'Change to \"Custom order\" to drag songs';
 }

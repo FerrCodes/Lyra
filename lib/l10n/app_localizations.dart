@@ -425,24 +425,6 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get sortName;
 
-  /// No description provided for @sortArtist.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist'**
-  String get sortArtist;
-
-  /// No description provided for @sortDateAdded.
-  ///
-  /// In en, this message translates to:
-  /// **'Date Added'**
-  String get sortDateAdded;
-
-  /// No description provided for @playNext.
-  ///
-  /// In en, this message translates to:
-  /// **'Play Next'**
-  String get playNext;
-
   /// No description provided for @willPlayNext.
   ///
   /// In en, this message translates to:
@@ -461,12 +443,6 @@ abstract class AppLocalizations {
   /// **'{title} added to queue'**
   String addedToQueue(String title);
 
-  /// No description provided for @addToPlaylist.
-  ///
-  /// In en, this message translates to:
-  /// **'Add to Playlist'**
-  String get addToPlaylist;
-
   /// No description provided for @removeFromFavorites.
   ///
   /// In en, this message translates to:
@@ -478,24 +454,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add to Favorites'**
   String get addToFavorites;
-
-  /// No description provided for @trackDetails.
-  ///
-  /// In en, this message translates to:
-  /// **'Track details'**
-  String get trackDetails;
-
-  /// No description provided for @albumLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Album'**
-  String get albumLabel;
-
-  /// No description provided for @artistLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Artist'**
-  String get artistLabel;
 
   /// No description provided for @shareLabel.
   ///
@@ -556,6 +514,360 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All Songs'**
   String get allSongs;
+
+  /// No description provided for @createNewPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Create New Playlist'**
+  String get createNewPlaylist;
+
+  /// No description provided for @playlistNameEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist name cannot be empty'**
+  String get playlistNameEmpty;
+
+  /// No description provided for @failedToOpenGallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open gallery: {error}'**
+  String failedToOpenGallery(String error);
+
+  /// No description provided for @playlistName.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist Name'**
+  String get playlistName;
+
+  /// No description provided for @createPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Playlist'**
+  String get createPlaylist;
+
+  /// No description provided for @editLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get editLabel;
+
+  /// No description provided for @deleteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteLabel;
+
+  /// No description provided for @noPlaylistYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No Playlist Yet'**
+  String get noPlaylistYet;
+
+  /// No description provided for @createFirstPlaylistDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first playlist to\ngroup your favorite songs.'**
+  String get createFirstPlaylistDesc;
+
+  /// No description provided for @sortBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by:'**
+  String get sortBy;
+
+  /// No description provided for @sortCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom order'**
+  String get sortCustom;
+
+  /// No description provided for @sortTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get sortTitle;
+
+  /// No description provided for @sortArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get sortArtist;
+
+  /// No description provided for @sortAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get sortAlbum;
+
+  /// No description provided for @sortDateAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get sortDateAdded;
+
+  /// No description provided for @playlistInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist Info'**
+  String get playlistInfo;
+
+  /// No description provided for @totalSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Songs'**
+  String get totalSongs;
+
+  /// No description provided for @totalDuration.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Duration'**
+  String get totalDuration;
+
+  /// No description provided for @dateCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Date Created'**
+  String get dateCreated;
+
+  /// No description provided for @songsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} songs'**
+  String songsCount(int count);
+
+  /// No description provided for @hoursMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} hours {minutes} minutes'**
+  String hoursMinutes(int hours, int minutes);
+
+  /// No description provided for @hoursOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} hours'**
+  String hoursOnly(int hours);
+
+  /// No description provided for @minutesOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} minutes'**
+  String minutesOnly(int minutes);
+
+  /// No description provided for @searchSongHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search song or artist...'**
+  String get searchSongHint;
+
+  /// No description provided for @closeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get closeLabel;
+
+  /// No description provided for @sortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get sortLabel;
+
+  /// No description provided for @customizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize'**
+  String get customizeLabel;
+
+  /// No description provided for @searchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get searchLabel;
+
+  /// No description provided for @infoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get infoLabel;
+
+  /// No description provided for @viewPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'View Photo'**
+  String get viewPhoto;
+
+  /// No description provided for @editPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Playlist'**
+  String get editPlaylist;
+
+  /// No description provided for @playNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Play Next'**
+  String get playNext;
+
+  /// No description provided for @addToPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Playlist'**
+  String get addToPlaylist;
+
+  /// No description provided for @trackDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Track details'**
+  String get trackDetails;
+
+  /// No description provided for @deleteFromPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete from Playlist'**
+  String get deleteFromPlaylist;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedCount(int count);
+
+  /// No description provided for @removeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get removeLabel;
+
+  /// No description provided for @addLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get addLabel;
+
+  /// No description provided for @playLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get playLabel;
+
+  /// No description provided for @titleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get titleLabel;
+
+  /// No description provided for @artistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get artistLabel;
+
+  /// No description provided for @albumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get albumLabel;
+
+  /// No description provided for @pathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Path'**
+  String get pathLabel;
+
+  /// No description provided for @gagalMemuatLagu.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load songs: {error}'**
+  String gagalMemuatLagu(String error);
+
+  /// No description provided for @gagalMenghapusLagu.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete songs: {error}'**
+  String gagalMenghapusLagu(String error);
+
+  /// No description provided for @playlistNoPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'This playlist doesn\'t have a photo yet.'**
+  String get playlistNoPhoto;
+
+  /// No description provided for @addToPlaylistComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Playlist feature coming soon'**
+  String get addToPlaylistComingSoon;
+
+  /// No description provided for @changePlaylistPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Change Playlist Photo'**
+  String get changePlaylistPhoto;
+
+  /// No description provided for @galleryLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get galleryLabel;
+
+  /// No description provided for @cameraLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get cameraLabel;
+
+  /// No description provided for @cropPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Crop Photo'**
+  String get cropPhoto;
+
+  /// No description provided for @descriptionOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (Optional)'**
+  String get descriptionOptional;
+
+  /// No description provided for @saveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get saveLabel;
+
+  /// No description provided for @noSongsInDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs on your device yet.'**
+  String get noSongsInDevice;
+
+  /// No description provided for @songAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} added'**
+  String songAdded(String title);
+
+  /// No description provided for @pauseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get pauseLabel;
+
+  /// No description provided for @belumAdaLagu.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs yet'**
+  String get belumAdaLagu;
+
+  /// No description provided for @tambahkanLaguPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add some songs to fill this playlist.'**
+  String get tambahkanLaguPlaylist;
+
+  /// No description provided for @customOrderToDrag.
+  ///
+  /// In en, this message translates to:
+  /// **'Change to \"Custom order\" to drag songs'**
+  String get customOrderToDrag;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

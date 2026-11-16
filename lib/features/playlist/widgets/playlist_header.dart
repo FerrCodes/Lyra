@@ -65,9 +65,9 @@ class PlaylistHeader extends StatelessWidget {
         ),
 
         Positioned(
-          left: 24,
+          left: 16,
           right: 24,
-          bottom: 30,
+          bottom: 20,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
