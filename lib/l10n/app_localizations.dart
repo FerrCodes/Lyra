@@ -110,7 +110,7 @@ abstract class AppLocalizations {
   /// No description provided for @theme.
   ///
   /// In en, this message translates to:
-  /// **'App Theme'**
+  /// **'Theme'**
   String get theme;
 
   /// No description provided for @systemDefault.
@@ -254,7 +254,7 @@ abstract class AppLocalizations {
   /// No description provided for @indonesian.
   ///
   /// In en, this message translates to:
-  /// **'Bahasa Indonesia'**
+  /// **'Indonesia'**
   String get indonesian;
 
   /// No description provided for @shuffle.

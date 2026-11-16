@@ -15,7 +15,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get display => 'Tampilan';
 
   @override
-  String get theme => 'Tema Aplikasi';
+  String get theme => 'Tema';
 
   @override
   String get systemDefault => 'Ikuti Sistem';
@@ -89,7 +89,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get english => 'English';
 
   @override
-  String get indonesian => 'Bahasa Indonesia';
+  String get indonesian => 'Indonesia';
 
   @override
   String get shuffle => 'Shuffle';

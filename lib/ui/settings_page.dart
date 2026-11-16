@@ -22,6 +22,8 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   String _cacheSize = 'Menghitung...';
+  bool _isLanguageMenuOpen = false;
+  final GlobalKey _languageItemKey = GlobalKey();
 
   @override
   void initState() {
@@ -79,45 +81,157 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return AppLocalizations.of(context)!.indonesian;
   }
 
-  void _showLanguageDialog(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet(
+  Future<void> _showLanguageMenu(BuildContext context, WidgetRef ref) async {
+    final currentLang = ref.read(lyraPreferencesProvider).loadLanguage();
+
+    // Dapatkan posisi item Bahasa via GlobalKey
+    final RenderBox? button =
+        _languageItemKey.currentContext?.findRenderObject() as RenderBox?;
+    if (button == null) return;
+
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
+
+    // Set state: popover terbuka (untuk animasi chevron)
+    setState(() => _isLanguageMenuOpen = true);
+
+    final result = await showGeneralDialog<String>(
       context: context,
-      builder: (context) {
-        final currentLang = ref.watch(lyraPreferencesProvider).loadLanguage();
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(AppLocalizations.of(context)!.systemDefault),
-                trailing: currentLang == 'system'
-                    ? const Icon(Icons.check)
-                    : null,
-                onTap: () {
-                  ref.read(localeProvider.notifier).setLanguage('system');
-                  Navigator.pop(context);
-                },
+      barrierDismissible: true,
+      barrierLabel: 'Language Menu',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 150),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        final colors = context.lyra;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        return Stack(
+          children: [
+            // Posisi popover: di bawah item Bahasa, rata kanan
+            Positioned(
+              top: buttonPosition.dy + button.size.height - 12,
+              right:
+                  overlay.size.width -
+                  buttonPosition.dx -
+                  button.size.width +
+                  4,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: 200,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colors.textSecondary.withValues(alpha: 0.2),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildLanguageMenuItem(
+                        context,
+                        'system',
+                        AppLocalizations.of(context)!.systemDefault,
+                        currentLang,
+                        colors,
+                      ),
+                      Divider(
+                        color: colors.textSecondary.withValues(alpha: 0.1),
+                        height: 1,
+                      ),
+                      _buildLanguageMenuItem(
+                        context,
+                        'id',
+                        AppLocalizations.of(context)!.indonesian,
+                        currentLang,
+                        colors,
+                      ),
+                      Divider(
+                        color: colors.textSecondary.withValues(alpha: 0.1),
+                        height: 1,
+                      ),
+                      _buildLanguageMenuItem(
+                        context,
+                        'en',
+                        AppLocalizations.of(context)!.english,
+                        currentLang,
+                        colors,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              ListTile(
-                title: Text(AppLocalizations.of(context)!.indonesian),
-                trailing: currentLang == 'id' ? const Icon(Icons.check) : null,
-                onTap: () {
-                  ref.read(localeProvider.notifier).setLanguage('id');
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                title: Text(AppLocalizations.of(context)!.english),
-                trailing: currentLang == 'en' ? const Icon(Icons.check) : null,
-                onTap: () {
-                  ref.read(localeProvider.notifier).setLanguage('en');
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
+    );
+
+    if (mounted) {
+      setState(() => _isLanguageMenuOpen = false);
+    }
+
+    if (result != null && result != currentLang) {
+      ref.read(localeProvider.notifier).setLanguage(result);
+    }
+  }
+
+  Widget _buildLanguageMenuItem(
+    BuildContext context,
+    String value,
+    String label,
+    String currentLang,
+    LyraColors colors,
+  ) {
+    final isSelected = value == currentLang;
+
+    // Bungkus dengan Material agar efek ripple/abu-abu muncul
+    return Material(
+      color:
+          Colors.transparent, // Warna transparan agar tetap ikut warna popover
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior:
+          Clip.antiAlias, // Agar ripple tidak keluar dari sudut melengkung
+      child: InkWell(
+        onTap: () => Navigator.pop(context, value),
+        borderRadius: BorderRadius.circular(12),
+        splashColor: colors.textPrimary.withValues(
+          alpha: 0.1,
+        ), // Warna abu-abu/efek ketukan
+        highlightColor: colors.textPrimary.withValues(
+          alpha: 0.05,
+        ), // Efek saat ditahan
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: colors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+              ),
+              if (isSelected) Icon(Icons.check, color: colors.accent, size: 20),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -219,12 +333,72 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       colors: colors,
                     ),
                     _buildDivider(colors),
-                    _buildArrowTile(
-                      icon: Icons.language,
-                      title: l10n.language,
-                      subtitle: _getLanguageName(context, ref),
-                      onTap: () => _showLanguageDialog(context, ref),
-                      colors: colors,
+                    GestureDetector(
+                      key: _languageItemKey,
+                      onTap: () => _showLanguageMenu(context, ref),
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            // Ikon
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: colors.accent.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.language,
+                                color: colors.accent,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // Label & Subtitle
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.language,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _getLanguageName(context, ref),
+                                    style: TextStyle(
+                                      color: colors.textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Chevron Animasi
+                            AnimatedRotation(
+                              turns: _isLanguageMenuOpen ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutCubic,
+                              child: Icon(
+                                Icons.keyboard_arrow_down,
+                                color: colors.textSecondary.withValues(
+                                  alpha: 0.5,
+                                ),
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
