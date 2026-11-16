@@ -9,6 +9,7 @@ class GlassContainer extends StatelessWidget {
   final double? height;
   final EdgeInsetsGeometry? padding;
   final double blurSigma;
+  final double? tintOpacity;
 
   const GlassContainer({
     super.key,
@@ -18,6 +19,7 @@ class GlassContainer extends StatelessWidget {
     this.height,
     this.padding,
     this.blurSigma = 24,
+    this.tintOpacity,
   });
 
   @override
@@ -31,28 +33,39 @@ class GlassContainer extends StatelessWidget {
         height: height,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(radius),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-            child: Container(
-              padding: padding,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [colors.glassTintTop, colors.glassTintBottom],
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+              child: Container(
+                padding: padding,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      tintOpacity != null
+                          ? colors.glassTintTop.withValues(alpha: tintOpacity!)
+                          : colors.glassTintTop,
+                      tintOpacity != null
+                          ? colors.glassTintBottom.withValues(
+                              alpha: tintOpacity!,
+                            )
+                          : colors.glassTintBottom,
+                    ],
+                  ),
                 ),
-              ),
-              child: CustomPaint(
-                painter: _GradientBorderPainter(
-                  radius: radius,
-                  topColor: colors.glassBorderTop,
-                  bottomColor: colors.glassBorderBottom,
-                  highlightColor:
-                      Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white.withValues(alpha: 0.06)
-                      : Colors.white.withValues(alpha: 0.25),
+                child: CustomPaint(
+                  painter: _GradientBorderPainter(
+                    radius: radius,
+                    topColor: colors.glassBorderTop,
+                    bottomColor: colors.glassBorderBottom,
+                    highlightColor:
+                        Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white.withValues(alpha: 0.03)
+                        : Colors.white.withValues(alpha: 0.08),
+                  ),
+                  child: child,
                 ),
-                child: child,
               ),
             ),
           ),
@@ -92,6 +105,7 @@ class _GradientBorderPainter extends CustomPainter {
     );
 
     // Kilau tipis di dalam tepi atas (efek specular)
+    /*
     final inner = rect.deflate(1.0);
     final highlight = Paint()
       ..shader = LinearGradient(
@@ -106,6 +120,7 @@ class _GradientBorderPainter extends CustomPainter {
       RRect.fromRectAndRadius(inner, Radius.circular(radius - 1.5)),
       highlight,
     );
+    */
   }
 
   @override

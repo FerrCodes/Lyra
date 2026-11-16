@@ -94,7 +94,12 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     required Widget child,
   }) {
     if (item == null) {
-      return GlassContainer(height: 54, radius: radius, child: child);
+      return GlassContainer(
+        height: 54,
+        radius: radius,
+        tintOpacity: 0.2,
+        child: child,
+      );
     }
     return GestureDetector(
       dragStartBehavior: DragStartBehavior.down,
@@ -323,6 +328,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                     child: GlassContainer(
                       height: 54,
                       radius: 30,
+                      blurSigma: 12,
+                      tintOpacity: 0.4,
                       child: _buildTabRow(colors),
                     ),
                   ),
@@ -333,6 +340,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                       width: 54,
                       height: 54,
                       radius: 32,
+                      blurSigma: 12,
+                      tintOpacity: 0.5,
                       child: Icon(
                         Icons.search_rounded,
                         color: colors.textPrimary,

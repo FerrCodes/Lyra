@@ -23,13 +23,12 @@ class LyraColors extends ThemeExtension<LyraColors> {
     required this.accent,
   });
 
-  // Ganti nilai light dan dark di dalam class LyraColors:
   static const light = LyraColors(
     pageBackground: Color(0xFFF2F2F7),
     glassTintTop: Color(0x9EFFFFFF),
     glassTintBottom: Color(0x7AFFFFFF),
-    glassBorderTop: Color(0xCCFFFFFF),
-    glassBorderBottom: Color(0x668E8E93),
+    glassBorderTop: Color(0x1AFFFFFF),
+    glassBorderBottom: Color(0x338E8E93),
     glassShadow: Color(0x24000000),
     textPrimary: Color(0xDE000000),
     textSecondary: Color(0x8A000000),
@@ -40,7 +39,8 @@ class LyraColors extends ThemeExtension<LyraColors> {
     pageBackground: Color(0xFF000000),
     glassTintTop: Color(0xB32C2C2E),
     glassTintBottom: Color(0x991C1C1E),
-    glassBorderTop: Color(0x24FFFFFF),
+    // Turunkan juga di dark mode dari 0x24 menjadi 0x14
+    glassBorderTop: Color(0x14FFFFFF),
     glassBorderBottom: Color(0x0AFFFFFF),
     glassShadow: Colors.transparent,
     textPrimary: Color(0xEBFFFFFF),
