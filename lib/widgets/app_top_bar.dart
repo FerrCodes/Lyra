@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../providers/profile_provider.dart';
 import 'default_profile_avatar.dart';
 import 'lyra_header.dart';
-import '../ui/settings_page.dart';
-import '../ui/profile_page.dart';
 import '../ui/songs_page.dart';
 import '../ui/playlist_page.dart';
 import '../ui/library_page.dart';
@@ -15,11 +13,13 @@ import '../l10n/app_localizations.dart';
 class AppTopBar extends StatelessWidget {
   final int currentTab;
   final String currentSortFilter;
+  final VoidCallback onProfileTap;
 
   const AppTopBar({
     super.key,
     required this.currentTab,
     required this.currentSortFilter,
+    required this.onProfileTap,
   });
 
   String _getLocalizedFilter(BuildContext context, String filter) {
@@ -77,35 +77,14 @@ class AppTopBar extends StatelessWidget {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            GlassContainer(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              radius: 20,
-              blurSigma: 12,
-              tintOpacity: 0.5,
-              child: Text(
-                'LYRA MUSIC',
-                style: TextStyle(
-                  fontFamily: 'LyraFont',
-                  fontSize: 22,
-                  letterSpacing: -0.5,
-                  color: context.lyra.textPrimary,
-                ),
-              ),
-            ),
-
-            // Avatar Profil (Kanan)
+            // Avatar Profil (Kiri)
             _buildCircle(
               child: Material(
                 color: Colors.transparent,
                 shape: const CircleBorder(),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ProfilePage()),
-                    );
-                  },
+                  onTap: onProfileTap,
                   child: ClipOval(
                     child: ValueListenableBuilder<String?>(
                       valueListenable: profileImageNotifier,
@@ -122,6 +101,23 @@ class AppTopBar extends StatelessWidget {
                       },
                     ),
                   ),
+                ),
+              ),
+            ),
+
+            // Teks LYRA MUSIC (Kanan)
+            GlassContainer(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              radius: 20,
+              blurSigma: 12,
+              tintOpacity: 0.5,
+              child: Text(
+                'LYRA MUSIC',
+                style: TextStyle(
+                  fontFamily: 'LyraFont',
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                  color: context.lyra.textPrimary,
                 ),
               ),
             ),
@@ -256,31 +252,41 @@ class AppTopBar extends StatelessWidget {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          // Avatar Profil (Kiri - Untuk Buka Drawer)
+          _buildCircle(
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onProfileTap, // <--- Panggil drawer
+                child: ClipOval(
+                  child: ValueListenableBuilder<String?>(
+                    valueListenable: profileImageNotifier,
+                    builder: (context, imagePath, child) {
+                      if (imagePath != null && imagePath.isNotEmpty) {
+                        return Image.file(
+                          File(imagePath),
+                          fit: BoxFit.cover,
+                          width: 48,
+                          height: 48,
+                        );
+                      }
+                      return const DefaultProfileAvatar(size: 48);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Tombol Refresh (Kanan)
           TopBarButton(
             isCircle: false,
             onTap: () {},
             customChild: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SettingsPage()),
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: Icon(
-                        Icons.settings_outlined,
-                        color: Colors.black,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-                // Tombol Refresh
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
@@ -299,37 +305,6 @@ class AppTopBar extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-          _buildCircle(
-            child: Material(
-              color: Colors.transparent,
-              shape: const CircleBorder(),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfilePage()),
-                  );
-                },
-                child: ClipOval(
-                  child: ValueListenableBuilder<String?>(
-                    valueListenable: profileImageNotifier,
-                    builder: (context, imagePath, child) {
-                      if (imagePath != null && imagePath.isNotEmpty) {
-                        return Image.file(
-                          File(imagePath),
-                          fit: BoxFit.cover,
-                          width: 48,
-                          height: 48,
-                        );
-                      }
-                      return const DefaultProfileAvatar(size: 48);
-                    },
-                  ),
-                ),
-              ),
             ),
           ),
         ],

@@ -5,6 +5,7 @@ import 'songs_page.dart';
 import 'playlist_page.dart';
 import 'library_page.dart';
 import 'search_page.dart';
+import '../widgets/lyra_drawer.dart';
 import '../widgets/app_top_bar.dart';
 import '../theme/lyra_colors.dart';
 import '../preferences/preferences_provider.dart';
@@ -76,6 +77,7 @@ class _NestedNavigatorObserver extends NavigatorObserver {
 
 class _HomePageState extends ConsumerState<HomePage>
     with SingleTickerProviderStateMixin {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late PlayHistoryRecorder _recorder;
   int _currentTab = 0;
   final ValueNotifier<bool> _isScrolled = ValueNotifier<bool>(false);
@@ -283,7 +285,14 @@ class _HomePageState extends ConsumerState<HomePage>
         systemNavigationBarDividerColor: Colors.transparent,
       ),
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: colors.pageBackground,
+        drawerEnableOpenDragGesture: false,
+        drawer: LyraDrawer(
+          currentIndex: _currentTab,
+          onTabChanged: _switchTab,
+          onClose: () => _scaffoldKey.currentState?.closeDrawer(),
+        ),
         body: Stack(
           children: [
             // KONTEN UTAMA (DENGAN NESTED NAVIGATOR)
@@ -379,6 +388,7 @@ class _HomePageState extends ConsumerState<HomePage>
               AppTopBar(
                 currentTab: _currentTab,
                 currentSortFilter: _currentSortFilter,
+                onProfileTap: () => _scaffoldKey.currentState?.openDrawer(),
               ),
             ],
 
