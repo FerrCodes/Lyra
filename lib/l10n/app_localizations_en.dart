@@ -80,7 +80,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get others => 'Others';
 
   @override
-  String get appVersion => 'App Version';
+  String get appVersion => 'About';
 
   @override
   String get language => 'Language';
@@ -487,7 +487,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultProfileName => 'Lyra User';
 
   @override
-  String get enterName => 'Enter Name';
+  String get enterName => 'Name';
 
   @override
   String get cropProfilePhoto => 'Crop Profile Photo';
@@ -609,4 +609,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openAppSettings => 'Open App Info Settings';
+
+  @override
+  String get noFavoriteSongs => 'No favorite songs yet.';
 }

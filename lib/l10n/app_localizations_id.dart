@@ -80,7 +80,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get others => 'Lainnya';
 
   @override
-  String get appVersion => 'Versi Aplikasi';
+  String get appVersion => 'Tentang';
 
   @override
   String get language => 'Bahasa';
@@ -487,7 +487,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get defaultProfileName => 'Pengguna Lyra';
 
   @override
-  String get enterName => 'Masukan Nama';
+  String get enterName => 'Nama';
 
   @override
   String get cropProfilePhoto => 'Potong Foto Profil';
@@ -609,4 +609,7 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get openAppSettings => 'Buka Halaman Info Aplikasi';
+
+  @override
+  String get noFavoriteSongs => 'Belum ada lagu favorit.';
 }

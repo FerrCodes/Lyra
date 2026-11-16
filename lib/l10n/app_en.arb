@@ -24,7 +24,7 @@
   "clearCacheDesc": "Delete temporary images and song cache",
   "cacheCleared": "Cache cleared successfully",
   "others": "Others",
-  "appVersion": "App Version",
+  "appVersion": "About",
   "language": "Language",
   "english": "English",
   "indonesian": "Indonesia",
@@ -221,5 +221,6 @@
   "@updateFailed": { "placeholders": { "error": { "type": "String" } } },
   "permissionRequiredTitle": "Permission Required!",
   "permissionRequiredGateDesc": "Lyra needs \"Music and Audio\" access permission to scan and play songs on your device.",
-  "openAppSettings": "Open App Info Settings"
+  "openAppSettings": "Open App Info Settings",
+    "noFavoriteSongs": "No favorite songs yet."
 }

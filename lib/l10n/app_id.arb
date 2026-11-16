@@ -24,7 +24,7 @@
   "clearCacheDesc": "Hapus gambar sementara dan cache lagu",
   "cacheCleared": "Cache berhasil dibersihkan",
   "others": "Lainnya",
-  "appVersion": "Versi Aplikasi",
+  "appVersion": "Tentang",
   "language": "Bahasa",
   "english": "English",
   "indonesian": "Indonesia",
@@ -221,5 +221,6 @@
   "@updateFailed": { "placeholders": { "error": { "type": "String" } } },
   "permissionRequiredTitle": "Izin Diperlukan!",
   "permissionRequiredGateDesc": "Lyra membutuhkan izin akses \"Music and Audio\" untuk bisa memindai dan memutar lagu di perangkatmu.",
-  "openAppSettings": "Buka Halaman Info Aplikasi"
+  "openAppSettings": "Buka Halaman Info Aplikasi",
+    "noFavoriteSongs": "Belum ada lagu favorit."
 }

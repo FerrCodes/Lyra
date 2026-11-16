@@ -236,7 +236,7 @@ abstract class AppLocalizations {
   /// No description provided for @appVersion.
   ///
   /// In en, this message translates to:
-  /// **'App Version'**
+  /// **'About'**
   String get appVersion;
 
   /// No description provided for @language.
@@ -974,7 +974,7 @@ abstract class AppLocalizations {
   /// No description provided for @enterName.
   ///
   /// In en, this message translates to:
-  /// **'Enter Name'**
+  /// **'Name'**
   String get enterName;
 
   /// No description provided for @cropProfilePhoto.
@@ -1198,6 +1198,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open App Info Settings'**
   String get openAppSettings;
+
+  /// No description provided for @noFavoriteSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'No favorite songs yet.'**
+  String get noFavoriteSongs;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

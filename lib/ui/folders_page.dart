@@ -69,7 +69,7 @@ class FoldersPage extends ConsumerWidget {
               ListView.builder(
                 padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + 80,
-                  bottom: 40,
+                  bottom: 120,
                   left: 16,
                   right: 16,
                 ),
