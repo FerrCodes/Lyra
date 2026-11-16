@@ -1050,7 +1050,7 @@ class _PlayerPageState extends State<PlayerPage> {
                   const SizedBox(height: 32),
 
                   Text(
-                    'Volume pemutar',
+                    'Volume Aplikasi',
                     style: TextStyle(fontSize: 12, color: colors.textSecondary),
                   ),
                   const SizedBox(height: 8),

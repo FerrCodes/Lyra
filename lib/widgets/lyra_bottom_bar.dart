@@ -12,6 +12,7 @@ import 'marquee_text.dart';
 import 'package:flutter/gestures.dart';
 import 'player_panel.dart';
 import 'song_artwork.dart';
+import '../l10n/app_localizations.dart';
 
 class LyraBottomBar extends ConsumerStatefulWidget {
   final int currentIndex;
@@ -212,7 +213,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                   setState(() {});
                 },
                 decoration: InputDecoration(
-                  hintText: 'Artists, Songs, Lyrics, and More',
+                  hintText: AppLocalizations.of(context)!.searchHint,
                   hintStyle: TextStyle(
                     fontSize: 14,
                     color: colors.textSecondary,
@@ -375,22 +376,32 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
               padding: const EdgeInsets.symmetric(horizontal: hPad),
               child: Row(
                 children: [
-                  Expanded(child: _buildNavIcon(0, Icons.home_filled, 'Home')),
                   Expanded(
-                    child: _buildNavIcon(1, Icons.music_note_rounded, 'Songs'),
+                    child: _buildNavIcon(
+                      0,
+                      Icons.home_filled,
+                      AppLocalizations.of(context)!.navHome,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildNavIcon(
+                      1,
+                      Icons.music_note_rounded,
+                      AppLocalizations.of(context)!.navSongs,
+                    ),
                   ),
                   Expanded(
                     child: _buildNavIcon(
                       2,
                       Icons.queue_music_rounded,
-                      'Playlist',
+                      AppLocalizations.of(context)!.navPlaylist,
                     ),
                   ),
                   Expanded(
                     child: _buildNavIcon(
                       3,
                       Icons.library_music_rounded,
-                      'Library',
+                      AppLocalizations.of(context)!.navLibrary,
                     ),
                   ),
                 ],
@@ -428,7 +439,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                           child: item == null
                               ? Center(
                                   child: Text(
-                                    'Pilih lagu',
+                                    AppLocalizations.of(context)!.selectSong,
                                     style: TextStyle(
                                       color: colors.textSecondary,
                                     ),
@@ -640,7 +651,9 @@ class MiniPlayerContent extends StatelessWidget {
                   ),
                 ),
                 MarqueeText(
-                  text: item.artist ?? 'Unknown',
+                  text:
+                      item.artist ??
+                      AppLocalizations.of(context)!.unknownArtist,
                   style: TextStyle(
                     fontSize: isCompact ? 11 : 12,
                     color: secondary,

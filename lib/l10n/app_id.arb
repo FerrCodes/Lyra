@@ -29,5 +29,46 @@
   "english": "English",
   "indonesian": "Bahasa Indonesia",
   "shuffle": "Shuffle",
-  "repeat": "Repeat"
+  "repeat": "Repeat",
+    "goodMorning": "Pagi",
+  "goodAfternoon": "Siang",
+  "goodEvening": "Sore",
+  "goodNight": "Malam",
+  "greetingWithName": "Selamat {time}, {name}",
+  "@greetingWithName": {
+    "placeholders": {
+      "time": { "type": "String" },
+      "name": { "type": "String" }
+    }
+  },
+  "greetingWithoutName": "Selamat {time},",
+  "@greetingWithoutName": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "readyToListen": "Siap mendengarkan sesuatu hari ini?",
+  "noSongsFound": "Belum Ada Lagu",
+  "noSongsDesc": "Tidak dapat menemukan file musik. Pastikan sudah memberikan izin akses penyimpanan.",
+  "rescanSongs": "Pindai Ulang Lagu",
+  "favoritePlaylists": "Playlist Favorit",
+  "playlists": "Playlist",
+  "favorites": "Favorit",
+  "mostPlayed": "Sering Diputar",
+  "listenAgain": "Dengarkan Lagi",
+  "exploreMusicDesc": "Putar lagu dari tab Songs, buat Playlist pertama, atau tambahkan lagu ke Favorit. Aktivitas semua akan muncul di sini.",
+  "copyrightText": "© 2026 Lyra. All rights reserved.",
+  "playCount": "{count}x diputar",
+  "@playCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "navHome": "Home",
+  "navSongs": "Songs",
+  "navPlaylist": "Playlist",
+  "navLibrary": "Library",
+  "searchHint": "Artists, Songs, Lyrics, and More",
+  "selectSong": "Pilih lagu",
+  "unknownArtist": "Unknown"
 }

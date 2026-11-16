@@ -29,5 +29,46 @@
   "english": "English",
   "indonesian": "Bahasa Indonesia",
   "shuffle": "Shuffle",
-  "repeat": "Repeat"
+  "repeat": "Repeat",
+    "goodMorning": "Morning",
+  "goodAfternoon": "Afternoon",
+  "goodEvening": "Evening",
+  "goodNight": "Night",
+  "greetingWithName": "Good {time}, {name}",
+  "@greetingWithName": {
+    "placeholders": {
+      "time": { "type": "String" },
+      "name": { "type": "String" }
+    }
+  },
+  "greetingWithoutName": "Good {time},",
+  "@greetingWithoutName": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "readyToListen": "Ready to listen to something today?",
+  "noSongsFound": "No Songs Found",
+  "noSongsDesc": "Could not find music files. Make sure you have granted storage access permission.",
+  "rescanSongs": "Rescan Songs",
+  "favoritePlaylists": "Favorite Playlists",
+  "playlists": "Playlists",
+  "favorites": "Favorites",
+  "mostPlayed": "Most Played",
+  "listenAgain": "Listen Again",
+  "exploreMusicDesc": "Play songs from the Songs tab, create the first Playlist, or add songs to Favorites. Activities will all appear here.",
+  "copyrightText": "© 2026 Lyra. All rights reserved.",
+  "playCount": "{count}x played",
+  "@playCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "navHome": "Home",
+  "navSongs": "Songs",
+  "navPlaylist": "Playlist",
+  "navLibrary": "Library",
+  "searchHint": "Artists, Songs, Lyrics, and More",
+  "selectSong": "Select a song",
+  "unknownArtist": "Unknown"
 }

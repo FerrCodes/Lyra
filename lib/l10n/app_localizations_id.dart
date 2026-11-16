@@ -96,4 +96,85 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get repeat => 'Repeat';
+
+  @override
+  String get goodMorning => 'Pagi';
+
+  @override
+  String get goodAfternoon => 'Siang';
+
+  @override
+  String get goodEvening => 'Sore';
+
+  @override
+  String get goodNight => 'Malam';
+
+  @override
+  String greetingWithName(String time, String name) {
+    return 'Selamat $time, $name';
+  }
+
+  @override
+  String greetingWithoutName(String time) {
+    return 'Selamat $time,';
+  }
+
+  @override
+  String get readyToListen => 'Siap mendengarkan sesuatu hari ini?';
+
+  @override
+  String get noSongsFound => 'Belum Ada Lagu';
+
+  @override
+  String get noSongsDesc => 'Tidak dapat menemukan file musik. Pastikan sudah memberikan izin akses penyimpanan.';
+
+  @override
+  String get rescanSongs => 'Pindai Ulang Lagu';
+
+  @override
+  String get favoritePlaylists => 'Playlist Favorit';
+
+  @override
+  String get playlists => 'Playlist';
+
+  @override
+  String get favorites => 'Favorit';
+
+  @override
+  String get mostPlayed => 'Sering Diputar';
+
+  @override
+  String get listenAgain => 'Dengarkan Lagi';
+
+  @override
+  String get exploreMusicDesc => 'Putar lagu dari tab Songs, buat Playlist pertama, atau tambahkan lagu ke Favorit. Aktivitas semua akan muncul di sini.';
+
+  @override
+  String get copyrightText => '© 2026 Lyra. All rights reserved.';
+
+  @override
+  String playCount(int count) {
+    return '${count}x diputar';
+  }
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navSongs => 'Songs';
+
+  @override
+  String get navPlaylist => 'Playlist';
+
+  @override
+  String get navLibrary => 'Library';
+
+  @override
+  String get searchHint => 'Artists, Songs, Lyrics, and More';
+
+  @override
+  String get selectSong => 'Pilih lagu';
+
+  @override
+  String get unknownArtist => 'Unknown';
 }

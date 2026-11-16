@@ -12,6 +12,7 @@ import '../../theme/lyra_colors.dart';
 import '../../widgets/lyra_bottom_bar.dart';
 import '../../audio/lyra_audio_handler.dart';
 import '../playlist/widgets/playlist_cover.dart';
+import '../../l10n/app_localizations.dart';
 
 class DashboardView extends ConsumerWidget {
   final ScrollController controller;
@@ -23,12 +24,13 @@ class DashboardView extends ConsumerWidget {
     required this.onOpenPlaylist,
   });
 
-  String _getGreeting() {
+  String _getGreeting(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Pagi';
-    if (hour < 15) return 'Siang';
-    if (hour < 18) return 'Sore';
-    return 'Malam';
+    if (hour < 12) return l10n.goodMorning;
+    if (hour < 15) return l10n.goodAfternoon;
+    if (hour < 18) return l10n.goodEvening;
+    return l10n.goodNight;
   }
 
   // Fungsi Helper: Putar dari List Song (Drift)
@@ -136,10 +138,12 @@ class DashboardView extends ConsumerWidget {
               child: ValueListenableBuilder<String>(
                 valueListenable: profileNameNotifier,
                 builder: (context, name, child) {
+                  final l10n = AppLocalizations.of(context)!;
                   final isDefaultName = name == 'Pengguna Lyra';
+                  final timeGreeting = _getGreeting(context);
                   final greetingText = isDefaultName
-                      ? 'Selamat ${_getGreeting()},'
-                      : 'Selamat ${_getGreeting()}, $name';
+                      ? l10n.greetingWithoutName(timeGreeting)
+                      : l10n.greetingWithName(timeGreeting, name);
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +161,7 @@ class DashboardView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Siap mendengarkan sesuatu hari ini?',
+                        AppLocalizations.of(context)!.readyToListen,
                         style: TextStyle(
                           fontSize: 16,
                           color: colors.textSecondary,
@@ -205,7 +209,7 @@ class DashboardView extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        'Belum Ada Lagu',
+                        AppLocalizations.of(context)!.noSongsFound,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 20,
@@ -215,7 +219,7 @@ class DashboardView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tidak dapat menemukan file musik. Pastikan sudah memberikan izin akses penyimpanan.',
+                        AppLocalizations.of(context)!.noSongsDesc,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: colors.textSecondary,
@@ -233,7 +237,9 @@ class DashboardView extends ConsumerWidget {
                             ref.invalidate(allSongsProvider);
                           },
                           icon: const Icon(Icons.refresh_rounded, size: 20),
-                          label: const Text('Pindai Ulang Lagu'),
+                          label: Text(
+                            AppLocalizations.of(context)!.rescanSongs,
+                          ),
                           style: FilledButton.styleFrom(
                             backgroundColor: colors.accent,
                             foregroundColor: Colors.white,
@@ -252,7 +258,7 @@ class DashboardView extends ConsumerWidget {
             // PLAYLIST FAVORIT
             _buildPlaylistSection(
               context: context,
-              title: 'Playlist Favorit',
+              title: AppLocalizations.of(context)!.favoritePlaylists,
               dbStream: db.watchFavoritePlaylists(),
               colors: colors,
               isDark: isDark,
@@ -260,7 +266,7 @@ class DashboardView extends ConsumerWidget {
             // PLAYLIST KAMU
             _buildPlaylistSection(
               context: context,
-              title: 'Playlist',
+              title: AppLocalizations.of(context)!.playlists,
               dbStream:
                   (db.select(db.playlists)..orderBy([
                         (t) => drift.OrderingTerm(expression: t.sortOrder),
@@ -272,7 +278,7 @@ class DashboardView extends ConsumerWidget {
             // FAVORIT
             _buildSongSection(
               context: context,
-              title: 'Favorit',
+              title: AppLocalizations.of(context)!.favorites,
               dbStream: db.watchFavorites(),
               colors: colors,
               isDark: isDark,
@@ -291,10 +297,11 @@ class DashboardView extends ConsumerWidget {
             // SERING DIPUTAR
             _buildHistorySection(
               context: context,
-              title: 'Sering Diputar',
+              title: AppLocalizations.of(context)!.mostPlayed,
               dbStream: db.watchTopPlayed(limit: 10),
               itemBuilder: (history) => _buildHistoryShelfItem(
                 history,
+                context,
                 colors,
                 isDark,
                 showPlayCount: true,
@@ -304,10 +311,11 @@ class DashboardView extends ConsumerWidget {
             // DENGARKAN LAGI
             _buildHistorySection(
               context: context,
-              title: 'Dengarkan Lagi',
+              title: AppLocalizations.of(context)!.listenAgain,
               dbStream: db.watchRecentlyPlayed(limit: 6),
               itemBuilder: (history) => _buildHistoryShelfItem(
                 history,
+                context,
                 colors,
                 isDark,
                 allSongs: allSongs,
@@ -341,7 +349,9 @@ class DashboardView extends ConsumerWidget {
                               child: Column(
                                 children: [
                                   Text(
-                                    'Putar lagu dari tab Songs, buat Playlist pertama, atau tambahkan lagu ke Favorit. Aktivitas semua akan muncul di sini.',
+                                    AppLocalizations.of(
+                                      context,
+                                    )!.exploreMusicDesc,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontSize: 14,
@@ -370,7 +380,7 @@ class DashboardView extends ConsumerWidget {
           child: IgnorePointer(
             child: Center(
               child: Text(
-                '© 2026 Lyra. All rights reserved.',
+                AppLocalizations.of(context)!.copyrightText,
                 style: TextStyle(
                   fontSize: 11,
                   color: colors.textSecondary.withValues(alpha: 0.5),
@@ -578,25 +588,21 @@ class DashboardView extends ConsumerWidget {
         if (data.isEmpty) return const SizedBox.shrink();
 
         final colors = context.lyra;
-        final isFirst = title == 'Lanjutkan';
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTitle(title, colors),
             const SizedBox(height: 12),
-            if (isFirst)
-              itemBuilder(data.first)
-            else
-              SizedBox(
-                height: 185,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: data.length,
-                  itemBuilder: (context, index) => itemBuilder(data[index]),
-                ),
+            SizedBox(
+              height: 185,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: data.length,
+                itemBuilder: (context, index) => itemBuilder(data[index]),
               ),
+            ),
             const SizedBox(height: 28),
           ],
         );
@@ -622,6 +628,7 @@ class DashboardView extends ConsumerWidget {
   // Helper: Item Shelf untuk History
   Widget _buildHistoryShelfItem(
     PlayHistoryData history,
+    BuildContext context,
     LyraColors colors,
     bool isDark, {
     bool showPlayCount = false,
@@ -670,7 +677,7 @@ class DashboardView extends ConsumerWidget {
             ),
             if (showPlayCount)
               Text(
-                '${history.playCount}x diputar',
+                AppLocalizations.of(context)!.playCount(history.playCount),
                 style: TextStyle(color: colors.textSecondary, fontSize: 12),
               )
             else

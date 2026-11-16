@@ -96,4 +96,85 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get repeat => 'Repeat';
+
+  @override
+  String get goodMorning => 'Morning';
+
+  @override
+  String get goodAfternoon => 'Afternoon';
+
+  @override
+  String get goodEvening => 'Evening';
+
+  @override
+  String get goodNight => 'Night';
+
+  @override
+  String greetingWithName(String time, String name) {
+    return 'Good $time, $name';
+  }
+
+  @override
+  String greetingWithoutName(String time) {
+    return 'Good $time,';
+  }
+
+  @override
+  String get readyToListen => 'Ready to listen to something today?';
+
+  @override
+  String get noSongsFound => 'No Songs Found';
+
+  @override
+  String get noSongsDesc => 'Could not find music files. Make sure you have granted storage access permission.';
+
+  @override
+  String get rescanSongs => 'Rescan Songs';
+
+  @override
+  String get favoritePlaylists => 'Favorite Playlists';
+
+  @override
+  String get playlists => 'Playlists';
+
+  @override
+  String get favorites => 'Favorites';
+
+  @override
+  String get mostPlayed => 'Most Played';
+
+  @override
+  String get listenAgain => 'Listen Again';
+
+  @override
+  String get exploreMusicDesc => 'Play a song from the Songs tab, create your first Playlist, or add songs to Favorites. All activity will appear here.';
+
+  @override
+  String get copyrightText => '© 2026 Lyra. All rights reserved.';
+
+  @override
+  String playCount(int count) {
+    return '${count}x played';
+  }
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navSongs => 'Songs';
+
+  @override
+  String get navPlaylist => 'Playlist';
+
+  @override
+  String get navLibrary => 'Library';
+
+  @override
+  String get searchHint => 'Artists, Songs, Lyrics, and More';
+
+  @override
+  String get selectSong => 'Select a song';
+
+  @override
+  String get unknownArtist => 'Unknown';
 }

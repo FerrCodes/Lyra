@@ -268,6 +268,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Repeat'**
   String get repeat;
+
+  /// No description provided for @goodMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning'**
+  String get goodMorning;
+
+  /// No description provided for @goodAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Afternoon'**
+  String get goodAfternoon;
+
+  /// No description provided for @goodEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Evening'**
+  String get goodEvening;
+
+  /// No description provided for @goodNight.
+  ///
+  /// In en, this message translates to:
+  /// **'Night'**
+  String get goodNight;
+
+  /// No description provided for @greetingWithName.
+  ///
+  /// In en, this message translates to:
+  /// **'Good {time}, {name}'**
+  String greetingWithName(String time, String name);
+
+  /// No description provided for @greetingWithoutName.
+  ///
+  /// In en, this message translates to:
+  /// **'Good {time},'**
+  String greetingWithoutName(String time);
+
+  /// No description provided for @readyToListen.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to listen to something today?'**
+  String get readyToListen;
+
+  /// No description provided for @noSongsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No Songs Found'**
+  String get noSongsFound;
+
+  /// No description provided for @noSongsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not find music files. Make sure you have granted storage access permission.'**
+  String get noSongsDesc;
+
+  /// No description provided for @rescanSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescan Songs'**
+  String get rescanSongs;
+
+  /// No description provided for @favoritePlaylists.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite Playlists'**
+  String get favoritePlaylists;
+
+  /// No description provided for @playlists.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlists'**
+  String get playlists;
+
+  /// No description provided for @favorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get favorites;
+
+  /// No description provided for @mostPlayed.
+  ///
+  /// In en, this message translates to:
+  /// **'Most Played'**
+  String get mostPlayed;
+
+  /// No description provided for @listenAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Listen Again'**
+  String get listenAgain;
+
+  /// No description provided for @exploreMusicDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Play a song from the Songs tab, create your first Playlist, or add songs to Favorites. All activity will appear here.'**
+  String get exploreMusicDesc;
+
+  /// No description provided for @copyrightText.
+  ///
+  /// In en, this message translates to:
+  /// **'© 2026 Lyra. All rights reserved.'**
+  String get copyrightText;
+
+  /// No description provided for @playCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}x played'**
+  String playCount(int count);
+
+  /// No description provided for @navHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// No description provided for @navSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Songs'**
+  String get navSongs;
+
+  /// No description provided for @navPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Playlist'**
+  String get navPlaylist;
+
+  /// No description provided for @navLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get navLibrary;
+
+  /// No description provided for @searchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists, Songs, Lyrics, and More'**
+  String get searchHint;
+
+  /// No description provided for @selectSong.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a song'**
+  String get selectSong;
+
+  /// No description provided for @unknownArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get unknownArtist;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
