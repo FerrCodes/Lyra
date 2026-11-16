@@ -169,26 +169,79 @@ class DashboardView extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 28),
+            // JIKA SEDANG LOADING
+            if (songsAsync.isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+
             // KARTU PENGGUNA BARU (Jika belum ada lagu)
             if (songsAsync.hasValue && allSongs.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 32,
+                  ),
                   decoration: BoxDecoration(
                     color: colors.textPrimary.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: colors.accent.withValues(alpha: 0.3),
+                      width: 1.5,
+                    ),
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.library_music, size: 60, color: colors.accent),
-                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: colors.accent.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                       Text(
-                        'Tidak ada lagu yang ditemukan.',
+                        'Belum Ada Lagu',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tidak dapat menemukan file musik. Pastikan sudah memberikan izin akses penyimpanan.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: colors.textSecondary,
-                          height: 1.4,
+                          height: 1.5,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Tombol Aksi untuk Memuat Ulang
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () {
+                            // Memaksa provider untuk memindai ulang lagu dari MediaStore
+                            ref.invalidate(allSongsProvider);
+                          },
+                          icon: const Icon(Icons.refresh_rounded, size: 20),
+                          label: const Text('Pindai Ulang Lagu'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colors.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -260,7 +313,73 @@ class DashboardView extends ConsumerWidget {
                 allSongs: allSongs,
               ),
             ),
+            if (songsAsync.hasValue && allSongs.isNotEmpty)
+              StreamBuilder<List<Playlist>>(
+                stream: db.watchFavoritePlaylists(),
+                builder: (context, snapPlaylist) {
+                  return StreamBuilder<List<Song>>(
+                    stream: db.watchFavorites(),
+                    builder: (context, snapFav) {
+                      return StreamBuilder<List<PlayHistoryData>>(
+                        stream: db.watchRecentlyPlayed(limit: 1),
+                        builder: (context, snapHistory) {
+                          final hasPlaylist =
+                              (snapPlaylist.data ?? []).isNotEmpty;
+                          final hasFav = (snapFav.data ?? []).isNotEmpty;
+                          final hasHistory =
+                              (snapHistory.data ?? []).isNotEmpty;
+
+                          // Jika user belum punya playlist, favorit, dan riwayat putar
+                          if (!hasPlaylist && !hasFav && !hasHistory) {
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                left: 32,
+                                right: 32,
+                                top: 178,
+                                bottom: 40,
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Putar lagu dari tab Songs, buat Playlist pertama, atau tambahkan lagu ke Favorit. Aktivitas semua akan muncul di sini.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: colors.textSecondary,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          // Jika sudah ada aktivitas, kembalikan widget kosong
+                          return const SizedBox.shrink();
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
           ],
+        ),
+        Positioned(
+          bottom: 16, // Jarak dari dasar layar
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            child: Center(
+              child: Text(
+                '© 2026 Lyra. All rights reserved.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: colors.textSecondary.withValues(alpha: 0.5),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
