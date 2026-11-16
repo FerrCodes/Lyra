@@ -8,7 +8,7 @@
 
     <!-- Izin khusus untuk mengubah file media di Android 11+ -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
     <!-- Media audio (Android 13+) -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
@@ -24,7 +24,7 @@
         android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
 
     <application
-        android:label="lyra"
+        android:label="Lyra"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">

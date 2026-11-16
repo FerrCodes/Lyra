@@ -1,6 +1,7 @@
 package com.ferrriiidev.lyra
 
 import android.content.ContentUris
+import android.app.RecoverableSecurityException
 import android.content.Intent
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -26,6 +27,8 @@ class MainActivity : AudioServiceActivity() {
     private var pendingUpdateResult: MethodChannel.Result? = null
     private var pendingImageResult: MethodChannel.Result? = null
     private var permissionResult: MethodChannel.Result? = null
+    private var pendingWriteIntentSender: android.content.IntentSender? = null
+    private var pendingWriteUri: Uri? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -148,6 +151,13 @@ class MainActivity : AudioServiceActivity() {
                 permissionResult?.error("PERMISSION_DENIED", "Izin ditolak.", null)
             }
             permissionResult = null
+        } else if (requestCode == 2003) { 
+            if (resultCode == RESULT_OK) {
+                // Izin diberikan! Jalankan ulang update metadata
+                executeMetadataUpdate()
+            } else {
+                pendingUpdateResult?.error("PERMISSION_DENIED", "Izin edit file ditolak.", null)
+            }
         }
     }
 
@@ -168,6 +178,16 @@ class MainActivity : AudioServiceActivity() {
                     }
                 } else {
                     runOnUiThread { pendingUpdateResult?.error("PATH_ERROR", "Path tidak ditemukan.", null) }
+                }
+            } catch (e: android.app.RecoverableSecurityException) {
+                runOnUiThread {
+                    pendingWriteIntentSender = e.userAction.actionIntent.intentSender
+                    pendingWriteUri = pendingUpdateUri
+                    try {
+                        startIntentSenderForResult(pendingWriteIntentSender, 2003, null, 0, 0, 0)
+                    } catch (ex: Exception) {
+                        pendingUpdateResult?.error("PERMISSION_ERROR", ex.message, null)
+                    }
                 }
             } catch (e: Exception) {
                 runOnUiThread { pendingUpdateResult?.error("UPDATE_ERROR", e.message, null) }
@@ -212,8 +232,20 @@ class MainActivity : AudioServiceActivity() {
             values.getAsString(MediaStore.Audio.Media.ALBUM)?.let { tag.setField(FieldKey.ALBUM, it) }
             audioFile.commit()
 
-            contentResolver.openOutputStream(uri, "wt")?.use { output -> tempFile.inputStream().use { input -> input.copyTo(output) } }
+            // Gunakan ParcelFileDescriptor agar aman di semua versi Android
+            val pfd = contentResolver.openFileDescriptor(uri, "wt")
+            if (pfd != null) {
+                java.io.FileOutputStream(pfd.fileDescriptor).use { output ->
+                    tempFile.inputStream().use { input -> input.copyTo(output) }
+                }
+                pfd.close()
+            } else {
+                // Fallback jika pfd null (untuk Android 10 Legacy)
+                originalFile.outputStream().use { output -> tempFile.inputStream().use { input -> input.copyTo(output) } }
+            }
             true
+        } catch (e: android.app.RecoverableSecurityException) {
+            throw e // Lemparkan ke executeMetadataUpdate agar bisa minta izin
         } catch (e: Exception) {
             e.printStackTrace()
             false
@@ -223,20 +255,24 @@ class MainActivity : AudioServiceActivity() {
     }
 
     // SESUAI SARAN GPT
-    private fun writeCoverToFile(uri: Uri, imagePath: String): Boolean {
+        private fun writeCoverToFile(uri: Uri, imagePath: String): Boolean {
         val ext = getFileExtension(uri)
         val tempFile = File(cacheDir, "temp_cover_${System.currentTimeMillis()}.$ext")
         
+        // Ambil path asli untuk Android 10
+        val path = getPathFromUri(uri) ?: return false
+        val originalFile = File(path)
+        
         return try {
-            // 1. Salin file asli ke cache
+            // Salin file asli ke cache
             contentResolver.openInputStream(uri)?.use { input -> 
                 tempFile.outputStream().use { input.copyTo(it) } 
             } ?: return false
 
-            // 2. Baca file dengan Mp3agic
+            // Baca file dengan Mp3agic
             val mp3file = Mp3File(tempFile)
             
-            // 3. Gunakan ID3v24Tag
+            // Gunakan ID3v24Tag
             val id3v2Tag = if (mp3file.hasId3v2Tag()) {
                 mp3file.id3v2Tag
             } else {
@@ -245,17 +281,24 @@ class MainActivity : AudioServiceActivity() {
                 newTag
             }
 
-            // 4. Masukkan gambar menggunakan method setAlbumImage()
+            // Masukkan gambar menggunakan method setAlbumImage()
             val imageData = File(imagePath).readBytes()
             id3v2Tag.setAlbumImage(imageData, "image/jpeg")
 
-            // 5. Simpan ke file temp baru
+            // Simpan ke file temp baru
             val finalTempFile = File(cacheDir, "final_cover_${System.currentTimeMillis()}.$ext")
             mp3file.save(finalTempFile.absolutePath)
 
-            // 6. Tulis kembali ke file asli via URI
-            contentResolver.openOutputStream(uri, "wt")?.use { output -> 
-                finalTempFile.inputStream().use { input -> input.copyTo(output) } 
+            // Tulis kembali ke file asli via URI
+           val pfd = contentResolver.openFileDescriptor(uri, "wt")
+            if (pfd != null) {
+                java.io.FileOutputStream(pfd.fileDescriptor).use { output ->
+                    finalTempFile.inputStream().use { input -> input.copyTo(output) }
+                }
+                pfd.close()
+            } else {
+                // Fallback untuk Android 10 Legacy
+                originalFile.outputStream().use { output -> finalTempFile.inputStream().use { input -> input.copyTo(output) } }
             }
 
             if (finalTempFile.exists()) finalTempFile.delete()
