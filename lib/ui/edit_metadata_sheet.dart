@@ -29,9 +29,11 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
     _titleController = TextEditingController(text: widget.song.title);
     _artistController = TextEditingController(text: widget.song.artist);
     _albumController = TextEditingController(text: widget.song.album);
-    _albumArtistController = TextEditingController();
-    _genreController = TextEditingController();
-    _trackController = TextEditingController();
+    _albumArtistController = TextEditingController(
+      text: widget.song.albumArtist,
+    );
+    _genreController = TextEditingController(text: widget.song.genre);
+    _trackController = TextEditingController(text: widget.song.track);
   }
 
   @override
@@ -47,8 +49,11 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
 
   Future<void> _save() async {
     setState(() => _isLoading = true);
+    final messenger = ScaffoldMessenger.of(
+      context,
+    ); // Ambil referensi sebelum pop
     try {
-      await MediaStoreService.updateSongMetadata(
+      final success = await MediaStoreService.updateSongMetadata(
         id: widget.song.id,
         title: _titleController.text.trim(),
         artist: _artistController.text.trim(),
@@ -57,21 +62,24 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
         genre: _genreController.text.trim(),
         track: _trackController.text.trim(),
       );
-      await Future.delayed(const Duration(milliseconds: 500));
-      // Refresh daftar lagu agar perubahan langsung terlihat
+
+      if (!success) {
+        throw Exception("Gagal menulis metadata ke file.");
+      }
+
+      // Invalidasi dan TUNGGU sampai data terbaru selesai dimuat
       ref.invalidate(allSongsProvider);
+      await ref.read(allSongsProvider.future);
 
       if (mounted) {
-        Navigator.pop(context); // Tutup sheet jika berhasil
-        ScaffoldMessenger.of(context).showSnackBar(
+        Navigator.pop(context);
+        messenger.showSnackBar(
           const SnackBar(content: Text('Metadata berhasil diperbarui!')),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+        messenger.showSnackBar(SnackBar(content: Text('Gagal: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -123,26 +131,11 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
                       colors,
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(
-                      'Title',
-                      _titleController,
-                      colors,
-                      showRemove: true,
-                    ),
+                    _buildTextField('Title', _titleController, colors),
                     const SizedBox(height: 16),
-                    _buildTextField(
-                      'Artist',
-                      _artistController,
-                      colors,
-                      showRemove: true,
-                    ),
+                    _buildTextField('Artist', _artistController, colors),
                     const SizedBox(height: 16),
-                    _buildTextField(
-                      'Album',
-                      _albumController,
-                      colors,
-                      showRemove: true,
-                    ),
+                    _buildTextField('Album', _albumController, colors),
                     const SizedBox(height: 16),
                     _buildTextField(
                       'Album artist',
@@ -220,7 +213,6 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
     String label,
     TextEditingController controller,
     LyraColors colors, {
-    bool showRemove = false,
     bool isNumber = false,
   }) {
     return Column(
@@ -228,37 +220,22 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
       children: [
         Text(label, style: TextStyle(color: colors.accent, fontSize: 13)),
         const SizedBox(height: 4),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                keyboardType: isNumber
-                    ? TextInputType.number
-                    : TextInputType.text,
-                style: TextStyle(color: colors.textPrimary, fontSize: 16),
-                decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(
-                      color: colors.textSecondary.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: colors.accent),
-                  ),
-                ),
+        TextField(
+          controller: controller,
+          keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+          style: TextStyle(color: colors.textPrimary, fontSize: 16),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(
+                color: colors.textSecondary.withValues(alpha: 0.5),
               ),
             ),
-            if (showRemove) ...[
-              const SizedBox(width: 12),
-              Icon(Icons.remove, color: Colors.redAccent, size: 20),
-            ] else ...[
-              const SizedBox(width: 12),
-              Icon(Icons.add, color: Colors.green, size: 20),
-            ],
-          ],
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: colors.accent),
+            ),
+          ),
         ),
       ],
     );

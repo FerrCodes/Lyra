@@ -68,6 +68,12 @@ class MainActivity : AudioServiceActivity() {
                     put(MediaStore.Audio.Media.TITLE, call.argument<String>("title"))
                     put(MediaStore.Audio.Media.ARTIST, call.argument<String>("artist"))
                     put(MediaStore.Audio.Media.ALBUM, call.argument<String>("album"))
+                    call.argument<String>("albumArtist")?.let { put(MediaStore.Audio.Media.ALBUM_ARTIST, it) }
+                    call.argument<String>("genre")?.let { put(MediaStore.Audio.Media.GENRE, it) }
+                    call.argument<String>("track")?.let { 
+                        val trackNum = it.toIntOrNull() ?: 0
+                        put(MediaStore.Audio.Media.TRACK, trackNum) 
+                    }
                 }
                 
                 executeMetadataUpdate()
@@ -230,6 +236,9 @@ class MainActivity : AudioServiceActivity() {
             values.getAsString(MediaStore.Audio.Media.TITLE)?.let { tag.setField(FieldKey.TITLE, it) }
             values.getAsString(MediaStore.Audio.Media.ARTIST)?.let { tag.setField(FieldKey.ARTIST, it) }
             values.getAsString(MediaStore.Audio.Media.ALBUM)?.let { tag.setField(FieldKey.ALBUM, it) }
+            values.getAsString(MediaStore.Audio.Media.ALBUM_ARTIST)?.let { tag.setField(FieldKey.ALBUM_ARTIST, it) }
+            values.getAsString(MediaStore.Audio.Media.GENRE)?.let { tag.setField(FieldKey.GENRE, it) }
+            values.getAsString(MediaStore.Audio.Media.TRACK)?.let { tag.setField(FieldKey.TRACK, it) }
             audioFile.commit()
 
             // Gunakan ParcelFileDescriptor agar aman di semua versi Android
@@ -316,23 +325,55 @@ class MainActivity : AudioServiceActivity() {
     private fun getSongsFromMediaStore(): List<Map<String, Any>> {
         val songs = mutableListOf<Map<String, Any>>()
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-        val projection = arrayOf(MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA, MediaStore.Audio.Media.ALBUM_ID)
+        
+        // Buat list projection secara dinamis
+        val projectionList = mutableListOf(
+            MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, 
+            MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, 
+            MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATA, 
+            MediaStore.Audio.Media.ALBUM_ID, MediaStore.Audio.Media.TRACK
+        )
+        
+        // GENRE dan ALBUM_ARTIST hanya ada di Android 11 (API 30) ke atas
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            projectionList.add(MediaStore.Audio.Media.GENRE)
+            projectionList.add(MediaStore.Audio.Media.ALBUM_ARTIST)
+        }
+        
+        val projection = projectionList.toTypedArray()
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} > 0"
+        
         contentResolver.query(collection, projection, selection, null, "${MediaStore.Audio.Media.TITLE} ASC")?.use { cursor ->
+            // Dapatkan index kolom dasar
+            val idCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val titleCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+            val artistCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+            val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+            val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val pathCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+            val albumIdCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
+            val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
+            
+            // Dapatkan index kolom opsional (Jika tidak ada, nilainya -1)
+            val albumArtistCol = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM_ARTIST)
+            val genreCol = cursor.getColumnIndex(MediaStore.Audio.Media.GENRE)
+
             while (cursor.moveToNext()) {
-                val songId = cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID))
-                // Membuat Content URI dari ID
+                val songId = cursor.getLong(idCol)
                 val contentUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, songId).toString()
                 
                 songs.add(mapOf(
                     "id" to songId.toString(),
-                    "title" to (cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)) ?: "Unknown"),
-                    "artist" to (cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)) ?: "Unknown"),
-                    "album" to (cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)) ?: "Unknown"),
-                    "duration" to cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)),
-                    "path" to cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)),
-                    "albumId" to cursor.getLong(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)).toString(),
-                    "contentUri" to contentUri // <--- Tambahan Baru
+                    "title" to (cursor.getString(titleCol) ?: "Unknown"),
+                    "artist" to (cursor.getString(artistCol) ?: "Unknown"),
+                    "album" to (cursor.getString(albumCol) ?: "Unknown"),
+                    "duration" to cursor.getLong(durationCol),
+                    "path" to cursor.getString(pathCol),
+                    "albumId" to cursor.getLong(albumIdCol).toString(),
+                    "contentUri" to contentUri,
+                    "albumArtist" to (if (albumArtistCol != -1) cursor.getString(albumArtistCol).orEmpty() else ""),
+                    "genre" to (if (genreCol != -1) cursor.getString(genreCol).orEmpty() else ""),
+                    "track" to (if (trackCol != -1) cursor.getInt(trackCol).toString() else "0")
                 ))
             }
         }

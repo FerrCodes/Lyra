@@ -159,21 +159,35 @@ class _TrackDetailsPageState extends ConsumerState<TrackDetailsPage> {
                                         ),
                                       );
                                       // Simpan ke file MP3
-                                      await MediaStoreService.updateAlbumCover(
-                                        id: currentSong.id,
-                                        imagePath: imagePath,
-                                      );
-                                      // JEDA SEBENTAR
-                                      await Future.delayed(
-                                        const Duration(milliseconds: 500),
-                                      );
+                                      // Simpan ke file MP3
+                                      final success =
+                                          await MediaStoreService.updateAlbumCover(
+                                            id: currentSong.id,
+                                            imagePath: imagePath,
+                                          );
+
+                                      if (!success) {
+                                        throw Exception(
+                                          "Gagal menyimpan cover.",
+                                        );
+                                      }
+
+                                      // REFRESH DATA DAN TUNGGU SELESAI
+                                      ref.invalidate(allSongsProvider);
+                                      await ref.read(allSongsProvider.future);
+
                                       // BERSIHKAN CACHE GAMBAR FLUTTER
                                       PaintingBinding.instance.imageCache
                                           .clear();
                                       PaintingBinding.instance.imageCache
                                           .clearLiveImages();
-                                      // REFRESH DATA
-                                      ref.invalidate(allSongsProvider);
+
+                                      // PAKSA UI UNTUK REBUILD GAMBAR
+                                      if (mounted) {
+                                        setState(() {
+                                          _refreshKey++;
+                                        });
+                                      }
                                       // PAKSA UI UNTUK REBUILD GAMBAR
                                       if (mounted) {
                                         setState(() {
@@ -271,13 +285,25 @@ class _TrackDetailsPageState extends ConsumerState<TrackDetailsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildInfoRow('Album', currentSong.album, colors),
-                        _buildInfoRow('Genre', 'Unknown', colors),
+                        _buildInfoRow(
+                          'Genre',
+                          currentSong.genre.isNotEmpty
+                              ? currentSong.genre
+                              : 'Unknown',
+                          colors,
+                        ),
                         _buildInfoRow(
                           'Track length',
                           _formatDuration(currentSong.durationMs),
                           colors,
                         ),
-                        _buildInfoRow('Track number', '0', colors),
+                        _buildInfoRow(
+                          'Track number',
+                          currentSong.track.isNotEmpty
+                              ? currentSong.track
+                              : '0',
+                          colors,
+                        ),
                         _buildInfoRow(
                           'Format',
                           _getFormat(currentSong.path),
