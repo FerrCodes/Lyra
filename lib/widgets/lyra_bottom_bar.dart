@@ -353,31 +353,21 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
   Widget _buildTabRow(LyraColors colors) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const hPad = 8.0;
-        const diameter = 54.0; // sama dengan tinggi bar
+        const hPad = 0.0;
         final colWidth = (constraints.maxWidth - hPad * 2) / 4;
-        // Lingkaran menempel ke ujung bar di tab pertama dan terakhir,
-        // jarak antar tab dibagi rata di antaranya.
-        final travel = constraints.maxWidth - diameter - hPad * 2;
-        double circleLeft(int i) => hPad + travel * i / 3;
-        // Geser isi tiap tab agar tepat di tengah lingkaran.
-        double shift(int i) =>
-            (hPad + diameter / 2 + travel * i / 3) -
-            (hPad + colWidth * (i + 0.5));
-
         return Stack(
           children: [
             AnimatedPositioned(
               duration: const Duration(milliseconds: 280),
               curve: Curves.easeOutCubic,
-              left: circleLeft(widget.currentIndex),
+              left: hPad + colWidth * widget.currentIndex,
               top: 0,
               bottom: 0,
-              width: diameter,
+              width: colWidth,
               child: Container(
                 decoration: BoxDecoration(
                   color: colors.textPrimary.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
             ),
@@ -386,43 +376,31 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Transform.translate(
-                      offset: Offset(shift(0), 0),
-                      child: _buildNavIcon(
-                        0,
-                        Icons.home_filled,
-                        AppLocalizations.of(context)!.navHome,
-                      ),
+                    child: _buildNavIcon(
+                      0,
+                      Icons.home_filled,
+                      AppLocalizations.of(context)!.navHome,
                     ),
                   ),
                   Expanded(
-                    child: Transform.translate(
-                      offset: Offset(shift(1), 0),
-                      child: _buildNavIcon(
-                        1,
-                        Icons.music_note_rounded,
-                        AppLocalizations.of(context)!.navSongs,
-                      ),
+                    child: _buildNavIcon(
+                      1,
+                      Icons.music_note_rounded,
+                      AppLocalizations.of(context)!.navSongs,
                     ),
                   ),
                   Expanded(
-                    child: Transform.translate(
-                      offset: Offset(shift(2), 0),
-                      child: _buildNavIcon(
-                        2,
-                        Icons.queue_music_rounded,
-                        AppLocalizations.of(context)!.navPlaylist,
-                      ),
+                    child: _buildNavIcon(
+                      2,
+                      Icons.queue_music_rounded,
+                      AppLocalizations.of(context)!.navPlaylist,
                     ),
                   ),
                   Expanded(
-                    child: Transform.translate(
-                      offset: Offset(shift(3), 0),
-                      child: _buildNavIcon(
-                        3,
-                        Icons.library_music_rounded,
-                        AppLocalizations.of(context)!.navLibrary,
-                      ),
+                    child: _buildNavIcon(
+                      3,
+                      Icons.library_music_rounded,
+                      AppLocalizations.of(context)!.navLibrary,
                     ),
                   ),
                 ],
