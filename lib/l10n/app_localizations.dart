@@ -362,7 +362,7 @@ abstract class AppLocalizations {
   /// No description provided for @exploreMusicDesc.
   ///
   /// In en, this message translates to:
-  /// **'Play a song from the Songs tab, create your first Playlist, or add songs to Favorites. All activity will appear here.'**
+  /// **'Play songs from the Songs tab, create the first Playlist, or add songs to Favorites. Activities will all appear here.'**
   String get exploreMusicDesc;
 
   /// No description provided for @copyrightText.
@@ -418,6 +418,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unknown'**
   String get unknownArtist;
+
+  /// No description provided for @sortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get sortName;
+
+  /// No description provided for @sortArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get sortArtist;
+
+  /// No description provided for @sortDateAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Date Added'**
+  String get sortDateAdded;
+
+  /// No description provided for @playNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Play Next'**
+  String get playNext;
+
+  /// No description provided for @willPlayNext.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} will play next'**
+  String willPlayNext(String title);
+
+  /// No description provided for @addToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Queue'**
+  String get addToQueue;
+
+  /// No description provided for @addedToQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} added to queue'**
+  String addedToQueue(String title);
+
+  /// No description provided for @addToPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Playlist'**
+  String get addToPlaylist;
+
+  /// No description provided for @removeFromFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Favorites'**
+  String get removeFromFavorites;
+
+  /// No description provided for @addToFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Favorites'**
+  String get addToFavorites;
+
+  /// No description provided for @trackDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Track details'**
+  String get trackDetails;
+
+  /// No description provided for @albumLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Album'**
+  String get albumLabel;
+
+  /// No description provided for @artistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get artistLabel;
+
+  /// No description provided for @shareLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get shareLabel;
+
+  /// No description provided for @noPlaylistCreateFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'No Playlists yet. Create one in the Playlist tab.'**
+  String get noPlaylistCreateFirst;
+
+  /// No description provided for @selectPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Playlist'**
+  String get selectPlaylist;
+
+  /// No description provided for @songAddedToPlaylist.
+  ///
+  /// In en, this message translates to:
+  /// **'{song} added to {playlist}'**
+  String songAddedToPlaylist(String song, String playlist);
+
+  /// No description provided for @permissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Music and Audio permission required.'**
+  String get permissionRequired;
+
+  /// No description provided for @permissionRequiredDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Requires permission to search all songs.'**
+  String get permissionRequiredDesc;
+
+  /// No description provided for @tryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Again'**
+  String get tryAgain;
+
+  /// No description provided for @failedToLoadSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load songs: {error}'**
+  String failedToLoadSongs(String error);
+
+  /// No description provided for @noSongsFoundList.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs found.'**
+  String get noSongsFoundList;
+
+  /// No description provided for @allSongs.
+  ///
+  /// In en, this message translates to:
+  /// **'All Songs'**
+  String get allSongs;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

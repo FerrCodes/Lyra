@@ -4,6 +4,7 @@ import '../widgets/song_artwork.dart';
 import 'package:flutter/material.dart';
 import '../models/song.dart' as local;
 import '../ui/track_details_page.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import 'package:share_plus/share_plus.dart';
@@ -38,6 +39,20 @@ class SongsPageState extends ConsumerState<SongsPage> {
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
   String? _lastSortBy;
+
+  String _getLocalizedFilter(BuildContext context, String filter) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (filter) {
+      case 'Name':
+        return l10n.sortName;
+      case 'Artist':
+        return l10n.sortArtist;
+      case 'Date Added':
+        return l10n.sortDateAdded;
+      default:
+        return filter;
+    }
+  }
 
   @override
   void initState() {
@@ -135,7 +150,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                         child: Row(
                           children: [
                             Text(
-                              _sortBy,
+                              _getLocalizedFilter(context, _sortBy),
                               style: TextStyle(
                                 color: Colors.blue.shade700,
                                 fontSize: 16,
@@ -153,9 +168,18 @@ class SongsPageState extends ConsumerState<SongsPage> {
                         ),
                       ),
                       const Divider(height: 1, thickness: 0.5),
-                      _buildFilterOption('Name'),
-                      _buildFilterOption('Artist'),
-                      _buildFilterOption('Date Added'),
+                      _buildFilterOption(
+                        'Name',
+                        AppLocalizations.of(context)!.sortName,
+                      ),
+                      _buildFilterOption(
+                        'Artist',
+                        AppLocalizations.of(context)!.sortArtist,
+                      ),
+                      _buildFilterOption(
+                        'Date Added',
+                        AppLocalizations.of(context)!.sortDateAdded,
+                      ),
                       const SizedBox(height: 8),
                     ],
                   ),
@@ -168,11 +192,9 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
-  Widget _buildFilterOption(String title) {
-    final isSelected = _sortBy == title;
-    if (isSelected) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildFilterOption(String value, String label) {
+    final isSelected = _sortBy == value;
+    if (isSelected) return const SizedBox.shrink();
 
     return Material(
       color: Colors.transparent,
@@ -180,16 +202,16 @@ class SongsPageState extends ConsumerState<SongsPage> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         visualDensity: VisualDensity.compact,
         title: Text(
-          title,
+          label,
           style: const TextStyle(fontSize: 15, color: Colors.black87),
         ),
         onTap: () {
           Navigator.of(context, rootNavigator: true).pop();
           setState(() {
-            _sortBy = title;
-            widget.onSortChanged?.call(title);
+            _sortBy = value;
+            widget.onSortChanged?.call(value);
           });
-          ref.read(lyraPreferencesProvider).saveSongsSort(title);
+          ref.read(lyraPreferencesProvider).saveSongsSort(value);
         },
       ),
     );
@@ -220,7 +242,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
       0,
       albumIds: {for (var s in shuffled) s.path: s.albumId.toString()},
       sourceType: 'Songs',
-      sourceName: 'Semua Lagu',
+      sourceName: AppLocalizations.of(context)!.allSongs,
     );
     widget.onPlayTriggered?.call();
   }
@@ -245,7 +267,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
       0,
       albumIds: {for (var s in _displayedSongs) s.path: s.albumId.toString()},
       sourceType: 'Songs',
-      sourceName: 'Semua Lagu',
+      sourceName: AppLocalizations.of(context)!.allSongs,
     );
     widget.onPlayTriggered?.call();
   }
@@ -332,13 +354,15 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       Icons.playlist_play,
                       color: Colors.black87,
                     ),
-                    title: const Text('Play Next'),
+                    title: Text(AppLocalizations.of(context)!.playNext),
                     onTap: () {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            '${song.title} akan diputar selanjutnya',
+                            AppLocalizations.of(
+                              context,
+                            )!.willPlayNext(song.title),
                           ),
                         ),
                       );
@@ -349,12 +373,16 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       Icons.add_to_queue,
                       color: Colors.black87,
                     ),
-                    title: const Text('Add to Queue'),
+                    title: Text(AppLocalizations.of(context)!.addToQueue),
                     onTap: () {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('${song.title} ditambahkan ke antrean'),
+                          content: Text(
+                            AppLocalizations.of(
+                              context,
+                            )!.addedToQueue(song.title),
+                          ),
                         ),
                       );
                     },
@@ -364,7 +392,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       Icons.playlist_add,
                       color: Colors.black87,
                     ),
-                    title: const Text('Add to Playlist'),
+                    title: Text(AppLocalizations.of(context)!.addToPlaylist),
                     onTap: () {
                       Navigator.pop(context);
                       _showPlaylistSelection(song);
@@ -376,7 +404,9 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       color: isFav ? Colors.red : Colors.black87,
                     ),
                     title: Text(
-                      isFav ? 'Remove from Favorites' : 'Add to Favorites',
+                      isFav
+                          ? AppLocalizations.of(context)!.removeFromFavorites
+                          : AppLocalizations.of(context)!.addToFavorites,
                     ),
                     onTap: () {
                       Navigator.pop(context);
@@ -388,7 +418,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       Icons.info_outline,
                       color: Colors.black87,
                     ),
-                    title: const Text('Track details'),
+                    title: Text(AppLocalizations.of(context)!.trackDetails),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -401,7 +431,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.album, color: Colors.black87),
-                    title: const Text('Album'),
+                    title: Text(AppLocalizations.of(context)!.albumLabel),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.of(this.context).push(
@@ -414,7 +444,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.person, color: Colors.black87),
-                    title: const Text('Artist'),
+                    title: Text(AppLocalizations.of(context)!.artistLabel),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.of(this.context).push(
@@ -427,7 +457,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.share, color: Colors.black87),
-                    title: const Text('Share'),
+                    title: Text(AppLocalizations.of(context)!.shareLabel),
                     onTap: () {
                       SharePlus.instance.share(
                         ShareParams(
@@ -455,8 +485,8 @@ class SongsPageState extends ConsumerState<SongsPage> {
 
     if (playlists.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Belum ada Playlist. Buat dulu di tab Playlist.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.noPlaylistCreateFirst),
         ),
       );
       return;
@@ -494,10 +524,10 @@ class SongsPageState extends ConsumerState<SongsPage> {
                         ),
                       ),
                     ),
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(16.0),
                       child: Text(
-                        'Pilih Playlist',
+                        AppLocalizations.of(context)!.selectPlaylist,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -534,7 +564,12 @@ class SongsPageState extends ConsumerState<SongsPage> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      '${song.title} ditambahkan ke ${pl.name}',
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.songAddedToPlaylist(
+                                        song.title,
+                                        pl.name,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -584,20 +619,23 @@ class SongsPageState extends ConsumerState<SongsPage> {
                   color: Colors.grey,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Izin Music dan Audio dibutuhkan.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.permissionRequired,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Membutuhkan izin untuk mencari semua lagu.',
+                Text(
+                  AppLocalizations.of(context)!.permissionRequiredDesc,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () =>
                       ref.invalidate(allSongsProvider), // Coba muat ulang
-                  child: const Text('Coba Lagi'),
+                  child: Text(AppLocalizations.of(context)!.tryAgain),
                 ),
               ],
             ),
@@ -605,7 +643,11 @@ class SongsPageState extends ConsumerState<SongsPage> {
         }
 
         // Error umum (selain izin)
-        return Center(child: Text('Gagal memuat lagu: $err'));
+        return Center(
+          child: Text(
+            AppLocalizations.of(context)!.failedToLoadSongs(err.toString()),
+          ),
+        );
       },
       data: (songs) {
         // Sinkronkan data provider ke variabel lokal
@@ -616,7 +658,9 @@ class SongsPageState extends ConsumerState<SongsPage> {
         }
 
         if (_allSongs.isEmpty) {
-          return const Center(child: Text('Tidak ada lagu ditemukan.'));
+          return Center(
+            child: Text(AppLocalizations.of(context)!.noSongsFoundList),
+          );
         }
 
         return Stack(

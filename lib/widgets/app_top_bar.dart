@@ -9,6 +9,7 @@ import '../ui/songs_page.dart';
 import '../ui/playlist_page.dart';
 import '../ui/library_page.dart';
 import 'glass_container.dart';
+import '../l10n/app_localizations.dart';
 
 class AppTopBar extends StatelessWidget {
   final int currentTab;
@@ -19,6 +20,20 @@ class AppTopBar extends StatelessWidget {
     required this.currentTab,
     required this.currentSortFilter,
   });
+
+  String _getLocalizedFilter(BuildContext context, String filter) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (filter) {
+      case 'Name':
+        return l10n.sortName;
+      case 'Artist':
+        return l10n.sortArtist;
+      case 'Date Added':
+        return l10n.sortDateAdded;
+      default:
+        return filter;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +148,7 @@ class AppTopBar extends StatelessWidget {
                         const Icon(Icons.sort, color: Colors.black87, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          currentSortFilter,
+                          _getLocalizedFilter(context, currentSortFilter),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

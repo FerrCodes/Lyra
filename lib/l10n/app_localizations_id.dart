@@ -177,4 +177,81 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get unknownArtist => 'Unknown';
+
+  @override
+  String get sortName => 'Nama';
+
+  @override
+  String get sortArtist => 'Artis';
+
+  @override
+  String get sortDateAdded => 'Terakhir Ditambahkan';
+
+  @override
+  String get playNext => 'Putar Selanjutnya';
+
+  @override
+  String willPlayNext(String title) {
+    return '$title akan diputar selanjutnya';
+  }
+
+  @override
+  String get addToQueue => 'Tambah ke Antrean';
+
+  @override
+  String addedToQueue(String title) {
+    return '$title ditambahkan ke antrean';
+  }
+
+  @override
+  String get addToPlaylist => 'Tambah ke Playlist';
+
+  @override
+  String get removeFromFavorites => 'Hapus dari Favorit';
+
+  @override
+  String get addToFavorites => 'Tambah ke Favorit';
+
+  @override
+  String get trackDetails => 'Detail Lagu';
+
+  @override
+  String get albumLabel => 'Album';
+
+  @override
+  String get artistLabel => 'Artis';
+
+  @override
+  String get shareLabel => 'Bagikan';
+
+  @override
+  String get noPlaylistCreateFirst => 'Belum ada Playlist. Buat dulu di tab Playlist.';
+
+  @override
+  String get selectPlaylist => 'Pilih Playlist';
+
+  @override
+  String songAddedToPlaylist(String song, String playlist) {
+    return '$song ditambahkan ke $playlist';
+  }
+
+  @override
+  String get permissionRequired => 'Izin Music dan Audio dibutuhkan.';
+
+  @override
+  String get permissionRequiredDesc => 'Membutuhkan izin untuk mencari semua lagu.';
+
+  @override
+  String get tryAgain => 'Coba Lagi';
+
+  @override
+  String failedToLoadSongs(String error) {
+    return 'Gagal memuat lagu: $error';
+  }
+
+  @override
+  String get noSongsFoundList => 'Tidak ada lagu ditemukan.';
+
+  @override
+  String get allSongs => 'Semua Lagu';
 }

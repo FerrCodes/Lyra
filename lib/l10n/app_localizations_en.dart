@@ -147,7 +147,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get listenAgain => 'Listen Again';
 
   @override
-  String get exploreMusicDesc => 'Play a song from the Songs tab, create your first Playlist, or add songs to Favorites. All activity will appear here.';
+  String get exploreMusicDesc => 'Play songs from the Songs tab, create the first Playlist, or add songs to Favorites. Activities will all appear here.';
 
   @override
   String get copyrightText => '© 2026 Lyra. All rights reserved.';
@@ -177,4 +177,81 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unknownArtist => 'Unknown';
+
+  @override
+  String get sortName => 'Name';
+
+  @override
+  String get sortArtist => 'Artist';
+
+  @override
+  String get sortDateAdded => 'Date Added';
+
+  @override
+  String get playNext => 'Play Next';
+
+  @override
+  String willPlayNext(String title) {
+    return '$title will play next';
+  }
+
+  @override
+  String get addToQueue => 'Add to Queue';
+
+  @override
+  String addedToQueue(String title) {
+    return '$title added to queue';
+  }
+
+  @override
+  String get addToPlaylist => 'Add to Playlist';
+
+  @override
+  String get removeFromFavorites => 'Remove from Favorites';
+
+  @override
+  String get addToFavorites => 'Add to Favorites';
+
+  @override
+  String get trackDetails => 'Track details';
+
+  @override
+  String get albumLabel => 'Album';
+
+  @override
+  String get artistLabel => 'Artist';
+
+  @override
+  String get shareLabel => 'Share';
+
+  @override
+  String get noPlaylistCreateFirst => 'No Playlists yet. Create one in the Playlist tab.';
+
+  @override
+  String get selectPlaylist => 'Select Playlist';
+
+  @override
+  String songAddedToPlaylist(String song, String playlist) {
+    return '$song added to $playlist';
+  }
+
+  @override
+  String get permissionRequired => 'Music and Audio permission required.';
+
+  @override
+  String get permissionRequiredDesc => 'Requires permission to search all songs.';
+
+  @override
+  String get tryAgain => 'Try Again';
+
+  @override
+  String failedToLoadSongs(String error) {
+    return 'Failed to load songs: $error';
+  }
+
+  @override
+  String get noSongsFoundList => 'No songs found.';
+
+  @override
+  String get allSongs => 'All Songs';
 }
