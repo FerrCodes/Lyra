@@ -868,6 +868,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Change to \"Custom order\" to drag songs'**
   String get customOrderToDrag;
+
+  /// No description provided for @allCollections.
+  ///
+  /// In en, this message translates to:
+  /// **'All Collections'**
+  String get allCollections;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @dataUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Data updated'**
+  String get dataUpdated;
+
+  /// No description provided for @albums.
+  ///
+  /// In en, this message translates to:
+  /// **'Albums'**
+  String get albums;
+
+  /// No description provided for @artists.
+  ///
+  /// In en, this message translates to:
+  /// **'Artists'**
+  String get artists;
+
+  /// No description provided for @folders.
+  ///
+  /// In en, this message translates to:
+  /// **'Folders'**
+  String get folders;
+
+  /// No description provided for @albumsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Albums'**
+  String albumsCount(int count);
+
+  /// No description provided for @artistsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Artists'**
+  String artistsCount(int count);
+
+  /// No description provided for @foldersCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} Folders'**
+  String foldersCount(int count);
+
+  /// No description provided for @playAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Play All'**
+  String get playAll;
+
+  /// No description provided for @noFoldersFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No folders found.'**
+  String get noFoldersFound;
+
+  /// No description provided for @noSongsInFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'No songs in this folder.'**
+  String get noSongsInFolder;
+
+  /// No description provided for @shuffleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle'**
+  String get shuffleLabel;
+
+  /// No description provided for @playAllLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Play All'**
+  String get playAllLabel;
+
+  /// No description provided for @locationLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get locationLabel;
+
+  /// No description provided for @pathCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder path copied to clipboard!'**
+  String get pathCopied;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

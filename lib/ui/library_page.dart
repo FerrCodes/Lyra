@@ -4,9 +4,11 @@ import '../providers/database_provider.dart';
 import 'albums_page.dart';
 import 'artists_page.dart';
 import 'folders_page.dart';
+import 'favorites_page.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/songs_provider.dart';
+import '../theme/lyra_colors.dart';
 
-// Kabel untuk dipanggil dari home_page.dart
 final GlobalKey<LibraryPageState> libraryPageKey =
     GlobalKey<LibraryPageState>();
 
@@ -22,6 +24,7 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
   int _totalFavorites = 0;
   int _totalPlaylists = 0;
   final ScrollController _scrollController = ScrollController();
+
   bool get isScrolledDown =>
       _scrollController.hasClients && _scrollController.offset > 10;
 
@@ -31,29 +34,56 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     _loadStats();
   }
 
-  Future<void> _loadStats() async {
-    setState(() => _isLoading = true);
-    final db = ref.read(databaseProvider);
-    final favs = await db.getAllFavoriteSongs();
-    final playlists = await db.select(db.playlists).get();
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Tambahkan dispose
+    super.dispose();
+  }
 
-    if (mounted) {
-      setState(() {
-        _totalFavorites = favs.length;
-        _totalPlaylists = playlists.length;
-        _isLoading = false;
-      });
+  Future<void> _loadStats() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final db = ref.read(databaseProvider);
+      final favs = await db.getAllFavoriteSongs();
+      final playlists = await db.select(db.playlists).get();
+
+      if (mounted) {
+        setState(() {
+          _totalFavorites = favs.length;
+          _totalPlaylists = playlists.length;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading stats: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal memuat data perpustakaan.')),
+        );
+      }
+    }
+  }
+
+  Future<void> refreshStats() async {
+    // Panggil refresh untuk provider dan stats
+    try {
+      ref.invalidate(allSongsProvider);
+      await ref.read(allSongsProvider.future);
+      await _loadStats();
+    } catch (e) {
+      debugPrint('Error refreshing: $e');
     }
   }
 
   void showMoreMenu(BuildContext buttonContext) {
-    // Cari posisi tombol yang ditekan
     final RenderBox renderBox = buttonContext.findRenderObject() as RenderBox;
     final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final colors = context.lyra;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Rumus posisi persis seperti di Playlist Detail
     final double topPosition = offset.dy + renderBox.size.height - 70;
-    final double leftPosition = offset.dx - 1; // Disamakan dengan tombol
+    final double leftPosition = offset.dx - 1;
 
     showDialog(
       context: context,
@@ -67,9 +97,9 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
               child: Material(
                 color: Colors.transparent,
                 child: Container(
-                  width: 220, // Lebar disesuaikan
+                  width: 220,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
@@ -82,37 +112,24 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildPopoverItem(Icons.refresh, 'Refresh', () async {
-                        Navigator.pop(context); // Tutup popover
-                        await _loadStats(); // Tunggu loading selesai
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Data diperbarui')),
-                          );
-                        }
-                      }),
-                      const Divider(height: 1, thickness: 0.5),
                       _buildPopoverItem(
-                        Icons.account_tree_outlined,
-                        'View as Tree',
-                        () {
+                        Icons.refresh,
+                        AppLocalizations.of(context)!.refresh,
+                        () async {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fitur View as Tree segera hadir'),
-                            ),
-                          );
+                          await refreshStats();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  AppLocalizations.of(context)!.dataUpdated,
+                                ),
+                              ),
+                            );
+                          }
                         },
+                        colors,
                       ),
-                      const Divider(height: 1, thickness: 0.5),
-                      _buildPopoverItem(Icons.graphic_eq, 'Equalizer', () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Fitur Equalizer segera hadir'),
-                          ),
-                        );
-                      }),
                       const SizedBox(height: 8),
                     ],
                   ),
@@ -125,14 +142,22 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
-  Widget _buildPopoverItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _buildPopoverItem(
+    IconData icon,
+    String title,
+    VoidCallback onTap,
+    LyraColors colors,
+  ) {
     return Material(
       color: Colors.transparent,
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
         visualDensity: VisualDensity.compact,
-        leading: Icon(icon, color: Colors.black87, size: 20),
-        title: Text(title, style: const TextStyle(fontSize: 14)),
+        leading: Icon(icon, color: colors.textPrimary, size: 20),
+        title: Text(
+          title,
+          style: TextStyle(fontSize: 14, color: colors.textPrimary),
+        ),
         onTap: onTap,
       ),
     );
@@ -150,23 +175,45 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.lyra;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final allSongsAsync = ref.watch(allSongsProvider);
     final allSongs = allSongsAsync.value ?? [];
 
-    final int totalAlbums = allSongs.map((s) => s.album).toSet().length;
-    final int totalArtists = allSongs.map((s) => s.artist).toSet().length;
-    final int totalFolders = allSongs
+    // Perhitungan Album & Artist (Abaikan string kosong/spasi & kapitalisasi)
+    final validAlbums = allSongs
+        .where(
+          (s) =>
+              s.album.trim().isNotEmpty &&
+              s.album.toLowerCase() != 'unknown album',
+        )
+        .map((s) => s.album.trim().toLowerCase());
+    final totalAlbums = validAlbums.toSet().length;
+
+    final validArtists = allSongs
+        .where(
+          (s) =>
+              s.artist.trim().isNotEmpty &&
+              s.artist.toLowerCase() != 'unknown artist',
+        )
+        .map((s) => s.artist.trim().toLowerCase());
+    final totalArtists = validArtists.toSet().length;
+
+    // Perhitungan Folder (Gunakan full path direktori, bukan cuma nama akhir)
+    final totalFolders = allSongs
+        .where((s) => s.path.contains('/'))
         .map((s) {
-          final parts = s.path.split('/');
-          return parts.length > 1 ? parts[parts.length - 2] : 'Unknown Folder';
+          final dir = s.path.substring(0, s.path.lastIndexOf('/'));
+          return dir.trim();
         })
+        .where((dir) => dir.isNotEmpty)
         .toSet()
         .length;
 
     return Stack(
       children: [
-        // 1. KONTEN UTAMA (Selalu ada di belakang)
         ListView(
+          controller: _scrollController, // Controller dipasang di sini
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + 80,
             bottom: 160,
@@ -174,92 +221,113 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
             right: 16,
           ),
           children: [
-            const Text(
-              'Semua Koleksi',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              AppLocalizations.of(context)!.allCollections,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: colors.textPrimary,
+              ),
             ),
             const SizedBox(height: 16),
             _buildCategoryCard(
-              'Favorit',
+              AppLocalizations.of(context)!.favorites,
+              AppLocalizations.of(
+                context,
+              )!.songsCount(_isLoading ? 0 : _totalFavorites),
               Icons.favorite,
               Colors.redAccent,
-              _isLoading ? 0 : _totalFavorites,
-              () {},
+              isDark,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FavoritesPage()),
+                );
+              },
+              colors,
             ),
             const SizedBox(height: 12),
             _buildCategoryCard(
-              'Album',
+              AppLocalizations.of(context)!.albums,
+              AppLocalizations.of(context)!.albumsCount(totalAlbums),
               Icons.album,
               Colors.blueAccent,
-              totalAlbums,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AlbumsPage()),
-                );
-              },
+              isDark,
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AlbumsPage()),
+              ),
+              colors,
             ),
             const SizedBox(height: 12),
             _buildCategoryCard(
-              'Artis',
+              AppLocalizations.of(context)!.artists,
+              AppLocalizations.of(context)!.artistsCount(totalArtists),
               Icons.person,
               Colors.greenAccent.shade700,
-              totalArtists,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ArtistsPage()),
-                );
-              },
+              isDark,
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ArtistsPage()),
+              ),
+              colors,
             ),
             const SizedBox(height: 12),
             _buildCategoryCard(
-              'Folder',
+              AppLocalizations.of(context)!.folders,
+              AppLocalizations.of(context)!.foldersCount(totalFolders),
               Icons.folder,
               Colors.orangeAccent.shade700,
-              totalFolders,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FoldersPage()),
-                );
-              },
+              isDark,
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FoldersPage()),
+              ),
+              colors,
             ),
             const SizedBox(height: 32),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildStatItem(allSongs.length.toString(), 'Total Lagu'),
-                  _buildStatDivider(),
-                  _buildStatItem(_totalPlaylists.toString(), 'Playlist'),
+                  _buildStatItem(
+                    allSongsAsync.isLoading
+                        ? '...'
+                        : allSongs.length.toString(),
+                    AppLocalizations.of(context)!.totalSongs,
+                    colors,
+                  ),
+                  _buildStatDivider(colors),
+                  _buildStatItem(
+                    _totalPlaylists.toString(),
+                    AppLocalizations.of(context)!.playlists,
+                    colors,
+                  ),
                 ],
               ),
             ),
           ],
         ),
 
-        // LAPISAN SPINNER (Hanya muncul saat loading)
         if (_isLoading)
           Positioned.fill(
             child: IgnorePointer(
-              // Mencegah user klik kartu saat loading
               child: Container(
-                color: Colors.black.withValues(
-                  alpha: 0.1,
-                ), // Sedikit digelapkan
+                color: Colors.black.withValues(alpha: 0.1),
                 child: const Center(child: CircularProgressIndicator()),
               ),
             ),
@@ -270,25 +338,29 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
 
   Widget _buildCategoryCard(
     String title,
+    String subtitle,
     IconData icon,
     Color color,
-    int count,
+    bool isDark,
     VoidCallback onTap,
+    LyraColors colors,
   ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 80,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
         child: Row(
           children: [
@@ -303,26 +375,17 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
                 ),
               ),
             ),
-
             const SizedBox(width: 16),
-
             Container(
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15), // Warna pastel
+                color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                icon,
-                color: color, // Ikon warna solid
-                size: 26,
-              ),
+              child: Icon(icon, color: color, size: 26),
             ),
-
             const SizedBox(width: 16),
-
-            // 3. Teks (Judul & Jumlah)
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -330,17 +393,17 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.black87,
+                    style: TextStyle(
+                      color: colors.textPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$count Lagu',
+                    subtitle,
                     style: TextStyle(
-                      color: Colors.grey.shade500,
+                      color: colors.textSecondary,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -348,13 +411,11 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
                 ],
               ),
             ),
-
-            // 4. Tombol Arrow Right
             Padding(
               padding: const EdgeInsets.only(right: 20.0),
               child: Icon(
                 Icons.arrow_forward_ios,
-                color: Colors.grey.shade400,
+                color: colors.textSecondary,
                 size: 18,
               ),
             ),
@@ -364,23 +425,23 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
-  void refreshStats() {
-    _loadStats();
-  }
-
-  Widget _buildStatItem(String count, String label) {
+  Widget _buildStatItem(String count, String label, LyraColors colors) {
     return Column(
       children: [
         Text(
           count,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: colors.textPrimary,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: colors.textSecondary,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -388,7 +449,11 @@ class LibraryPageState extends ConsumerState<LibraryPage> {
     );
   }
 
-  Widget _buildStatDivider() {
-    return Container(height: 30, width: 1, color: Colors.grey.shade200);
+  Widget _buildStatDivider(LyraColors colors) {
+    return Container(
+      height: 30,
+      width: 1,
+      color: colors.textSecondary.withValues(alpha: 0.2),
+    );
   }
 }

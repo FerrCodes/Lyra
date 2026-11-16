@@ -428,4 +428,58 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get customOrderToDrag => 'Ubah ke \"Custom order\" untuk menggeser lagu';
+
+  @override
+  String get allCollections => 'Semua Koleksi';
+
+  @override
+  String get refresh => 'Segarkan';
+
+  @override
+  String get dataUpdated => 'Data diperbarui';
+
+  @override
+  String get albums => 'Album';
+
+  @override
+  String get artists => 'Artis';
+
+  @override
+  String get folders => 'Folder';
+
+  @override
+  String albumsCount(int count) {
+    return '$count Album';
+  }
+
+  @override
+  String artistsCount(int count) {
+    return '$count Artis';
+  }
+
+  @override
+  String foldersCount(int count) {
+    return '$count Folder';
+  }
+
+  @override
+  String get playAll => 'Putar Semua';
+
+  @override
+  String get noFoldersFound => 'Tidak ada folder yang ditemukan.';
+
+  @override
+  String get noSongsInFolder => 'Tidak ada lagu di folder ini.';
+
+  @override
+  String get shuffleLabel => 'Acak';
+
+  @override
+  String get playAllLabel => 'Putar Semua';
+
+  @override
+  String get locationLabel => 'Lokasi';
+
+  @override
+  String get pathCopied => 'Lokasi folder disalin ke clipboard!';
 }

@@ -428,4 +428,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customOrderToDrag => 'Change to \"Custom order\" to drag songs';
+
+  @override
+  String get allCollections => 'All Collections';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String get dataUpdated => 'Data updated';
+
+  @override
+  String get albums => 'Albums';
+
+  @override
+  String get artists => 'Artists';
+
+  @override
+  String get folders => 'Folders';
+
+  @override
+  String albumsCount(int count) {
+    return '$count Albums';
+  }
+
+  @override
+  String artistsCount(int count) {
+    return '$count Artists';
+  }
+
+  @override
+  String foldersCount(int count) {
+    return '$count Folders';
+  }
+
+  @override
+  String get playAll => 'Play All';
+
+  @override
+  String get noFoldersFound => 'No folders found.';
+
+  @override
+  String get noSongsInFolder => 'No songs in this folder.';
+
+  @override
+  String get shuffleLabel => 'Shuffle';
+
+  @override
+  String get playAllLabel => 'Play All';
+
+  @override
+  String get locationLabel => 'Location';
+
+  @override
+  String get pathCopied => 'Folder path copied to clipboard!';
 }
