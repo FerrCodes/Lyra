@@ -9,6 +9,7 @@ import '../ui/songs_page.dart';
 import '../ui/playlist_page.dart';
 import '../ui/library_page.dart';
 import 'glass_container.dart';
+import '../theme/lyra_colors.dart';
 import '../l10n/app_localizations.dart';
 
 class AppTopBar extends StatelessWidget {
@@ -78,14 +79,16 @@ class AppTopBar extends StatelessWidget {
           children: [
             GlassContainer(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              radius: 20, // Sudut melengkung kapsul
+              radius: 20,
+              blurSigma: 12,
+              tintOpacity: 0.5,
               child: Text(
                 'LYRA MUSIC',
                 style: TextStyle(
                   fontFamily: 'LyraFont',
                   fontSize: 22,
                   letterSpacing: -0.5,
-                  color: Colors.black87,
+                  color: context.lyra.textPrimary,
                 ),
               ),
             ),

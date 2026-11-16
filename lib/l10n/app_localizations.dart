@@ -170,7 +170,7 @@ abstract class AppLocalizations {
   /// No description provided for @appPermissions.
   ///
   /// In en, this message translates to:
-  /// **'App Permissions'**
+  /// **'Permissions'**
   String get appPermissions;
 
   /// No description provided for @appPermissionsDesc.
@@ -602,7 +602,7 @@ abstract class AppLocalizations {
   /// No description provided for @sortDateAdded.
   ///
   /// In en, this message translates to:
-  /// **'Recently added'**
+  /// **'New Added'**
   String get sortDateAdded;
 
   /// No description provided for @playlistInfo.

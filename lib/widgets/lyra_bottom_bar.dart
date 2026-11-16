@@ -97,7 +97,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
       return GlassContainer(
         height: 54,
         radius: radius,
-        tintOpacity: 0.2,
+        blurSigma: 12,
+        tintOpacity: 0.4,
         child: child,
       );
     }
@@ -194,6 +195,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                           width: 54,
                           height: 54,
                           radius: 32,
+                          blurSigma: 12,
+                          tintOpacity: 0.5,
                           child: Icon(
                             Icons.home_filled,
                             color: colors.textPrimary,
@@ -208,6 +211,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
             child: GlassContainer(
               height: 54,
               radius: 32,
+              blurSigma: 12,
+              tintOpacity: 0.5,
               child: TextField(
                 controller: _searchController,
                 focusNode: _searchFocusNode,
@@ -257,6 +262,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
               width: 54,
               height: 54,
               radius: 32,
+              blurSigma: 12,
+              tintOpacity: 0.5,
               child: Icon(Icons.close, color: colors.textPrimary),
             ),
           ),
@@ -483,6 +490,8 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                   width: 54,
                   height: 54,
                   radius: 32,
+                  blurSigma: 12,
+                  tintOpacity: 0.5,
                   child: Icon(
                     Icons.search_rounded,
                     color: colors.textPrimary,

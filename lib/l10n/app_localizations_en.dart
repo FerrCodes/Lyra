@@ -45,7 +45,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lyraNotificationDesc => 'Manage how Lyra sends notifications';
 
   @override
-  String get appPermissions => 'App Permissions';
+  String get appPermissions => 'Permissions';
 
   @override
   String get appPermissionsDesc => 'Manage file and media access';
@@ -279,7 +279,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortAlbum => 'Album';
 
   @override
-  String get sortDateAdded => 'Recently added';
+  String get sortDateAdded => 'New Added';
 
   @override
   String get playlistInfo => 'Playlist Info';

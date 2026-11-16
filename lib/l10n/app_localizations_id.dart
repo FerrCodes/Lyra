@@ -39,7 +39,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get deviceSettings => 'Pengaturan Perangkat';
 
   @override
-  String get lyraNotification => 'Notifikasi Lyra';
+  String get lyraNotification => 'Notifikasi';
 
   @override
   String get lyraNotificationDesc => 'Atur cara Lyra mengirim notifikasi';
@@ -279,7 +279,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get sortAlbum => 'Album';
 
   @override
-  String get sortDateAdded => 'Terakhir ditambahkan';
+  String get sortDateAdded => 'Baru Ditambahkan';
 
   @override
   String get playlistInfo => 'Info Playlist';
