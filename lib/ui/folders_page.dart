@@ -140,11 +140,11 @@ class FoldersPage extends ConsumerWidget {
                               style: TextStyle(
                                 color: colors.textSecondary,
                                 fontSize: 11,
+                                height: 1.3,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              softWrap: true,
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
                               AppLocalizations.of(
                                 context,

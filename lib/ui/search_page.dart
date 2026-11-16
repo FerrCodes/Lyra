@@ -9,6 +9,7 @@ import '../models/song.dart' as local;
 import '../providers/songs_provider.dart';
 import '../audio/lyra_audio_handler.dart';
 import '../theme/lyra_colors.dart';
+import '../l10n/app_localizations.dart';
 import 'package:audio_service/audio_service.dart';
 import '../features/search/search_logic.dart';
 import '../features/search/widgets/song_tile.dart';
@@ -180,11 +181,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   else ...[
                     // Top Result
                     if (_results!.topSongResult != null) ...[
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                           child: Text(
-                            'Top Result',
+                            AppLocalizations.of(context)!.topResult,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -205,11 +206,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
                     // Songs
                     if (_results!.songs.isNotEmpty) ...[
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
                           child: Text(
-                            'Songs',
+                            AppLocalizations.of(context)!.navSongs,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -241,11 +242,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
                     // Artists
                     if (_results!.artists.isNotEmpty) ...[
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
                           child: Text(
-                            'Artists',
+                            AppLocalizations.of(context)!.artists,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -266,11 +267,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
                     // Albums
                     if (_results!.albums.isNotEmpty) ...[
-                      const SliverToBoxAdapter(
+                      SliverToBoxAdapter(
                         child: Padding(
                           padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
                           child: Text(
-                            'Albums',
+                            AppLocalizations.of(context)!.albums,
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -339,7 +340,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Artists, Songs, Lyrics, and More',
+                AppLocalizations.of(context)!.searchHint,
                 style: TextStyle(fontSize: 16, color: colors.textSecondary),
               ),
             ],
@@ -358,7 +359,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Searches',
+                  AppLocalizations.of(context)!.recentSearches,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -367,7 +368,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 ),
                 TextButton(
                   onPressed: _clearRecentSearches,
-                  child: Text('Clear', style: TextStyle(color: colors.accent)),
+                  child: Text(
+                    AppLocalizations.of(context)!.clearLabel,
+                    style: TextStyle(color: colors.accent),
+                  ),
                 ),
               ],
             ),
@@ -404,7 +408,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       hasScrollBody: false,
       child: Center(
         child: Text(
-          'Tidak ada hasil untuk "$_debouncedQuery"',
+          AppLocalizations.of(context)!.noResultsFor(_debouncedQuery),
           style: TextStyle(fontSize: 16, color: colors.textSecondary),
         ),
       ),

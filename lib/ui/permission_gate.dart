@@ -1,6 +1,7 @@
+import 'home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'home_page.dart';
+import '../l10n/app_localizations.dart';
 
 class PermissionGate extends StatefulWidget {
   const PermissionGate({super.key});
@@ -91,19 +92,19 @@ class _PermissionGateState extends State<PermissionGate>
                   ),
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  'Izin Diperlukan!',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.permissionRequiredTitle,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Lyra membutuhkan izin akses "Music and Audio" untuk bisa memindai dan memutar lagu di perangkatmu.',
+                Text(
+                  AppLocalizations.of(context)!.permissionRequiredGateDesc,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
                     height: 1.5,
@@ -122,9 +123,9 @@ class _PermissionGateState extends State<PermissionGate>
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    label: const Text(
-                      'Buka Halaman Info Aplikasi',
-                      style: TextStyle(
+                    label: Text(
+                      AppLocalizations.of(context)!.openAppSettings,
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -141,9 +142,9 @@ class _PermissionGateState extends State<PermissionGate>
                 // Tombol Coba Lagi (Jika user sudah kasih izin tapi aplikasi belum mendeteksi)
                 TextButton(
                   onPressed: _checkPermission,
-                  child: const Text(
-                    'Coba Lagi',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  child: Text(
+                    AppLocalizations.of(context)!.tryAgain,
+                    style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                 ),
               ],

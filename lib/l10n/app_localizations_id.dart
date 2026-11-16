@@ -543,4 +543,70 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get speedLabel => 'Kecepatan';
+
+  @override
+  String get queueTitle => 'Antrean';
+
+  @override
+  String get shuffleModeActive => 'Mode acak aktif. Matikan acak untuk menggeser urutan.';
+
+  @override
+  String removedFromQueue(String title) {
+    return '\"$title\" dihapus dari antrean';
+  }
+
+  @override
+  String get undoLabel => 'Urungkan';
+
+  @override
+  String get emptyQueue => 'Antrean kosong';
+
+  @override
+  String get topResult => 'Hasil Teratas';
+
+  @override
+  String get recentSearches => 'Pencarian Terakhir';
+
+  @override
+  String get clearLabel => 'Hapus';
+
+  @override
+  String noResultsFor(String query) {
+    return 'Tidak ada hasil untuk \"$query\"';
+  }
+
+  @override
+  String get encodingType => 'Tipe Encoding';
+
+  @override
+  String get unicodeUtf16 => 'Unicode (UTF-16)';
+
+  @override
+  String get albumArtistLabel => 'Artis Album';
+
+  @override
+  String get genreLabel => 'Genre';
+
+  @override
+  String get trackNumberLabel => 'Nomor Track';
+
+  @override
+  String get cancelLabel => 'Batal';
+
+  @override
+  String get metadataUpdated => 'Metadata berhasil diperbarui!';
+
+  @override
+  String updateFailed(String error) {
+    return 'Gagal: $error';
+  }
+
+  @override
+  String get permissionRequiredTitle => 'Izin Diperlukan!';
+
+  @override
+  String get permissionRequiredGateDesc => 'Lyra membutuhkan izin akses \"Music and Audio\" untuk bisa memindai dan memutar lagu di perangkatmu.';
+
+  @override
+  String get openAppSettings => 'Buka Halaman Info Aplikasi';
 }

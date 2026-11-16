@@ -4,6 +4,7 @@ import '../models/song.dart' as local;
 import '../providers/songs_provider.dart';
 import '../services/media_store_service.dart';
 import '../theme/lyra_colors.dart';
+import '../../l10n/app_localizations.dart';
 
 class EditMetadataSheet extends ConsumerStatefulWidget {
   final local.Song song;
@@ -74,12 +75,20 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
       if (mounted) {
         Navigator.pop(context);
         messenger.showSnackBar(
-          const SnackBar(content: Text('Metadata berhasil diperbarui!')),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.metadataUpdated),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text('Gagal: $e')));
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.updateFailed(e.toString()),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -126,27 +135,43 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildDropdownField(
-                      'Encoding type',
-                      'Unicode (UTF-16)',
+                      AppLocalizations.of(context)!.encodingType,
+                      AppLocalizations.of(context)!.unicodeUtf16,
                       colors,
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField('Title', _titleController, colors),
-                    const SizedBox(height: 16),
-                    _buildTextField('Artist', _artistController, colors),
-                    const SizedBox(height: 16),
-                    _buildTextField('Album', _albumController, colors),
+                    _buildTextField(
+                      AppLocalizations.of(context)!.titleLabel,
+                      _titleController,
+                      colors,
+                    ),
                     const SizedBox(height: 16),
                     _buildTextField(
-                      'Album artist',
+                      AppLocalizations.of(context)!.artistLabel,
+                      _artistController,
+                      colors,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      AppLocalizations.of(context)!.albumLabel,
+                      _albumController,
+                      colors,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      AppLocalizations.of(context)!.albumArtistLabel,
                       _albumArtistController,
                       colors,
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField('Genre', _genreController, colors),
+                    _buildTextField(
+                      AppLocalizations.of(context)!.genreLabel,
+                      _genreController,
+                      colors,
+                    ),
                     const SizedBox(height: 16),
                     _buildTextField(
-                      'Track number',
+                      AppLocalizations.of(context)!.trackNumberLabel,
                       _trackController,
                       colors,
                       isNumber: true,
@@ -174,7 +199,7 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
                     child: Text(
-                      'Cancel',
+                      AppLocalizations.of(context)!.cancelLabel,
                       style: TextStyle(
                         color: colors.textPrimary,
                         fontSize: 16,
@@ -191,7 +216,7 @@ class _EditMetadataSheetState extends ConsumerState<EditMetadataSheet> {
                       : TextButton(
                           onPressed: _save,
                           child: Text(
-                            'Save',
+                            AppLocalizations.of(context)!.saveLabel,
                             style: TextStyle(
                               color: colors.accent,
                               fontSize: 16,

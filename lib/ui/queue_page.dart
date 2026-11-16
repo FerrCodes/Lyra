@@ -6,6 +6,7 @@ import '../audio/lyra_audio_handler.dart';
 import '../main.dart';
 import '../theme/lyra_colors.dart';
 import '../widgets/song_artwork.dart';
+import '../l10n/app_localizations.dart';
 
 class QueuePage extends StatefulWidget {
   final ScrollController? scrollController;
@@ -96,12 +97,12 @@ class _QueuePageState extends State<QueuePage> {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
         content: Text(
-          '"${item.title}" dihapus dari antrean',
+          AppLocalizations.of(context)!.removedFromQueue(item.title),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         action: SnackBarAction(
-          label: 'Undo',
+          label: AppLocalizations.of(context)!.undoLabel,
           onPressed: () =>
               _handler.insertTrackToQueue(index.clamp(0, _items.length), item),
         ),
@@ -173,7 +174,7 @@ class _QueuePageState extends State<QueuePage> {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Text(
-              'Mode acak aktif. Matikan acak untuk menggeser urutan.',
+              AppLocalizations.of(context)!.shuffleModeActive,
               style: TextStyle(fontSize: 12, color: colors.textPrimary),
             ),
           ),
@@ -196,7 +197,7 @@ class _QueuePageState extends State<QueuePage> {
           ),
           Expanded(
             child: Text(
-              'Antrean',
+              AppLocalizations.of(context)!.queueTitle,
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -205,7 +206,7 @@ class _QueuePageState extends State<QueuePage> {
             ),
           ),
           Text(
-            '${_items.length} lagu',
+            AppLocalizations.of(context)!.songsCount(_items.length),
             style: TextStyle(fontSize: 13, color: colors.textSecondary),
           ),
         ],
@@ -223,7 +224,7 @@ class _QueuePageState extends State<QueuePage> {
             padding: const EdgeInsets.all(40),
             child: Center(
               child: Text(
-                'Antrean kosong',
+                AppLocalizations.of(context)!.emptyQueue,
                 style: TextStyle(color: colors.textSecondary, fontSize: 16),
               ),
             ),
@@ -316,7 +317,7 @@ class _QueuePageState extends State<QueuePage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  item.artist ?? 'Unknown Artist',
+                  item.artist ?? AppLocalizations.of(context)!.unknownArtist,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12, color: colors.textSecondary),

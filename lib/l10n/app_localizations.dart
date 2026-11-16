@@ -1078,6 +1078,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Speed'**
   String get speedLabel;
+
+  /// No description provided for @queueTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue'**
+  String get queueTitle;
+
+  /// No description provided for @shuffleModeActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle mode active. Turn off shuffle to reorder.'**
+  String get shuffleModeActive;
+
+  /// No description provided for @removedFromQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{title}\" removed from queue'**
+  String removedFromQueue(String title);
+
+  /// No description provided for @undoLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undoLabel;
+
+  /// No description provided for @emptyQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue is empty'**
+  String get emptyQueue;
+
+  /// No description provided for @topResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Top Result'**
+  String get topResult;
+
+  /// No description provided for @recentSearches.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Searches'**
+  String get recentSearches;
+
+  /// No description provided for @clearLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearLabel;
+
+  /// No description provided for @noResultsFor.
+  ///
+  /// In en, this message translates to:
+  /// **'No results for \"{query}\"'**
+  String noResultsFor(String query);
+
+  /// No description provided for @encodingType.
+  ///
+  /// In en, this message translates to:
+  /// **'Encoding type'**
+  String get encodingType;
+
+  /// No description provided for @unicodeUtf16.
+  ///
+  /// In en, this message translates to:
+  /// **'Unicode (UTF-16)'**
+  String get unicodeUtf16;
+
+  /// No description provided for @albumArtistLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Album artist'**
+  String get albumArtistLabel;
+
+  /// No description provided for @genreLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Genre'**
+  String get genreLabel;
+
+  /// No description provided for @trackNumberLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Track number'**
+  String get trackNumberLabel;
+
+  /// No description provided for @cancelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancelLabel;
+
+  /// No description provided for @metadataUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Metadata updated successfully!'**
+  String get metadataUpdated;
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed: {error}'**
+  String updateFailed(String error);
+
+  /// No description provided for @permissionRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission Required!'**
+  String get permissionRequiredTitle;
+
+  /// No description provided for @permissionRequiredGateDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyra needs \"Music and Audio\" access permission to scan and play songs on your device.'**
+  String get permissionRequiredGateDesc;
+
+  /// No description provided for @openAppSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open App Info Settings'**
+  String get openAppSettings;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

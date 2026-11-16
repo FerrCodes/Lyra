@@ -543,4 +543,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get speedLabel => 'Speed';
+
+  @override
+  String get queueTitle => 'Queue';
+
+  @override
+  String get shuffleModeActive => 'Shuffle mode active. Turn off shuffle to reorder.';
+
+  @override
+  String removedFromQueue(String title) {
+    return '\"$title\" removed from queue';
+  }
+
+  @override
+  String get undoLabel => 'Undo';
+
+  @override
+  String get emptyQueue => 'Queue is empty';
+
+  @override
+  String get topResult => 'Top Result';
+
+  @override
+  String get recentSearches => 'Recent Searches';
+
+  @override
+  String get clearLabel => 'Clear';
+
+  @override
+  String noResultsFor(String query) {
+    return 'No results for \"$query\"';
+  }
+
+  @override
+  String get encodingType => 'Encoding type';
+
+  @override
+  String get unicodeUtf16 => 'Unicode (UTF-16)';
+
+  @override
+  String get albumArtistLabel => 'Album artist';
+
+  @override
+  String get genreLabel => 'Genre';
+
+  @override
+  String get trackNumberLabel => 'Track number';
+
+  @override
+  String get cancelLabel => 'Cancel';
+
+  @override
+  String get metadataUpdated => 'Metadata updated successfully!';
+
+  @override
+  String updateFailed(String error) {
+    return 'Failed: $error';
+  }
+
+  @override
+  String get permissionRequiredTitle => 'Permission Required!';
+
+  @override
+  String get permissionRequiredGateDesc => 'Lyra needs \"Music and Audio\" access permission to scan and play songs on your device.';
+
+  @override
+  String get openAppSettings => 'Open App Info Settings';
 }
