@@ -358,15 +358,19 @@ class _QueuePageState extends State<QueuePage> {
     );
 
     // Selalu kembalikan Dismissible, atur direction berdasarkan isCurrent
-    return Dismissible(
+    // RepaintBoundary di level tile supaya drag/scroll tidak repaint semua
+    return RepaintBoundary(
       key: key,
-      direction: isCurrent
-          ? DismissDirection.none
-          : DismissDirection.horizontal,
-      onDismissed: (_) => _remove(item), // Mengirim item, bukan index
-      background: _swipeBackground(colors, Alignment.centerLeft),
-      secondaryBackground: _swipeBackground(colors, Alignment.centerRight),
-      child: content,
+      child: Dismissible(
+        key: ObjectKey(item),
+        direction: isCurrent
+            ? DismissDirection.none
+            : DismissDirection.horizontal,
+        onDismissed: (_) => _remove(item),
+        background: _swipeBackground(colors, Alignment.centerLeft),
+        secondaryBackground: _swipeBackground(colors, Alignment.centerRight),
+        child: content,
+      ),
     );
   }
 

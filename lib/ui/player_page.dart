@@ -818,6 +818,7 @@ class _PlayerPageState extends State<PlayerPage> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: colors.pageBackground,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -838,153 +839,147 @@ class _PlayerPageState extends State<PlayerPage> {
                 }
 
                 return SafeArea(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 12),
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: colors.textSecondary.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colors.textSecondary.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          AppLocalizations.of(context)!.sleepTimer,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: colors.textPrimary,
-                          ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        AppLocalizations.of(context)!.sleepTimer,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
                         ),
-                        const SizedBox(height: 16),
+                      ),
+                      const SizedBox(height: 16),
 
-                        // Opsi OFF
-                        _buildRadioTimerOption(
-                          context,
-                          AppLocalizations.of(context)!.offLabel,
-                          !isActive, // Terpilih jika timer mati
-                          () {
-                            handler.cancelSleepTimer();
-                            Navigator.pop(context);
-                          },
-                          colors,
-                        ),
-                        // Opsi 30 Menit
-                        _buildRadioTimerOption(
-                          context,
-                          AppLocalizations.of(context)!.minutes30,
-                          isSelected(const Duration(minutes: 30)),
-                          () {
-                            handler.startSleepTimer(
-                              const Duration(minutes: 30),
-                            );
-                            Navigator.pop(context);
-                          },
-                          colors,
-                        ),
-                        // Opsi 1 Jam
-                        _buildRadioTimerOption(
-                          context,
-                          AppLocalizations.of(context)!.hour1,
-                          isSelected(const Duration(hours: 1)),
-                          () {
-                            handler.startSleepTimer(const Duration(hours: 1));
-                            Navigator.pop(context);
-                          },
-                          colors,
-                        ),
-                        // Opsi 1 Jam 30 Menit
-                        _buildRadioTimerOption(
-                          context,
-                          AppLocalizations.of(context)!.hour1Min30,
-                          isSelected(const Duration(hours: 1, minutes: 30)),
-                          () {
-                            handler.startSleepTimer(
+                      // Opsi OFF
+                      _buildRadioTimerOption(
+                        context,
+                        AppLocalizations.of(context)!.offLabel,
+                        !isActive, // Terpilih jika timer mati
+                        () {
+                          handler.cancelSleepTimer();
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+                      // Opsi 30 Menit
+                      _buildRadioTimerOption(
+                        context,
+                        AppLocalizations.of(context)!.minutes30,
+                        isSelected(const Duration(minutes: 30)),
+                        () {
+                          handler.startSleepTimer(const Duration(minutes: 30));
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+                      // Opsi 1 Jam
+                      _buildRadioTimerOption(
+                        context,
+                        AppLocalizations.of(context)!.hour1,
+                        isSelected(const Duration(hours: 1)),
+                        () {
+                          handler.startSleepTimer(const Duration(hours: 1));
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+                      // Opsi 1 Jam 30 Menit
+                      _buildRadioTimerOption(
+                        context,
+                        AppLocalizations.of(context)!.hour1Min30,
+                        isSelected(const Duration(hours: 1, minutes: 30)),
+                        () {
+                          handler.startSleepTimer(
+                            const Duration(hours: 1, minutes: 30),
+                          );
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+                      // Opsi 2 Jam
+                      _buildRadioTimerOption(
+                        context,
+                        AppLocalizations.of(context)!.hours2,
+                        isSelected(const Duration(hours: 2)),
+                        () {
+                          handler.startSleepTimer(const Duration(hours: 2));
+                          Navigator.pop(context);
+                        },
+                        colors,
+                      ),
+                      // Opsi CUSTOM
+                      _buildRadioTimerOption(
+                        context,
+                        AppLocalizations.of(context)!.customLabel,
+                        isActive &&
+                            !isSelected(const Duration(minutes: 30)) &&
+                            !isSelected(const Duration(hours: 1)) &&
+                            !isSelected(
                               const Duration(hours: 1, minutes: 30),
-                            );
-                            Navigator.pop(context);
-                          },
-                          colors,
-                        ),
-                        // Opsi 2 Jam
-                        _buildRadioTimerOption(
-                          context,
-                          AppLocalizations.of(context)!.hours2,
-                          isSelected(const Duration(hours: 2)),
-                          () {
-                            handler.startSleepTimer(const Duration(hours: 2));
-                            Navigator.pop(context);
-                          },
-                          colors,
-                        ),
-                        // Opsi CUSTOM
-                        _buildRadioTimerOption(
-                          context,
-                          AppLocalizations.of(context)!.customLabel,
-                          isActive &&
-                              !isSelected(const Duration(minutes: 30)) &&
-                              !isSelected(const Duration(hours: 1)) &&
-                              !isSelected(
-                                const Duration(hours: 1, minutes: 30),
-                              ) &&
-                              !isSelected(const Duration(hours: 2)),
-                          () async {
-                            final time = await showTimePicker(
-                              context: context,
-                              initialTime: TimeOfDay.now(),
-                              builder: (context, child) {
-                                final isDark =
-                                    Theme.of(context).brightness ==
-                                    Brightness.dark;
-                                return Theme(
-                                  data: Theme.of(context).copyWith(
-                                    colorScheme: isDark
-                                        ? ColorScheme.dark(
-                                            primary: colors.accent,
-                                            onPrimary: Colors.white,
-                                            surface: colors.pageBackground,
-                                            onSurface: colors.textPrimary,
-                                          )
-                                        : ColorScheme.light(
-                                            primary: colors.accent,
-                                            onPrimary: Colors.white,
-                                            surface: colors.pageBackground,
-                                            onSurface: colors.textPrimary,
-                                          ),
-                                  ),
-                                  child: child!,
-                                );
-                              },
-                            );
-                            if (time != null) {
-                              final now = TimeOfDay.now();
-                              final difference = Duration(
-                                hours: time.hour - now.hour,
-                                minutes: time.minute - now.minute,
+                            ) &&
+                            !isSelected(const Duration(hours: 2)),
+                        () async {
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                            builder: (context, child) {
+                              final isDark =
+                                  Theme.of(context).brightness ==
+                                  Brightness.dark;
+                              return Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: isDark
+                                      ? ColorScheme.dark(
+                                          primary: colors.accent,
+                                          onPrimary: Colors.white,
+                                          surface: colors.pageBackground,
+                                          onSurface: colors.textPrimary,
+                                        )
+                                      : ColorScheme.light(
+                                          primary: colors.accent,
+                                          onPrimary: Colors.white,
+                                          surface: colors.pageBackground,
+                                          onSurface: colors.textPrimary,
+                                        ),
+                                ),
+                                child: child!,
                               );
-                              if (difference == Duration.zero) {
-                                handler.startSleepTimer(
-                                  const Duration(days: 1),
-                                );
-                              } else if (difference.isNegative) {
-                                handler.startSleepTimer(
-                                  difference + const Duration(days: 1),
-                                );
-                              } else {
-                                handler.startSleepTimer(difference);
-                              }
-                              if (context.mounted) Navigator.pop(context);
+                            },
+                          );
+                          if (time != null) {
+                            final now = TimeOfDay.now();
+                            final difference = Duration(
+                              hours: time.hour - now.hour,
+                              minutes: time.minute - now.minute,
+                            );
+                            if (difference == Duration.zero) {
+                              handler.startSleepTimer(const Duration(days: 1));
+                            } else if (difference.isNegative) {
+                              handler.startSleepTimer(
+                                difference + const Duration(days: 1),
+                              );
+                            } else {
+                              handler.startSleepTimer(difference);
                             }
-                          },
-                          colors,
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                    ),
+                            if (context.mounted) Navigator.pop(context);
+                          }
+                        },
+                        colors,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 );
               },
@@ -1025,134 +1020,118 @@ class _PlayerPageState extends State<PlayerPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // Agar sudut melengkung terlihat
+      backgroundColor: colors.pageBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.4, // Muncul 40% layar di awal
-          minChildSize: 0.2,
-          maxChildSize: 0.9, // Bisa ditarik sampai 90% layar
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: colors.pageBackground,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-              ),
-              child: ListView(
-                controller: scrollController,
-                padding: const EdgeInsets.all(24),
-                children: [
-                  // Handle Bar
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: colors.textSecondary.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: colors.textSecondary.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                ),
+                const SizedBox(height: 24),
 
-                  Text(
-                    AppLocalizations.of(context)!.appVolume,
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // --- FITUR VOLUME ---
-                  StreamBuilder<double>(
-                    stream: handler.volumeStream,
-                    builder: (context, snapshot) {
-                      final currentVolume = snapshot.data ?? 1.0;
-                      return Row(
-                        children: [
-                          Icon(
-                            currentVolume == 0
-                                ? Icons.volume_off_rounded
-                                : Icons.volume_down_rounded,
-                            color: colors.textSecondary,
-                          ),
-                          Expanded(
-                            child: Slider(
-                              value: currentVolume,
-                              activeColor: colors.accent,
-                              inactiveColor: colors.textSecondary.withValues(
-                                alpha: 0.2,
-                              ),
-                              onChanged: (value) {
-                                handler.setVolume(value);
-                              },
+                Text(
+                  AppLocalizations.of(context)!.appVolume,
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 8),
+                StreamBuilder<double>(
+                  stream: handler.volumeStream,
+                  builder: (context, snapshot) {
+                    final currentVolume = snapshot.data ?? 1.0;
+                    return Row(
+                      children: [
+                        Icon(
+                          currentVolume == 0
+                              ? Icons.volume_off_rounded
+                              : Icons.volume_down_rounded,
+                          color: colors.textSecondary,
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: currentVolume,
+                            activeColor: colors.accent,
+                            inactiveColor: colors.textSecondary.withValues(
+                              alpha: 0.2,
                             ),
+                            onChanged: (value) => handler.setVolume(value),
                           ),
-                          Icon(
-                            Icons.volume_up_rounded,
-                            color: colors.textSecondary,
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                        ),
+                        Icon(
+                          Icons.volume_up_rounded,
+                          color: colors.textSecondary,
+                        ),
+                      ],
+                    );
+                  },
+                ),
 
-                  const SizedBox(height: 16),
-                  Divider(color: colors.textSecondary.withValues(alpha: 0.1)),
-                  const SizedBox(height: 16),
+                const SizedBox(height: 16),
+                Divider(color: colors.textSecondary.withValues(alpha: 0.1)),
+                const SizedBox(height: 16),
 
-                  Text(
-                    AppLocalizations.of(context)!.speedLabel,
-                    style: TextStyle(fontSize: 12, color: colors.textSecondary),
-                  ),
-                  const SizedBox(height: 12),
-
-                  StreamBuilder<double>(
-                    stream: handler.speedStream,
-                    initialData: handler.speed,
-                    builder: (context, snapshot) {
-                      final currentSpeed = snapshot.data ?? 1.0;
-                      return Wrap(
-                        spacing: 8,
-                        children: [0.75, 1.0, 1.25, 1.5].map((speed) {
-                          final isActive = (currentSpeed - speed).abs() < 0.01;
-                          return GestureDetector(
-                            onTap: () => handler.setSpeed(speed),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
+                Text(
+                  AppLocalizations.of(context)!.speedLabel,
+                  style: TextStyle(fontSize: 12, color: colors.textSecondary),
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<double>(
+                  stream: handler.speedStream,
+                  initialData: handler.speed,
+                  builder: (context, snapshot) {
+                    final currentSpeed = snapshot.data ?? 1.0;
+                    return Wrap(
+                      spacing: 8,
+                      children: [0.75, 1.0, 1.25, 1.5].map((speed) {
+                        final isActive = (currentSpeed - speed).abs() < 0.01;
+                        return GestureDetector(
+                          onTap: () => handler.setSpeed(speed),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isActive
+                                  ? colors.accent.withValues(alpha: 0.15)
+                                  : colors.textPrimary.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '${speed}x',
+                              style: TextStyle(
                                 color: isActive
-                                    ? colors.accent.withValues(alpha: 0.15)
-                                    : colors.textPrimary.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '${speed}x',
-                                style: TextStyle(
-                                  color: isActive
-                                      ? colors.accent
-                                      : colors.textPrimary,
-                                  fontWeight: isActive
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 14,
-                                ),
+                                    ? colors.accent
+                                    : colors.textPrimary,
+                                fontWeight: isActive
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontSize: 14,
                               ),
                             ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         );
       },
     );

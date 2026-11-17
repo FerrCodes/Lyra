@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
@@ -18,6 +19,8 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   Map<String, String> _currentAlbumIds = {};
   bool _mutatingQueue = false;
   Timer? _sleepTimer;
+  static const _kShuffle = 'lyra_shuffle_mode';
+  static const _kRepeat = 'lyra_repeat_mode';
 
   final ValueNotifier<bool> sleepTimerActiveNotifier = ValueNotifier<bool>(
     false,
@@ -50,6 +53,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   LyraAudioHandler() {
     _sessionInitFuture = _initAudioSession();
+    _restorePlaybackModes();
 
     _playbackSub = _player.playbackEventStream.listen(_broadcastState);
     _player.shuffleModeEnabledStream.listen(
@@ -80,6 +84,23 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> _initAudioSession() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
+  }
+
+  Future<void> _restorePlaybackModes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final shuffleOn = prefs.getBool(_kShuffle) ?? false;
+      final repeatIndex = prefs.getInt(_kRepeat) ?? 0;
+
+      await _player.setShuffleModeEnabled(shuffleOn);
+      await _player.setLoopMode(switch (repeatIndex) {
+        1 => LoopMode.all,
+        2 => LoopMode.one,
+        _ => LoopMode.off,
+      });
+    } catch (e) {
+      debugPrint('Gagal restore playback modes: $e');
+    }
   }
 
   void _broadcastState(PlaybackEvent event) {
@@ -336,6 +357,13 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     final enable = shuffleMode != AudioServiceShuffleMode.none;
     if (enable) await _player.shuffle();
     await _player.setShuffleModeEnabled(enable);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_kShuffle, enable);
+    } catch (e) {
+      debugPrint('Gagal save shuffle mode: $e');
+    }
   }
 
   @override
@@ -345,6 +373,19 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
       AudioServiceRepeatMode.one => LoopMode.one,
       _ => LoopMode.all,
     });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final idx = switch (repeatMode) {
+        AudioServiceRepeatMode.none => 0,
+        AudioServiceRepeatMode.all => 1,
+        AudioServiceRepeatMode.one => 2,
+        _ => 1, // Menangkap AudioServiceRepeatMode.group, arahkan ke 'all'
+      };
+      await prefs.setInt(_kRepeat, idx);
+    } catch (e) {
+      debugPrint('Gagal save repeat mode: $e');
+    }
   }
 
   @override
@@ -413,6 +454,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   double get volume => _player.volume;
   Stream<double> get volumeStream => _player.volumeStream;
 
+  @override
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
   double get speed => _player.speed;
   Stream<double> get speedStream => _player.speedStream;

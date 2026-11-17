@@ -12,7 +12,6 @@ import '../providers/database_provider.dart';
 import '../services/media_store_service.dart';
 import '../preferences/preferences_provider.dart';
 import 'package:audio_service/audio_service.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/library/pages/album_detail_page.dart';
 import '../features/library/pages/artist_detail_page.dart';
@@ -295,27 +294,20 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: QueryArtworkWidget(
-                            key: ValueKey('audio-sheet-${song.id}'),
-                            id: int.parse(song.id),
-                            type: ArtworkType.AUDIO,
-                            size: 200,
-                            artworkHeight: 40,
-                            artworkWidth: 40,
-                            artworkBorder: BorderRadius.circular(8),
-                            nullArtworkWidget: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.music_note,
-                                color: Colors.grey,
-                              ),
+                        SongArtwork(
+                          id: int.parse(song.id),
+                          size: 40,
+                          radius: 8,
+                          placeholder: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.music_note,
+                              color: Colors.grey,
                             ),
                           ),
                         ),
