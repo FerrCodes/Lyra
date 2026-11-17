@@ -10,7 +10,7 @@
   "systemEqualizer": "System Equalizer",
   "openSystemEqualizer": "Open device audio settings",
   "deviceSettings": "Device Settings",
-  "lyraNotification": "Lyra Notifications",
+  "lyraNotification": "Notifications",
   "lyraNotificationDesc": "Manage how Lyra sends notifications",
   "appPermissions": "Permissions",
   "appPermissionsDesc": "Manage file and media access",

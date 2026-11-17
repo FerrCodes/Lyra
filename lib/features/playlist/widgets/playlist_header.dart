@@ -31,6 +31,7 @@ class PlaylistHeader extends StatelessWidget {
             child: Image.file(
               File(imagePath!),
               fit: BoxFit.cover,
+              gaplessPlayback: true,
               errorBuilder: (context, error, stackTrace) => PlaylistCover(
                 playlistId: playlistId,
                 imagePath: null,

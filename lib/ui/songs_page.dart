@@ -387,7 +387,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
                     title: Text(AppLocalizations.of(context)!.addToPlaylist),
                     onTap: () {
                       Navigator.pop(context);
-                      _showPlaylistSelection(song);
+                      _showPlaylistSelection(song, isFav);
                     },
                   ),
                   ListTile(
@@ -469,7 +469,7 @@ class SongsPageState extends ConsumerState<SongsPage> {
     );
   }
 
-  void _showPlaylistSelection(local.Song song) async {
+  void _showPlaylistSelection(local.Song song, bool isFav) async {
     final db = ref.read(databaseProvider);
     final playlists = await db.select(db.playlists).get();
 
@@ -517,13 +517,31 @@ class SongsPageState extends ConsumerState<SongsPage> {
                       ),
                     ),
                     Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text(
-                        AppLocalizations.of(context)!.selectPlaylist,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
+                      padding: const EdgeInsets.only(top: 8, bottom: 8),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context)!.selectPlaylist,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.black87,
+                              ),
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showSongOptions(song, isFav);
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const Divider(height: 1),

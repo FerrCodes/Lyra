@@ -39,6 +39,8 @@ class _PlaylistCoverState extends ConsumerState<PlaylistCover>
         child: Image.file(
           File(widget.imagePath!),
           fit: BoxFit.cover,
+          gaplessPlayback: true,
+          cacheWidth: (300 * MediaQuery.of(context).devicePixelRatio).round(),
           errorBuilder: (_, _, _) => _mosaic(),
         ),
       );

@@ -158,7 +158,7 @@ abstract class AppLocalizations {
   /// No description provided for @lyraNotification.
   ///
   /// In en, this message translates to:
-  /// **'Lyra Notifications'**
+  /// **'Notifications'**
   String get lyraNotification;
 
   /// No description provided for @lyraNotificationDesc.

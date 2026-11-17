@@ -39,7 +39,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deviceSettings => 'Device Settings';
 
   @override
-  String get lyraNotification => 'Lyra Notifications';
+  String get lyraNotification => 'Notifications';
 
   @override
   String get lyraNotificationDesc => 'Manage how Lyra sends notifications';
