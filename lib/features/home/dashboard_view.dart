@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:on_audio_query/on_audio_query.dart';
+import '../../widgets/song_artwork.dart';
 import '../../database/database.dart';
 import '../../main.dart';
 import '../../models/song.dart' as local;
@@ -127,6 +127,7 @@ class DashboardView extends ConsumerWidget {
         // KONTEN UTAMA
         ListView(
           controller: controller,
+          cacheExtent: 2000,
           padding: EdgeInsets.only(
             top: MediaQuery.of(context).padding.top + 80,
             bottom: 160,
@@ -418,62 +419,64 @@ class DashboardView extends ConsumerWidget {
             const SizedBox(height: 12),
             SizedBox(
               height: 180,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: data.length,
-                itemBuilder: (context, index) {
-                  final playlist = data[index];
-                  return PressableScale(
-                    onTap: () => onOpenPlaylist(playlist),
-                    child: Container(
-                      width: 140,
-                      margin: const EdgeInsets.only(right: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 140,
-                            width: 140,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: isDark
-                                  ? []
-                                  : [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.05,
+              child: RepaintBoundary(
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: data.length,
+                  itemBuilder: (context, index) {
+                    final playlist = data[index];
+                    return PressableScale(
+                      onTap: () => onOpenPlaylist(playlist),
+                      child: Container(
+                        width: 140,
+                        margin: const EdgeInsets.only(right: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              height: 140,
+                              width: 140,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: isDark
+                                    ? []
+                                    : [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.05,
+                                          ),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
                                         ),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: PlaylistCover(
-                                playlistId: playlist.id,
-                                imagePath: playlist.imagePath,
-                                iconSize: 40,
+                                      ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
+                                child: PlaylistCover(
+                                  playlistId: playlist.id,
+                                  imagePath: playlist.imagePath,
+                                  iconSize: 40,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            playlist.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: colors.textPrimary,
+                            const SizedBox(height: 12),
+                            Text(
+                              playlist.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: colors.textPrimary,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -506,29 +509,27 @@ class DashboardView extends ConsumerWidget {
             const SizedBox(height: 12),
             SizedBox(
               height: 185,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: data.length,
-                itemBuilder: (context, index) {
-                  final song = data[index];
-                  return PressableScale(
-                    onTap: () => onPlay(index, data),
-                    child: Container(
-                      width: 130,
-                      margin: const EdgeInsets.only(right: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: QueryArtworkWidget(
-                              id: int.tryParse(albumById[song.id] ?? '') ?? 0,
-                              type: ArtworkType.ALBUM,
-                              size: 150,
-                              artworkWidth: 130,
-                              artworkHeight: 130,
-                              nullArtworkWidget: Container(
+              child: RepaintBoundary(
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: data.length,
+                  itemBuilder: (context, index) {
+                    final song = data[index];
+                    return PressableScale(
+                      onTap: () => onPlay(index, data),
+                      child: Container(
+                        width: 130,
+                        margin: const EdgeInsets.only(right: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SongArtwork(
+                              id: int.tryParse(song.id) ?? 0,
+                              size: 130,
+                              radius: 16,
+                              loadSize: 200,
+                              placeholder: Container(
                                 color: colors.textSecondary.withValues(
                                   alpha: 0.1,
                                 ),
@@ -539,32 +540,32 @@ class DashboardView extends ConsumerWidget {
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            song.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: colors.textPrimary,
-                              fontSize: 14,
+                            const SizedBox(height: 8),
+                            Text(
+                              song.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: colors.textPrimary,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                          Text(
-                            song.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: colors.textSecondary,
-                              fontSize: 12,
+                            Text(
+                              song.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: colors.textSecondary,
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 28),
@@ -646,21 +647,17 @@ class DashboardView extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: QueryArtworkWidget(
-                id: int.tryParse(history.albumId) ?? 0,
-                type: ArtworkType.ALBUM,
-                size: 150,
-                artworkWidth: 130,
-                artworkHeight: 130,
-                nullArtworkWidget: Container(
-                  color: colors.textSecondary.withValues(alpha: 0.1),
-                  child: Icon(
-                    Icons.music_note,
-                    size: 40,
-                    color: colors.textSecondary,
-                  ),
+            SongArtwork(
+              id: int.tryParse(history.songId) ?? 0,
+              size: 130,
+              radius: 16,
+              loadSize: 200,
+              placeholder: Container(
+                color: colors.textSecondary.withValues(alpha: 0.1),
+                child: Icon(
+                  Icons.music_note,
+                  size: 40,
+                  color: colors.textSecondary,
                 ),
               ),
             ),

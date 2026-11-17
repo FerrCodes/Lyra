@@ -293,241 +293,250 @@ class _HomePageState extends ConsumerState<HomePage>
           onTabChanged: _switchTab,
           onClose: () => _scaffoldKey.currentState?.closeDrawer(),
         ),
-        body: Stack(
-          children: [
-            // KONTEN UTAMA (DENGAN NESTED NAVIGATOR)
-            PrimaryScrollController(
-              controller: _mainScrollController,
-              child: IndexedStack(
-                index: _currentTab,
-                children: [
-                  _buildScrollTrackedTab(
-                    0,
-                    DashboardView(
-                      controller: _mainScrollController,
-                      onOpenPlaylist: (playlist) {
-                        _switchTab(2); // Pindah ke tab Playlist
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          playlistPageKey.currentState?.openPlaylist(playlist);
-                        });
-                      },
+        body: RepaintBoundary(
+          child: Stack(
+            children: [
+              // KONTEN UTAMA (DENGAN NESTED NAVIGATOR)
+              PrimaryScrollController(
+                controller: _mainScrollController,
+                child: IndexedStack(
+                  index: _currentTab,
+                  children: [
+                    _buildScrollTrackedTab(
+                      0,
+                      DashboardView(
+                        controller: _mainScrollController,
+                        onOpenPlaylist: (playlist) {
+                          _switchTab(2); // Pindah ke tab Playlist
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            playlistPageKey.currentState?.openPlaylist(
+                              playlist,
+                            );
+                          });
+                        },
+                      ),
                     ),
-                  ),
 
-                  // Tab Songs
-                  _buildScrollTrackedTab(
-                    1,
-                    Navigator(
-                      key: _songsNavKey,
-                      observers: [_songsObserver],
-                      onGenerateRoute: (settings) => MaterialPageRoute(
-                        builder: (_) => SongsPage(
-                          key: songsPageKey,
-                          onPlayTriggered: () => setState(() {}),
-                          onSortChanged: (newFilter) {
-                            setState(() => _currentSortFilter = newFilter);
-                          },
+                    // Tab Songs
+                    _buildScrollTrackedTab(
+                      1,
+                      Navigator(
+                        key: _songsNavKey,
+                        observers: [_songsObserver],
+                        onGenerateRoute: (settings) => MaterialPageRoute(
+                          builder: (_) => SongsPage(
+                            key: songsPageKey,
+                            onPlayTriggered: () => setState(() {}),
+                            onSortChanged: (newFilter) {
+                              setState(() => _currentSortFilter = newFilter);
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Tab Playlist
+                    _buildScrollTrackedTab(
+                      2,
+                      Navigator(
+                        key: _playlistNavKey,
+                        observers: [_playlistObserver],
+                        onGenerateRoute: (settings) => MaterialPageRoute(
+                          builder: (_) => PlaylistPage(key: playlistPageKey),
+                        ),
+                      ),
+                    ),
+
+                    // Tab Library
+                    _buildScrollTrackedTab(
+                      3,
+                      Navigator(
+                        key: _libraryNavKey,
+                        observers: [_libraryObserver],
+                        onGenerateRoute: (settings) => MaterialPageRoute(
+                          builder: (_) => LibraryPage(key: libraryPageKey),
+                        ),
+                      ),
+                    ),
+                    _buildScrollTrackedTab(4, const SearchPage()),
+                  ],
+                ),
+              ),
+
+              // HEADER (Hanya muncul jika bukan di halaman detail)
+              if (!hideHeader)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      height: MediaQuery.of(context).padding.top + 90,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            colors.pageBackground.withValues(alpha: 0.8),
+                            colors.pageBackground.withValues(alpha: 0.0),
+                          ],
+                          stops: const [0.0, 0.8],
                         ),
                       ),
                     ),
                   ),
+                ),
+              if (!hideHeader) ...[
+                // Panggil Top Bar
+                AppTopBar(
+                  currentTab: _currentTab,
+                  currentSortFilter: _currentSortFilter,
+                  onProfileTap: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
+              ],
 
-                  // Tab Playlist
-                  _buildScrollTrackedTab(
-                    2,
-                    Navigator(
-                      key: _playlistNavKey,
-                      observers: [_playlistObserver],
-                      onGenerateRoute: (settings) => MaterialPageRoute(
-                        builder: (_) => PlaylistPage(key: playlistPageKey),
-                      ),
-                    ),
-                  ),
-
-                  // Tab Library
-                  _buildScrollTrackedTab(
-                    3,
-                    Navigator(
-                      key: _libraryNavKey,
-                      observers: [_libraryObserver],
-                      onGenerateRoute: (settings) => MaterialPageRoute(
-                        builder: (_) => LibraryPage(key: libraryPageKey),
-                      ),
-                    ),
-                  ),
-                  _buildScrollTrackedTab(4, const SearchPage()),
-                ],
-              ),
-            ),
-
-            // HEADER (Hanya muncul jika bukan di halaman detail)
-            if (!hideHeader)
+              // OVERLAY GRADASI UNTUK AREA BOTTOM BAR
               Positioned(
-                top: 0,
                 left: 0,
                 right: 0,
+                bottom: 0,
                 child: IgnorePointer(
                   child: Container(
-                    height: MediaQuery.of(context).padding.top + 90,
+                    height: MediaQuery.of(context).padding.bottom + 90,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          colors.pageBackground.withValues(alpha: 0.8),
+                          // Transparan di atas
                           colors.pageBackground.withValues(alpha: 0.0),
+                          // Mulai memutih di tengah
+                          colors.pageBackground.withValues(alpha: 0.3),
+                          // Putih solid di paling bawah
+                          colors.pageBackground.withValues(alpha: 0.6),
                         ],
-                        stops: const [0.0, 0.8],
+                        stops: const [0.0, 0.5, 1.0],
                       ),
                     ),
                   ),
                 ),
               ),
-            if (!hideHeader) ...[
-              // Panggil Top Bar
-              AppTopBar(
-                currentTab: _currentTab,
-                currentSortFilter: _currentSortFilter,
-                onProfileTap: () => _scaffoldKey.currentState?.openDrawer(),
-              ),
-            ],
 
-            // OVERLAY GRADASI UNTUK AREA BOTTOM BAR
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: IgnorePointer(
-                child: Container(
-                  height: MediaQuery.of(context).padding.bottom + 90,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        // Transparan di atas
-                        colors.pageBackground.withValues(alpha: 0.0),
-                        // Mulai memutih di tengah
-                        colors.pageBackground.withValues(alpha: 0.3),
-                        // Putih solid di paling bawah
-                        colors.pageBackground.withValues(alpha: 0.6),
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
+              // BOTTOM BAR
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: MediaQuery.of(context).padding.bottom + 12,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: _isScrolled,
+                  builder: (context, isScrolled, _) => LyraBottomBar(
+                    currentIndex: _currentTab,
+                    isScrolled: isScrolled,
+                    playerPanel: _playerPanel,
+                    onHomeTap: () {
+                      // Jika sedang di halaman detail (bukan root)
+                      bool isInsideDetail = false;
+                      if (_currentTab == 1 && !_isSongsRoot)
+                        isInsideDetail = true;
+                      if (_currentTab == 2 && !_isPlaylistRoot) {
+                        isInsideDetail = true;
+                      }
+                      if (_currentTab == 3 && !_isLibraryRoot) {
+                        isInsideDetail = true;
+                      }
+
+                      if (isInsideDetail) {
+                        bool handledScroll = false;
+
+                        // CEK SCROLL KHUSUS UNTUK TAB PLAYLIST (Tab 2)
+                        if (_currentTab == 2) {
+                          final detailState = playlistPageKey
+                              .currentState
+                              ?.detailPageKey
+                              .currentState;
+                          if (detailState != null &&
+                              detailState.isScrolledDown) {
+                            detailState.scrollToTop();
+                            handledScroll = true; // Berhasil di-scroll
+                          }
+                        }
+
+                        // Jika scroll sudah ditangani, hentikan proses (jangan tutup halaman)
+                        if (handledScroll) return;
+
+                        _switchTab(0);
+                        return;
+                      }
+
+                      // Cek apakah halaman root sedang di-scroll (Kode lama kamu biarkan saja)
+                      bool isScrolledDown = false;
+                      if (_currentTab == 0 && _activeOffsetForTab(0) > 10) {
+                        isScrolledDown = true;
+                      } else if (_currentTab == 1) {
+                        isScrolledDown =
+                            songsPageKey.currentState?.isScrolledDown ?? false;
+                      } else if (_currentTab == 2) {
+                        isScrolledDown =
+                            playlistPageKey.currentState?.isScrolledDown ??
+                            false;
+                      } else if (_currentTab == 3) {
+                        isScrolledDown =
+                            libraryPageKey.currentState?.isScrolledDown ??
+                            false;
+                      }
+
+                      // Jika root sedang di-scroll, luncurkan ke atas
+                      if (isScrolledDown) {
+                        // ... (kode if-else milikmu biarkan sama)
+                        if (_currentTab == 0 &&
+                            _mainScrollController.hasClients) {
+                          _mainScrollController.animateTo(
+                            0.0,
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeOutCubic,
+                          );
+                        } else if (_currentTab == 1) {
+                          songsPageKey.currentState?.scrollToTop();
+                        } else if (_currentTab == 2) {
+                          playlistPageKey.currentState?.scrollToTop();
+                        } else if (_currentTab == 3) {
+                          libraryPageKey.currentState?.scrollToTop();
+                        }
+                        return;
+                      }
+
+                      // Jika sudah di paling atas, pindah ke tab Beranda
+                      _switchTab(0);
+                    },
+                    onTabChanged: (index) {
+                      // Jika menekan tab yang sama, kembalikan ke halaman utama tab tersebut
+                      if (index == _currentTab) {
+                        if (index == 1) {
+                          _songsNavKey.currentState?.popUntil((r) => r.isFirst);
+                        }
+                        if (index == 2) {
+                          _playlistNavKey.currentState?.popUntil(
+                            (r) => r.isFirst,
+                          );
+                        }
+                        if (index == 3) {
+                          _libraryNavKey.currentState?.popUntil(
+                            (r) => r.isFirst,
+                          );
+                        }
+                      } else {
+                        _switchTab(index);
+                      }
+                    },
                   ),
                 ),
               ),
-            ),
 
-            // BOTTOM BAR
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: MediaQuery.of(context).padding.bottom + 12,
-              child: ValueListenableBuilder<bool>(
-                valueListenable: _isScrolled,
-                builder: (context, isScrolled, _) => LyraBottomBar(
-                  currentIndex: _currentTab,
-                  isScrolled: isScrolled,
-                  playerPanel: _playerPanel,
-                  onHomeTap: () {
-                    // Jika sedang di halaman detail (bukan root)
-                    bool isInsideDetail = false;
-                    if (_currentTab == 1 && !_isSongsRoot)
-                      isInsideDetail = true;
-                    if (_currentTab == 2 && !_isPlaylistRoot) {
-                      isInsideDetail = true;
-                    }
-                    if (_currentTab == 3 && !_isLibraryRoot) {
-                      isInsideDetail = true;
-                    }
-
-                    if (isInsideDetail) {
-                      bool handledScroll = false;
-
-                      // CEK SCROLL KHUSUS UNTUK TAB PLAYLIST (Tab 2)
-                      if (_currentTab == 2) {
-                        final detailState = playlistPageKey
-                            .currentState
-                            ?.detailPageKey
-                            .currentState;
-                        if (detailState != null && detailState.isScrolledDown) {
-                          detailState.scrollToTop();
-                          handledScroll = true; // Berhasil di-scroll
-                        }
-                      }
-
-                      // Jika scroll sudah ditangani, hentikan proses (jangan tutup halaman)
-                      if (handledScroll) return;
-
-                      _switchTab(0);
-                      return;
-                    }
-
-                    // Cek apakah halaman root sedang di-scroll (Kode lama kamu biarkan saja)
-                    bool isScrolledDown = false;
-                    if (_currentTab == 0 && _activeOffsetForTab(0) > 10) {
-                      isScrolledDown = true;
-                    } else if (_currentTab == 1) {
-                      isScrolledDown =
-                          songsPageKey.currentState?.isScrolledDown ?? false;
-                    } else if (_currentTab == 2) {
-                      isScrolledDown =
-                          playlistPageKey.currentState?.isScrolledDown ?? false;
-                    } else if (_currentTab == 3) {
-                      isScrolledDown =
-                          libraryPageKey.currentState?.isScrolledDown ?? false;
-                    }
-
-                    // Jika root sedang di-scroll, luncurkan ke atas
-                    if (isScrolledDown) {
-                      // ... (kode if-else milikmu biarkan sama)
-                      if (_currentTab == 0 &&
-                          _mainScrollController.hasClients) {
-                        _mainScrollController.animateTo(
-                          0.0,
-                          duration: const Duration(milliseconds: 400),
-                          curve: Curves.easeOutCubic,
-                        );
-                      } else if (_currentTab == 1) {
-                        songsPageKey.currentState?.scrollToTop();
-                      } else if (_currentTab == 2) {
-                        playlistPageKey.currentState?.scrollToTop();
-                      } else if (_currentTab == 3) {
-                        libraryPageKey.currentState?.scrollToTop();
-                      }
-                      return;
-                    }
-
-                    // Jika sudah di paling atas, pindah ke tab Beranda
-                    _switchTab(0);
-                  },
-                  onTabChanged: (index) {
-                    // Jika menekan tab yang sama, kembalikan ke halaman utama tab tersebut
-                    if (index == _currentTab) {
-                      if (index == 1) {
-                        _songsNavKey.currentState?.popUntil((r) => r.isFirst);
-                      }
-                      if (index == 2) {
-                        _playlistNavKey.currentState?.popUntil(
-                          (r) => r.isFirst,
-                        );
-                      }
-                      if (index == 3) {
-                        _libraryNavKey.currentState?.popUntil((r) => r.isFirst);
-                      }
-                    } else {
-                      _switchTab(index);
-                    }
-                  },
-                ),
-              ),
-            ),
-
-            // PANEL PLAYER PENUH (ditarik dari mini player)
-            if (_playerBuilt)
-              Positioned.fill(child: PlayerPanel(controller: _playerPanel)),
-          ],
+              // PANEL PLAYER PENUH (ditarik dari mini player)
+              if (_playerBuilt)
+                Positioned.fill(child: PlayerPanel(controller: _playerPanel)),
+            ],
+          ),
         ),
       ),
     );

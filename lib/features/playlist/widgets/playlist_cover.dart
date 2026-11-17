@@ -1,11 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 import '../../../providers/database_provider.dart';
-import '../../../providers/songs_provider.dart';
+import '../../../widgets/song_artwork.dart';
 
-class PlaylistCover extends ConsumerWidget {
+class PlaylistCover extends ConsumerStatefulWidget {
   final int playlistId;
   final String? imagePath;
   final double iconSize;
@@ -20,38 +19,51 @@ class PlaylistCover extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasImage = imagePath != null && imagePath!.isNotEmpty;
+  ConsumerState<PlaylistCover> createState() => _PlaylistCoverState();
+}
+
+// Tambahkan AutomaticKeepAliveClientMixin agar tidak di-destroy saat di-scroll
+class _PlaylistCoverState extends ConsumerState<PlaylistCover>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Wajib dipanggil untuk KeepAlive
+
+    final hasImage = widget.imagePath != null && widget.imagePath!.isNotEmpty;
 
     if (hasImage) {
       return SizedBox.expand(
         child: Image.file(
-          File(imagePath!),
+          File(widget.imagePath!),
           fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => _mosaic(ref),
+          errorBuilder: (_, _, _) => _mosaic(),
         ),
       );
     }
-    return _mosaic(ref);
+    return _mosaic();
   }
 
-  Widget _mosaic(WidgetRef ref) {
+  Widget _mosaic() {
     final db = ref.read(databaseProvider);
-    final allSongs = ref.watch(allSongsProvider).value ?? [];
 
     return StreamBuilder<List<String>>(
-      stream: db.watchPlaylistSongIds(playlistId),
+      stream: db.watchPlaylistSongIds(widget.playlistId),
       builder: (context, snapshot) {
         final ids = snapshot.data ?? const <String>[];
-        final albumBysong = {for (final s in allSongs) s.id: s.albumId};
 
-        // Album unik sesuai urutan playlist, tanpa albumId kosong
-        final albums = <String>{};
+        // Ambil maksimal 4 songId unik (TANPA memanggil allSongsProvider lagi)
+        final list = <String>[];
+        final seen = <String>{};
         for (final id in ids) {
-          final a = albumBysong[id];
-          if (a != null && a != '0') albums.add(a);
+          if (id.isNotEmpty && !seen.contains(id)) {
+            seen.add(id);
+            list.add(id);
+            if (list.length == 4) break;
+          }
         }
-        final list = albums.toList();
 
         if (list.isEmpty) return _placeholder();
         if (list.length < 4) return _art(list.first);
@@ -80,19 +92,13 @@ class PlaylistCover extends ConsumerWidget {
     );
   }
 
-  Widget _art(String albumId) {
-    return SizedBox.expand(
-      child: QueryArtworkWidget(
-        id: int.tryParse(albumId) ?? 0,
-        type: ArtworkType.ALBUM,
-        size: artSize,
-        artworkWidth: double.infinity,
-        artworkHeight: double.infinity,
-        artworkFit: BoxFit.cover,
-        artworkBorder: BorderRadius.zero,
-        keepOldArtwork: true,
-        nullArtworkWidget: _placeholder(),
-      ),
+  Widget _art(String songId) {
+    return SongArtwork(
+      id: int.tryParse(songId) ?? 0,
+      size: double.infinity,
+      radius: 0,
+      loadSize: widget.artSize,
+      placeholder: _placeholder(),
     );
   }
 
@@ -108,7 +114,7 @@ class PlaylistCover extends ConsumerWidget {
       child: Center(
         child: Icon(
           Icons.album_rounded,
-          size: iconSize,
+          size: widget.iconSize,
           color: const Color(0x66FFFFFF),
         ),
       ),

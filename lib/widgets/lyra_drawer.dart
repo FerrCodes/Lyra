@@ -34,120 +34,122 @@ class LyraDrawer extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // ==========================================
           // HEADER DRAWER (Foto & Nama)
-          // ==========================================
           InkWell(
             onTap: () {
-              onClose(); // Tutup drawer
+              onClose();
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ProfilePage()),
               );
             },
-            child: SizedBox(
-              height: 240,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Foto Profil (Full Width)
-                  ValueListenableBuilder<String?>(
-                    valueListenable: profileImageNotifier,
-                    builder: (context, imagePath, child) {
-                      if (imagePath != null && imagePath.isNotEmpty) {
-                        return Image.file(File(imagePath), fit: BoxFit.cover);
-                      }
-                      // Jika tidak ada foto, gunakan background gradient khas Lyra
-                      return Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              colors.accent.withValues(alpha: 0.8),
-                              colors.accent.withValues(alpha: 0.4),
-                            ],
+            child: RepaintBoundary(
+              child: SizedBox(
+                height: 240,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Foto Profil (Full Width)
+                    ValueListenableBuilder<String?>(
+                      valueListenable: profileImageNotifier,
+                      builder: (context, imagePath, child) {
+                        if (imagePath != null && imagePath.isNotEmpty) {
+                          return Image.file(
+                            File(imagePath),
+                            fit: BoxFit.cover,
+                            cacheWidth: 600,
+                          );
+                        }
+                        // Jika tidak ada foto, gunakan background gradient khas Lyra
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                colors.accent.withValues(alpha: 0.8),
+                                colors.accent.withValues(alpha: 0.4),
+                              ],
+                            ),
                           ),
-                        ),
-                        child: const Center(
-                          child: DefaultProfileAvatar(size: 100),
-                        ),
-                      );
-                    },
-                  ),
+                          child: const Center(
+                            child: DefaultProfileAvatar(size: 100),
+                          ),
+                        );
+                      },
+                    ),
 
-                  // Gradasi Gelap di Bawah agar Teks Terbaca
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.7),
-                          Colors.black.withValues(alpha: 0.9),
-                        ],
-                        stops: const [0.4, 0.8, 1.0],
+                    // Gradasi Gelap di Bawah agar Teks Terbaca
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.7),
+                            Colors.black.withValues(alpha: 0.9),
+                          ],
+                          stops: const [0.4, 0.8, 1.0],
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Teks Nama & Ikon Panah
-                  Positioned(
-                    bottom: 20,
-                    left: 20,
-                    right: 20,
-                    child: Row(
-                      children: [
-                        // Nama Pengguna
-                        Expanded(
-                          child: ValueListenableBuilder<String>(
-                            valueListenable: profileNameNotifier,
-                            builder: (context, name, child) {
-                              final displayName = name.isEmpty
-                                  ? AppLocalizations.of(
-                                      context,
-                                    )!.defaultProfileName
-                                  : name;
-                              return Text(
-                                displayName,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              );
-                            },
+                    // Teks Nama & Ikon Panah
+                    Positioned(
+                      bottom: 20,
+                      left: 20,
+                      right: 20,
+                      child: Row(
+                        children: [
+                          // Nama Pengguna
+                          Expanded(
+                            child: ValueListenableBuilder<String>(
+                              valueListenable: profileNameNotifier,
+                              builder: (context, name, child) {
+                                final displayName = name.isEmpty
+                                    ? AppLocalizations.of(
+                                        context,
+                                      )!.defaultProfileName
+                                    : name;
+                                return Text(
+                                  displayName,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                );
+                              },
+                            ),
                           ),
-                        ),
 
-                        // Ikon Panah Kanan
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          child: const Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: Colors.white,
-                            size: 16,
+                          // Ikon Panah Kanan
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            child: const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
 
           const SizedBox(height: 12),
 
-          // ==========================================
           // MENU LIST
-          // ==========================================
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -190,38 +192,6 @@ class LyraDrawer extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMenuItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required int index,
-    required LyraColors colors,
-  }) {
-    final isSelected = currentIndex == index;
-
-    return ListTile(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      tileColor: isSelected
-          ? colors.accent.withValues(alpha: 0.1)
-          : Colors.transparent,
-      leading: Icon(
-        icon,
-        color: isSelected ? colors.accent : colors.textPrimary,
-      ),
-      title: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? colors.accent : colors.textPrimary,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-        ),
-      ),
-      onTap: () {
-        onClose();
-        onTabChanged(index);
-      },
     );
   }
 }
