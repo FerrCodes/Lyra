@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer();
+  final OnAudioQuery _audioQuery = OnAudioQuery();
   late final Future<void> _sessionInitFuture;
 
   late final StreamSubscription<PlaybackEvent> _playbackSub;
@@ -293,19 +294,19 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   // Fungsi baru untuk mengambil gambar secara async dan memperbarui notifikasi
   Future<void> _fetchAndUpdateArtwork(MediaItem item) async {
-    final albumId = item.extras?['albumId'];
-    if (albumId == null || albumId == '0') return;
+    final albumIdRaw = item.extras?['albumId']?.toString();
+    final albumIdNum = int.tryParse(albumIdRaw ?? '');
+    if (albumIdNum == null || albumIdNum == 0) return;
 
     try {
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/album_art_$albumId.jpg');
+      final file = File('${tempDir.path}/album_art_$albumIdNum.jpg');
 
       // MEMORY MANAGEMENT: Cek apakah gambar sudah ada di cache HP
       if (!await file.exists()) {
         // Jika belum ada, baru ambil dari MediaStore
-        final audioQuery = OnAudioQuery();
-        Uint8List? artBytes = await audioQuery.queryArtwork(
-          int.parse(albumId),
+        Uint8List? artBytes = await _audioQuery.queryArtwork(
+          albumIdNum,
           ArtworkType.ALBUM,
           format: ArtworkFormat.JPEG,
           size: 500,
@@ -325,7 +326,11 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
         // Update juga di antrean agar sinkron
         final newQueue = List<MediaItem>.from(queue.value);
-        final index = newQueue.indexWhere((e) => e.id == item.id);
+        final index = newQueue.indexWhere(
+          (e) =>
+              e.id == item.id &&
+              e.extras?['albumId']?.toString() == albumIdNum.toString(),
+        );
         if (index != -1) {
           newQueue[index] = updatedItem;
           queue.add(newQueue);
@@ -333,7 +338,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
       }
     } catch (e) {
       // ERROR HANDLING: Tampilkan error di console agar bisa dilacak
-      debugPrint('Gagal memuat artwork untuk album $albumId: $e');
+      debugPrint('Gagal memuat artwork untuk album $albumIdNum: $e');
     }
   }
 

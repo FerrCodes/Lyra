@@ -22,9 +22,8 @@ class SongArtwork extends StatefulWidget {
   static final LinkedHashMap<String, Uint8List> _small = LinkedHashMap();
   static final LinkedHashMap<String, Uint8List> _large = LinkedHashMap();
   static final Map<String, Future<Uint8List>> _pending = {};
-
+  static final OnAudioQuery _audioQuery = OnAudioQuery();
   static String _key(int id, int loadSize) => '$id@$loadSize';
-
   static LinkedHashMap<String, Uint8List> _cacheFor(int loadSize) =>
       loadSize > 400 ? _large : _small;
 
@@ -33,7 +32,7 @@ class SongArtwork extends StatefulWidget {
     return _pending[key] ??= () async {
       Uint8List bytes = Uint8List(0); // kosong = tidak ada sampul
       try {
-        final r = await OnAudioQuery().queryArtwork(
+        final r = await _audioQuery.queryArtwork(
           id,
           ArtworkType.AUDIO,
           format: ArtworkFormat.JPEG,

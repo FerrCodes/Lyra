@@ -25,6 +25,27 @@ class PlaylistCover extends ConsumerStatefulWidget {
 // Tambahkan AutomaticKeepAliveClientMixin agar tidak di-destroy saat di-scroll
 class _PlaylistCoverState extends ConsumerState<PlaylistCover>
     with AutomaticKeepAliveClientMixin {
+  late Stream<List<String>> _songIdsStream;
+  List<String>? _latestSongIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _songIdsStream = ref
+        .read(databaseProvider)
+        .watchPlaylistSongIds(widget.playlistId);
+  }
+
+  @override
+  void didUpdateWidget(covariant PlaylistCover oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.playlistId != widget.playlistId) {
+      _songIdsStream = ref
+          .read(databaseProvider)
+          .watchPlaylistSongIds(widget.playlistId);
+    }
+  }
+
   @override
   bool get wantKeepAlive => true;
 
@@ -49,12 +70,14 @@ class _PlaylistCoverState extends ConsumerState<PlaylistCover>
   }
 
   Widget _mosaic() {
-    final db = ref.read(databaseProvider);
-
     return StreamBuilder<List<String>>(
-      stream: db.watchPlaylistSongIds(widget.playlistId),
+      stream: _songIdsStream,
+      initialData: _latestSongIds,
       builder: (context, snapshot) {
-        final ids = snapshot.data ?? const <String>[];
+        if (snapshot.hasData && snapshot.data != null) {
+          _latestSongIds = snapshot.data;
+        }
+        final ids = snapshot.data ?? _latestSongIds ?? const <String>[];
 
         // Ambil maksimal 4 songId unik (TANPA memanggil allSongsProvider lagi)
         final list = <String>[];

@@ -39,14 +39,16 @@ class _QueuePageState extends State<QueuePage> {
     // Auto-scroll diperbaiki agar mempertimbangkan tinggi header
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentIndex = _handler.playbackState.value.queueIndex;
+      final controller = widget.scrollController;
       if (currentIndex != null &&
-          widget.scrollController != null &&
-          widget.scrollController!.hasClients) {
+          controller != null &&
+          controller.hasClients &&
+          controller.position.maxScrollExtent > 0) {
         final offset = ((currentIndex - 1) * 70.0).clamp(
           0.0,
-          widget.scrollController!.position.maxScrollExtent,
+          controller.position.maxScrollExtent,
         );
-        widget.scrollController!.jumpTo(offset);
+        controller.jumpTo(offset);
       }
     });
   }
@@ -362,7 +364,7 @@ class _QueuePageState extends State<QueuePage> {
     return RepaintBoundary(
       key: key,
       child: Dismissible(
-        key: ObjectKey(item),
+        key: ValueKey('dismiss_${key.toString()}_$index'),
         direction: isCurrent
             ? DismissDirection.none
             : DismissDirection.horizontal,

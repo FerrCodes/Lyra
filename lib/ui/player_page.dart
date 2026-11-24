@@ -33,6 +33,7 @@ class _PlayerPageState extends State<PlayerPage> {
   static final Map<int, Color> _colorCache = {};
   Color? _dynamicColor;
   int? _lastAlbumId;
+  final OnAudioQuery _audioQuery = OnAudioQuery();
 
   late final Stream<MediaItem?> _distinctMediaItemStream = audioHandler
       .mediaItem
@@ -42,7 +43,7 @@ class _PlayerPageState extends State<PlayerPage> {
     if (_colorCache.containsKey(albumId)) return _colorCache[albumId]!;
 
     try {
-      final artwork = await OnAudioQuery().queryArtwork(
+      final artwork = await _audioQuery.queryArtwork(
         albumId,
         ArtworkType.ALBUM,
         size: 400,
@@ -127,7 +128,9 @@ class _PlayerPageState extends State<PlayerPage> {
             if (albumId != _lastAlbumId) {
               _lastAlbumId = albumId;
               _getDynamicColor(albumId, colors.pageBackground).then((color) {
-                if (mounted) setState(() => _dynamicColor = color);
+                if (mounted && _lastAlbumId == albumId) {
+                  setState(() => _dynamicColor = color);
+                }
               });
             }
 
@@ -290,7 +293,10 @@ class _PlayerPageState extends State<PlayerPage> {
                                   final allSongs =
                                       ref.watch(allSongsProvider).value ?? [];
                                   final localSong = allSongs.firstWhere(
-                                    (s) => s.path == item.id,
+                                    (s) =>
+                                        s.path == item.id ||
+                                        (songId != 0 &&
+                                            s.id == songId.toString()),
                                     orElse: () => local.Song(
                                       id: '',
                                       title: '',
@@ -311,7 +317,10 @@ class _PlayerPageState extends State<PlayerPage> {
                                     builder: (context, snapshot) {
                                       final isFav =
                                           snapshot.data?.any(
-                                            (s) => s.path == item.id,
+                                            (s) =>
+                                                s.path == item.id ||
+                                                (localSong.id.isNotEmpty &&
+                                                    s.id == localSong.id),
                                           ) ??
                                           false;
 
@@ -637,13 +646,26 @@ class _PlayerPageState extends State<PlayerPage> {
                                                 // Beri sedikit padding horizontal jika ada teks
                                                 child: Center(
                                                   child: isActive
-                                                      ? Text(
-                                                          timeText,
-                                                          style: TextStyle(
-                                                            color: accentColor,
-                                                            fontSize: 9,
-                                                            fontWeight:
-                                                                FontWeight.bold,
+                                                      ? Padding(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 4,
+                                                              ),
+                                                          child: FittedBox(
+                                                            fit: BoxFit
+                                                                .scaleDown,
+                                                            child: Text(
+                                                              timeText,
+                                                              maxLines: 1,
+                                                              style: TextStyle(
+                                                                color:
+                                                                    accentColor,
+                                                                fontSize: 9,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                            ),
                                                           ),
                                                         )
                                                       : Icon(

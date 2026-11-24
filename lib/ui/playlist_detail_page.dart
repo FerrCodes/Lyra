@@ -31,7 +31,7 @@ class PlaylistDetailPage extends ConsumerStatefulWidget {
 class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   List<Song> _songsInPlaylist = [];
   List<Song> _displayedSongs = [];
-  bool _isLoading = true;
+
   late String _currentPlaylistName;
   String? _currentImagePath;
   String? _currentDescription;
@@ -63,7 +63,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
 
   Future<void> _loadSongs() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    if (_songsInPlaylist.isEmpty) {}
 
     try {
       final db = ref.read(databaseProvider);
@@ -75,11 +75,9 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       setState(() {
         _songsInPlaylist = data;
         _applySort();
-        _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
 
       // Beri tahu user kalau database gagal dimuat
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1079,12 +1077,13 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
     final headerHeight = screenWidth + topPadding + 32;
     final topInset = topPadding + 60;
 
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: pageColor,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    //if (_isLoading) {
+    //return const Scaffold(
+    //  backgroundColor: pageColor,
+    //  body: Center(child: CircularProgressIndicator()),
+    // );
+    //}
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -1140,7 +1139,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                   PlaylistTrackList(
                     displayedSongs: _displayedSongs,
                     albumIds: _albumIdsFor(
-                      ref.watch(allSongsProvider).value ?? const [],
+                      ref.read(allSongsProvider).value ?? const [],
                     ),
                     isSelectionMode: _isSelectionMode,
                     selectedSongIds: _selectedSongIds,

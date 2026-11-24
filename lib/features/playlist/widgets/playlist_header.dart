@@ -26,18 +26,15 @@ class PlaylistHeader extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         if (hasImage)
-          Hero(
-            tag: 'playlist_image_$playlistId',
-            child: Image.file(
-              File(imagePath!),
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              errorBuilder: (context, error, stackTrace) => PlaylistCover(
-                playlistId: playlistId,
-                imagePath: null,
-                iconSize: 96,
-                artSize: 800,
-              ),
+          Image.file(
+            File(imagePath!),
+            fit: BoxFit.cover,
+            gaplessPlayback: true,
+            errorBuilder: (context, error, stackTrace) => PlaylistCover(
+              playlistId: playlistId,
+              imagePath: null,
+              iconSize: 96,
+              artSize: 800,
             ),
           )
         else

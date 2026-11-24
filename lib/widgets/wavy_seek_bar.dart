@@ -74,15 +74,17 @@ class _WavySeekBarState extends State<WavySeekBar>
 
   void _startDrag(double dx, double width) {
     HapticFeedback.selectionClick(); // Getar halus
+    final safeProgress = width <= 0 ? 0.0 : (dx / width).clamp(0.0, 1.0);
     setState(() {
-      _dragProgress = (dx / width).clamp(0.0, 1.0);
+      _dragProgress = safeProgress;
     });
     _interactionController.forward();
   }
 
   void _updateDrag(double dx, double width) {
+    final safeProgress = width <= 0 ? 0.0 : (dx / width).clamp(0.0, 1.0);
     setState(() {
-      _dragProgress = (dx / width).clamp(0.0, 1.0);
+      _dragProgress = safeProgress;
     });
   }
 
@@ -94,7 +96,7 @@ class _WavySeekBarState extends State<WavySeekBar>
 
     // Optimistic Progress: Tahan jarum selama 500ms agar audio sempat menyusul
     Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
+      if (mounted && _dragProgress == targetProgress) {
         setState(() {
           _dragProgress = null;
         });
@@ -229,9 +231,9 @@ class _WavyPainter extends CustomPainter {
     final trackHeight = 3.0;
 
     // Konfigurasi Gelombang ASLI
-    final maxAmplitude = 2.5;
-    final waveLength = 48.0;
-    final taperDistance = 64.0;
+    final maxAmplitude = 4.0;
+    final waveLength = 36.0;
+    final taperDistance = 40.0;
 
     // Hanya mendatar jika sedang ditarik (interactionValue == 1)
     final currentAmplitude = maxAmplitude * (1.0 - interactionValue);
@@ -327,12 +329,6 @@ class _WavyPainter extends CustomPainter {
       Radius.circular(thumbCurrentWidth / 2),
     );
     canvas.drawRRect(rRect, paintThumb);
-
-    // 4. Inner Highlight (Saran GPT: Titik tengah yang kontras)
-    final paintInner = Paint()
-      ..color = thumbInnerColor
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(thumbX, thumbY), 3.0, paintInner);
   }
 
   @override
