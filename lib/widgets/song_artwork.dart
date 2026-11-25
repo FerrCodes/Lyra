@@ -30,6 +30,48 @@ class SongArtwork extends StatefulWidget {
   static LinkedHashMap<String, Uint8List> _cacheFor(int loadSize) =>
       loadSize > 400 ? _large : _small;
 
+  static final Queue<int> _warmQueue = Queue<int>();
+  static bool _isWarming = false;
+
+  /// Pre-load artwork bytes ke cache statis secara bertahap (maks 2 paralel)
+  /// agar tidak membanjiri MethodChannel / Android MediaStore saat daftar
+  /// lagu panjang dimuat.
+  static void warmCacheAll(Iterable<int> ids, {int loadSize = 200}) {
+    final cache = _cacheFor(loadSize);
+    for (final id in ids) {
+      if (id == 0) continue;
+      final key = _key(id, loadSize);
+      if (cache.containsKey(key) || _pending.containsKey(key)) continue;
+      if (_warmQueue.length >= 200) break;
+      _warmQueue.add(id);
+    }
+    if (_isWarming || _warmQueue.isEmpty) return;
+    _drainWarmQueue(loadSize);
+  }
+
+  static Future<void> _drainWarmQueue(int loadSize) async {
+    _isWarming = true;
+    try {
+      while (_warmQueue.isNotEmpty) {
+        final batch = <Future<Uint8List>>[];
+        for (int i = 0; i < 2 && _warmQueue.isNotEmpty; i++) {
+          final id = _warmQueue.removeFirst();
+          final key = _key(id, loadSize);
+          if (!_cacheFor(loadSize).containsKey(key)) {
+            batch.add(_load(id, loadSize));
+          }
+        }
+        if (batch.isNotEmpty) {
+          await Future.wait(batch);
+          // Beri jeda singkat agar event loop tetap responsif untuk frame scroll
+          await Future<void>.delayed(const Duration(milliseconds: 8));
+        }
+      }
+    } finally {
+      _isWarming = false;
+    }
+  }
+
   static Future<Uint8List> _load(int id, int loadSize) {
     final key = _key(id, loadSize);
     return _pending[key] ??= () async {

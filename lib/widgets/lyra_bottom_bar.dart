@@ -34,10 +34,24 @@ class LyraBottomBar extends ConsumerStatefulWidget {
   ConsumerState<LyraBottomBar> createState() => _LyraBottomBarState();
 }
 
-class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
+class _LyraBottomBarState extends ConsumerState<LyraBottomBar>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   bool _isSearchFocused = false;
+
+  // 0 = bar normal, 1 = bar ringkas (saat scroll ke bawah)
+  late final AnimationController _mode = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 260),
+    value: widget.isScrolled ? 1.0 : 0.0,
+  );
+  late final Animation<double> _t = CurvedAnimation(
+    parent: _mode,
+    curve: Curves.easeOutCubic,
+    reverseCurve: Curves.easeInCubic,
+  );
+  static const double _slot = 54 + 12; // tombol search + jarak
 
   @override
   void initState() {
@@ -50,7 +64,16 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
   }
 
   @override
+  void didUpdateWidget(covariant LyraBottomBar old) {
+    super.didUpdateWidget(old);
+    if (old.isScrolled != widget.isScrolled) {
+      widget.isScrolled ? _mode.forward() : _mode.reverse();
+    }
+  }
+
+  @override
   void dispose() {
+    _mode.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -143,35 +166,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
       return _buildAppleMusicSearchBar();
     }
 
-    return RepaintBoundary(
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        reverseDuration: const Duration(milliseconds: 250),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        layoutBuilder: (currentChild, previousChildren) {
-          return Stack(
-            alignment: Alignment.bottomCenter,
-            clipBehavior: Clip.none,
-            children: [
-              ...previousChildren,
-              if (currentChild != null) currentChild,
-            ],
-          );
-        },
-        transitionBuilder: (child, animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: ScaleTransition(
-              alignment: Alignment.bottomCenter,
-              scale: Tween<double>(begin: 0.96, end: 1.0).animate(animation),
-              child: child,
-            ),
-          );
-        },
-        child: widget.isScrolled ? _buildScrolledState() : _buildDefaultState(),
-      ),
-    );
+    return RepaintBoundary(child: _buildMainBar());
   }
 
   // DESAIN KHUSUS TAB SEARCH
@@ -272,40 +267,51 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
     );
   }
 
-  // DESAIN SAAT DI ATAS (3 KAPSUL BAWAAN)
-  Widget _buildDefaultState() {
+  Widget _anim(Widget child, Widget Function(double t, Widget child) builder) {
+    return AnimatedBuilder(
+      animation: _t,
+      child: child, // tidak ikut di-rebuild tiap frame
+      builder: (_, c) => builder(_t.value, c!),
+    );
+  }
+
+  // SATU TREE UNTUK DUA MODE (normal & ringkas)
+  Widget _buildMainBar() {
     return StreamBuilder<MediaItem?>(
-      key: const ValueKey('default_state'),
       stream: audioHandler.mediaItem.distinct((a, b) => a?.id == b?.id),
       builder: (context, snapshot) {
         final item = snapshot.data;
         final colors = context.lyra;
+        final hasItem = item != null;
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (item != null) ...[
-                PressableScale(
-                  onTap: _openPlayer,
-                  child: _miniShell(
-                    item: item,
-                    radius: 30,
-                    child: Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: MiniPlayerContent(
-                                  item: item,
-                                  onGradient: true,
-                                ),
+        final mini = PressableScale(
+          onTap: _openPlayer,
+          child: _miniShell(
+            item: item,
+            radius: 30,
+            child: item == null
+                ? Center(
+                    child: Text(
+                      AppLocalizations.of(context)!.selectSong,
+                      style: TextStyle(color: colors.textSecondary),
+                    ),
+                  )
+                : Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: MiniPlayerContent(
+                                item: item,
+                                isCompact: widget.isScrolled,
+                                onGradient: true,
                               ),
+                            ),
+                            _anim(
                               IconButton(
-                                icon: Icon(
+                                icon: const Icon(
                                   Icons.skip_next_rounded,
                                   color: Colors.white,
                                   size: 28,
@@ -314,50 +320,98 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
                                     (audioHandler as LyraAudioHandler)
                                         .skipToNext(),
                               ),
-                            ],
+                              (t, c) => ClipRect(
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  widthFactor: 1 - t,
+                                  child: Opacity(opacity: 1 - t, child: c),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: _buildProgressBar(item),
+                      ),
+                    ],
+                  ),
+          ),
+        );
+
+        final tabs = GlassContainer(
+          height: 54,
+          radius: 30,
+          blurSigma: 12,
+          tintOpacity: 0.4,
+          child: _buildTabRow(colors),
+        );
+
+        final search = PressableScale(
+          onTap: () => widget.onTabChanged(4),
+          child: GlassContainer(
+            width: 54,
+            height: 54,
+            radius: 32,
+            blurSigma: 12,
+            tintOpacity: 0.5,
+            child: Icon(
+              Icons.search_rounded,
+              color: colors.textPrimary,
+              size: 28,
+            ),
+          ),
+        );
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _anim(mini, (t, c) {
+                    final row = Padding(
+                      padding: EdgeInsets.only(right: _slot * t),
+                      child: c,
+                    );
+                    if (hasItem) return row;
+                    return ClipRect(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        heightFactor: t,
+                        child: SizedBox(width: double.infinity, child: row),
+                      ),
+                    );
+                  }),
+                  _anim(
+                    const SizedBox.shrink(),
+                    (t, _) => SizedBox(height: hasItem ? 12 * (1 - t) : 0),
+                  ),
+                  _anim(
+                    tabs,
+                    (t, c) => IgnorePointer(
+                      ignoring: t > 0.5,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: _slot),
+                        child: ClipRect(
+                          child: Align(
+                            alignment: Alignment.topCenter,
+                            heightFactor: 1 - t,
+                            child: SizedBox(width: double.infinity, child: c),
                           ),
                         ),
-                        Positioned(
-                          bottom: 0,
-                          left: 0,
-                          right: 0,
-                          child: _buildProgressBar(item),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: GlassContainer(
-                      height: 54,
-                      radius: 30,
-                      blurSigma: 12,
-                      tintOpacity: 0.4,
-                      child: _buildTabRow(colors),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  PressableScale(
-                    onTap: () => widget.onTabChanged(4),
-                    child: GlassContainer(
-                      width: 54,
-                      height: 54,
-                      radius: 32,
-                      blurSigma: 12,
-                      tintOpacity: 0.5,
-                      child: Icon(
-                        Icons.search_rounded,
-                        color: colors.textPrimary,
-                        size: 28,
                       ),
                     ),
                   ),
                 ],
               ),
+              Positioned(right: 0, bottom: 0, child: search),
             ],
           ),
         );
@@ -423,84 +477,6 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar> {
               ),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  // DESAIN SAAT DI-SCROLL
-  Widget _buildScrolledState() {
-    return StreamBuilder<MediaItem?>(
-      key: const ValueKey('scrolled_state'),
-      stream: audioHandler.mediaItem,
-      builder: (context, snapshot) {
-        final item = snapshot.data;
-        final colors = context.lyra;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: PressableScale(
-                  onTap: _openPlayer,
-                  child: _miniShell(
-                    item: item,
-                    radius: 32,
-                    child: Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: item == null
-                              ? Center(
-                                  child: Text(
-                                    AppLocalizations.of(context)!.selectSong,
-                                    style: TextStyle(
-                                      color: colors.textSecondary,
-                                    ),
-                                  ),
-                                )
-                              : Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0,
-                                  ),
-                                  child: MiniPlayerContent(
-                                    item: item,
-                                    isCompact: true,
-                                    onGradient: true,
-                                  ),
-                                ),
-                        ),
-                        if (item != null)
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: _buildProgressBar(item),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              PressableScale(
-                onTap: () => widget.onTabChanged(4),
-                child: GlassContainer(
-                  width: 54,
-                  height: 54,
-                  radius: 32,
-                  blurSigma: 12,
-                  tintOpacity: 0.5,
-                  child: Icon(
-                    Icons.search_rounded,
-                    color: colors.textPrimary,
-                    size: 28,
-                  ),
-                ),
-              ),
-            ],
-          ),
         );
       },
     );

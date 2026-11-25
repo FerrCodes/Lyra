@@ -78,6 +78,12 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         _songsInPlaylist = data;
         _applySort();
       });
+
+      // Pre-load artwork bytes secara bertahap di background agar scroll lancar
+      // tanpa membanjiri MethodChannel.
+      SongArtwork.warmCacheAll(
+        data.map((s) => int.tryParse(s.id) ?? 0),
+      );
     } catch (e) {
       if (!mounted) return;
 
