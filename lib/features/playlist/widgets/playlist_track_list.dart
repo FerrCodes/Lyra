@@ -17,7 +17,6 @@ class PlaylistTrackList extends StatelessWidget {
   final Function(int oldIndex, int newIndex) onReorder;
   final Function(Song song) onToggleSelection;
   final Function(Song song) onPlaySong;
-  final Function(Song song) onLongPress;
   final Function(Song song) onShowOptions;
 
   const PlaylistTrackList({
@@ -29,7 +28,6 @@ class PlaylistTrackList extends StatelessWidget {
     required this.onReorder,
     required this.onToggleSelection,
     required this.onPlaySong,
-    required this.onLongPress,
     required this.onShowOptions,
     required this.albumIds,
   });
@@ -175,7 +173,6 @@ class PlaylistTrackList extends StatelessWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(17),
                   onTap: () => onPlaySong(song),
-                  onLongPress: () => onLongPress(song),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 8, 0, 8),
                     child: Row(

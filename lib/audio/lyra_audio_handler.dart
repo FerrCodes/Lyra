@@ -10,10 +10,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player = AudioPlayer(
+    audioLoadConfiguration: const AudioLoadConfiguration(
+      androidLoadControl: AndroidLoadControl(
+        minBufferDuration: Duration(seconds: 10),
+        maxBufferDuration: Duration(seconds: 30),
+        bufferForPlaybackDuration: Duration(milliseconds: 250),
+        bufferForPlaybackAfterRebufferDuration: Duration(milliseconds: 500),
+      ),
+    ),
+  );
   final OnAudioQuery _audioQuery = OnAudioQuery();
   late final Future<void> _sessionInitFuture;
-
   late final StreamSubscription<PlaybackEvent> _playbackSub;
   late final StreamSubscription<int?> _indexSub;
   late final StreamSubscription<Duration?> _durationSub;
@@ -55,7 +63,6 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   LyraAudioHandler() {
     _sessionInitFuture = _initAudioSession();
     _restorePlaybackModes();
-
     _playbackSub = _player.playbackEventStream.listen(_broadcastState);
     _player.shuffleModeEnabledStream.listen(
       (_) => _broadcastState(_player.playbackEvent),
@@ -63,20 +70,32 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     _player.loopModeStream.listen(
       (_) => _broadcastState(_player.playbackEvent),
     );
-
-    _indexSub = _player.currentIndexStream.listen((index) {
-      if (_mutatingQueue) return;
+    _player.playerStateStream.listen((s) {
+      debugPrint(
+        '[SKIP] ${s.processingState} playing=${s.playing} @ ${_skipWatch.elapsedMilliseconds} ms',
+      );
+    });
+    _indexSub = _player.currentIndexStream.distinct().listen((index) {
+      debugPrint(
+        '[SKIP] index berubah -> $index @ ${_skipWatch.elapsedMilliseconds} ms',
+      );
+      if (_mutatingQueue || _pendingIndex != null) return;
       if (index != null && index >= 0 && index < queue.value.length) {
-        final currentItem = queue.value[index];
+        final currentItem = _withCachedArt(queue.value[index]);
         mediaItem.add(currentItem);
         // Ambil gambar setiap kali lagu berganti
         _fetchAndUpdateArtwork(currentItem);
+
+        Future.delayed(const Duration(milliseconds: 1000), () {
+          if (_player.currentIndex == index) _prefetchNeighborArt(index);
+        });
       }
     });
 
-    _durationSub = _player.durationStream.listen((duration) {
+    _durationSub = _player.durationStream.distinct().listen((duration) {
+      if (_pendingIndex != null) return;
       final current = mediaItem.value;
-      if (current != null && duration != null) {
+      if (current != null && duration != null && current.duration != duration) {
         mediaItem.add(current.copyWith(duration: duration));
       }
     });
@@ -142,10 +161,12 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
           ProcessingState.completed => AudioProcessingState.completed,
         },
         playing: playing,
-        updatePosition: _player.position,
+        updatePosition: _pendingIndex != null
+            ? Duration.zero
+            : _player.position,
         bufferedPosition: _player.bufferedPosition,
         speed: _player.speed,
-        queueIndex: event.currentIndex,
+        queueIndex: _pendingIndex ?? event.currentIndex,
         shuffleMode: shuffleOn
             ? AudioServiceShuffleMode.all
             : AudioServiceShuffleMode.none,
@@ -188,17 +209,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     }).toList();
 
     final audioSources = songs.map((s) {
-      // Karena s adalah Song versi Drift (tidak punya contentUri),
-      // kita bentuk URI-nya secara manual menggunakan ID lagu.
-      // Tapi agar aman untuk lagu lama, kita cek apakah ID-nya angka.
-      final songIdNum = int.tryParse(s.id);
-      if (songIdNum != null) {
-        // Membentuk: content://media/external/audio/media/[ID]
-        final uri = Uri.parse('content://media/external/audio/media/${s.id}');
-        return AudioSource.uri(uri);
-      }
-
-      // Fallback jika ID bukan angka (misal data lama)
+      // Langsung gunakan path (jauh lebih cepat dari content://)
       return AudioSource.file(s.path);
     }).toList();
 
@@ -210,6 +221,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
       // Ambil gambar untuk lagu pertama secara background
       _fetchAndUpdateArtwork(mediaItems[initialIndex]);
+      unawaited(_prefetchAllArt(mediaItems, initialIndex));
     } catch (e) {
       playbackState.add(
         playbackState.value.copyWith(
@@ -224,7 +236,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     final i = _player.currentIndex;
     final q = queue.value;
     if (i != null && i >= 0 && i < q.length) {
-      mediaItem.add(q[i]);
+      mediaItem.add(_withCachedArt(q[i]));
       _fetchAndUpdateArtwork(q[i]);
     }
     _broadcastState(_player.playbackEvent);
@@ -245,6 +257,92 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     } finally {
       _mutatingQueue = false;
       _resyncCurrent();
+    }
+  }
+
+  // Cache artwork per album supaya notifikasi langsung dapat gambar
+  final Map<String, Uri> _artCache = {};
+  final Stopwatch _skipWatch = Stopwatch();
+
+  // ===== Skip cepat: tap beruntun digabung jadi satu lompatan =====
+  int? _pendingIndex;
+  Timer? _metaTimer;
+  bool _skipRunning = false;
+
+  void _skipBy(int delta) {
+    final order = _player.effectiveIndices; // urutan putar (ikut shuffle)
+    final from = _pendingIndex ?? _player.currentIndex;
+    if (order.isEmpty || from == null) return;
+
+    var pos = order.indexOf(from);
+    if (pos < 0) return;
+    pos += delta;
+    if (pos < 0 || pos >= order.length) {
+      if (_player.loopMode == LoopMode.off) return;
+      pos = (pos + order.length) % order.length;
+    }
+    _jumpTo(order[pos]);
+  }
+
+  void _jumpTo(int index) {
+    final q = queue.value;
+    if (index < 0 || index >= q.length) return;
+    _pendingIndex = index;
+
+    // Tap pertama: langsung. Tap beruntun: tunggu 150 ms, hanya yang terakhir dipasang
+    final firstTap = !_skipRunning;
+    _metaTimer?.cancel();
+    void pushMeta() {
+      final i = _pendingIndex ?? _player.currentIndex;
+      if (i == null || i >= queue.value.length) return;
+      mediaItem.add(_withCachedArt(queue.value[i]));
+      _fetchAndUpdateArtwork(queue.value[i]);
+      _broadcastState(_player.playbackEvent);
+    }
+
+    if (firstTap) {
+      pushMeta();
+      _drainSkips();
+    } else {
+      _metaTimer = Timer(const Duration(milliseconds: 150), pushMeta);
+    }
+    _broadcastState(_player.playbackEvent);
+  }
+
+  Future<void> _drainSkips() async {
+    _skipRunning = true;
+    try {
+      // Selama masih ada target baru, lompat ke target terakhir saja
+      while (_pendingIndex != null) {
+        final target = _pendingIndex!;
+        await _player.seek(Duration.zero, index: target);
+        if (_pendingIndex == target) _pendingIndex = null;
+      }
+    } catch (e) {
+      debugPrint('Gagal skip: $e');
+      _pendingIndex = null;
+    } finally {
+      _skipRunning = false;
+      _resyncCurrent();
+      _metaTimer?.cancel();
+      final d = _player.duration;
+      final c = mediaItem.value;
+      if (d != null && c != null && c.duration != d) {
+        mediaItem.add(c.copyWith(duration: d));
+      }
+    }
+  }
+
+  MediaItem _withCachedArt(MediaItem item) {
+    final art = _artCache[item.extras?['albumId']?.toString() ?? ''];
+    return art == null ? item : item.copyWith(artUri: art);
+  }
+
+  // Siapkan artwork lagu sebelum dan sesudahnya di latar belakang
+  void _prefetchNeighborArt(int index) {
+    final q = queue.value;
+    for (final i in [index + 1, index - 1]) {
+      if (i >= 0 && i < q.length) _fetchAndUpdateArtwork(q[i]);
     }
   }
 
@@ -292,53 +390,67 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  // Fungsi baru untuk mengambil gambar secara async dan memperbarui notifikasi
+  final Map<String, Future<Uri?>> _artLoading = {};
+  Directory? _artDir;
+
+  // Satu album = satu proses muat, permintaan ganda menunggu hasil yang sama
+  Future<Uri?> _loadArt(int albumId) {
+    final key = albumId.toString();
+    final cached = _artCache[key];
+    if (cached != null) return Future.value(cached);
+
+    return _artLoading[key] ??= () async {
+      try {
+        _artDir ??= await getTemporaryDirectory();
+        final file = File('${_artDir!.path}/album_art_300_$key.jpg');
+        if (!await file.exists() || await file.length() == 0) {
+          final bytes = await _audioQuery.queryArtwork(
+            albumId,
+            ArtworkType.ALBUM,
+            format: ArtworkFormat.JPEG,
+            size: 300,
+          );
+          if (bytes == null) return null;
+          // tulis ke file sementara dulu, supaya tidak ada file setengah jadi
+          final tmp = File('${file.path}.tmp');
+          await tmp.writeAsBytes(bytes, flush: true);
+          await tmp.rename(file.path);
+        }
+        final uri = Uri.file(file.path);
+        _artCache[key] = uri;
+        return uri;
+      } catch (e) {
+        debugPrint('Gagal memuat artwork untuk album $albumId: $e');
+        return null;
+      } finally {
+        _artLoading.remove(key);
+      }
+    }();
+  }
+
   Future<void> _fetchAndUpdateArtwork(MediaItem item) async {
-    final albumIdRaw = item.extras?['albumId']?.toString();
-    final albumIdNum = int.tryParse(albumIdRaw ?? '');
-    if (albumIdNum == null || albumIdNum == 0) return;
+    final albumId = int.tryParse(item.extras?['albumId']?.toString() ?? '');
+    if (albumId == null || albumId == 0) return;
 
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/album_art_$albumIdNum.jpg');
+    final art = await _loadArt(albumId);
+    if (art == null) return;
 
-      // MEMORY MANAGEMENT: Cek apakah gambar sudah ada di cache HP
-      if (!await file.exists()) {
-        // Jika belum ada, baru ambil dari MediaStore
-        Uint8List? artBytes = await _audioQuery.queryArtwork(
-          albumIdNum,
-          ArtworkType.ALBUM,
-          format: ArtworkFormat.JPEG,
-          size: 500,
-        );
+    final cur = mediaItem.value;
+    if (cur != null && cur.id == item.id && cur.artUri != art) {
+      mediaItem.add(cur.copyWith(artUri: art));
+    }
+  }
 
-        if (artBytes != null) {
-          await file.writeAsBytes(artBytes);
-        } else {
-          return; // Gambar tidak ditemukan di MediaStore
-        }
-      }
-
-      // Perbarui MediaItem yang sedang diputar dengan gambar
-      if (mediaItem.value?.id == item.id) {
-        final updatedItem = item.copyWith(artUri: Uri.file(file.path));
-        mediaItem.add(updatedItem);
-
-        // Update juga di antrean agar sinkron
-        final newQueue = List<MediaItem>.from(queue.value);
-        final index = newQueue.indexWhere(
-          (e) =>
-              e.id == item.id &&
-              e.extras?['albumId']?.toString() == albumIdNum.toString(),
-        );
-        if (index != -1) {
-          newQueue[index] = updatedItem;
-          queue.add(newQueue);
-        }
-      }
-    } catch (e) {
-      // ERROR HANDLING: Tampilkan error di console agar bisa dilacak
-      debugPrint('Gagal memuat artwork untuk album $albumIdNum: $e');
+  // Siapkan cover semua album di latar belakang, dari yang terdekat dulu
+  Future<void> _prefetchAllArt(List<MediaItem> items, int start) async {
+    final order = List<int>.generate(items.length, (i) => i)
+      ..sort((a, b) => (a - start).abs().compareTo((b - start).abs()));
+    final seen = <int>{};
+    for (final i in order) {
+      final id = int.tryParse(items[i].extras?['albumId']?.toString() ?? '');
+      if (id == null || id == 0 || !seen.add(id)) continue;
+      await _loadArt(id);
+      if (seen.length >= 100) break; // batas supaya tidak berat
     }
   }
 
@@ -355,7 +467,10 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> seek(Duration position) => _player.seek(position);
+  Future<void> seek(Duration position) async {
+    await _player.seek(position);
+    _broadcastState(_player.playbackEvent);
+  }
 
   @override
   Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
@@ -417,36 +532,30 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> skipToNext() async {
-    if (_player.hasNext) await _player.seekToNext();
-  }
+  Future<void> skipToNext() async => _skipBy(1);
 
   @override
   Future<void> skipToPrevious() async {
-    // Jika lagu sudah berjalan lebih dari 10 detik, ulangi dari awal
-    if (_player.position > const Duration(seconds: 10)) {
+    // Hanya ulang dari awal kalau tidak sedang skip beruntun
+    if (_pendingIndex == null &&
+        _player.position > const Duration(seconds: 10)) {
       await _player.seek(Duration.zero);
-    } else {
-      // Jika masih di bawah 10 detik, pindah ke lagu sebelumnya
-      if (_player.hasPrevious) {
-        await _player.seekToPrevious();
-      }
+      _broadcastState(_player.playbackEvent);
+      return;
     }
+    _skipBy(-1);
   }
 
   @override
-  Future<void> skipToQueueItem(int index) async {
-    if (index < 0 || index >= queue.value.length) return;
-    await _player.seek(Duration.zero, index: index);
-  }
+  Future<void> skipToQueueItem(int index) async => _jumpTo(index);
 
   // Bersihkan resource saat aplikasi ditutup
   Future<void> disposePlayer() async {
     _sleepTimer?.cancel();
     sleepTimerActiveNotifier.dispose();
     sleepTimerRemainingNotifier.dispose();
-    await _playbackSub.cancel();
     await _indexSub.cancel();
+    await _playbackSub.cancel();
     await _durationSub.cancel();
     await _player.dispose();
   }

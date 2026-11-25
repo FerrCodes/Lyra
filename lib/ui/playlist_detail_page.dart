@@ -1168,14 +1168,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                       final index = _displayedSongs.indexOf(song);
                       _playPlaylist(startIndex: index);
                     },
-                    onLongPress: (song) {
-                      if (!_isSelectionMode) {
-                        setState(() {
-                          _isSelectionMode = true;
-                          _selectedSongIds.add(song.id);
-                        });
-                      }
-                    },
                     onShowOptions: (song) => _showSongOptions(song),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 110)),

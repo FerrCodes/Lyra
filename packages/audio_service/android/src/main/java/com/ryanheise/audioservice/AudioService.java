@@ -517,6 +517,9 @@ public class AudioService extends MediaBrowserServiceCompat {
         if (!controls.equals(this.controls)) {
             notificationChanged = true;
         }
+        if (this.processingState != processingState) {
+            notificationChanged = true;
+        }
         this.controls = controls;
         this.nativeActions.clear();
         this.customActions.clear();
