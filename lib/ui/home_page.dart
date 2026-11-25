@@ -370,24 +370,25 @@ class _HomePageState extends ConsumerState<HomePage>
                   left: 0,
                   right: 0,
                   child: IgnorePointer(
-                    child: Container(
-                      height: MediaQuery.of(context).padding.top + 90,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            colors.pageBackground.withValues(alpha: 0.8),
-                            colors.pageBackground.withValues(alpha: 0.0),
-                          ],
-                          stops: const [0.0, 0.8],
+                    child: RepaintBoundary(
+                      child: Container(
+                        height: MediaQuery.of(context).padding.top + 90,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              colors.pageBackground.withValues(alpha: 0.8),
+                              colors.pageBackground.withValues(alpha: 0.0),
+                            ],
+                            stops: const [0.0, 0.8],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               if (!hideHeader) ...[
-                // Panggil Top Bar
                 AppTopBar(
                   currentTab: _currentTab,
                   currentSortFilter: _currentSortFilter,
@@ -401,21 +402,23 @@ class _HomePageState extends ConsumerState<HomePage>
                 right: 0,
                 bottom: 0,
                 child: IgnorePointer(
-                  child: Container(
-                    height: MediaQuery.of(context).padding.bottom + 90,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          // Transparan di atas
-                          colors.pageBackground.withValues(alpha: 0.0),
-                          // Mulai memutih di tengah
-                          colors.pageBackground.withValues(alpha: 0.3),
-                          // Putih solid di paling bawah
-                          colors.pageBackground.withValues(alpha: 0.6),
-                        ],
-                        stops: const [0.0, 0.5, 1.0],
+                  child: RepaintBoundary(
+                    child: Container(
+                      height: MediaQuery.of(context).padding.bottom + 90,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            // Transparan di atas
+                            colors.pageBackground.withValues(alpha: 0.0),
+                            // Mulai memutih di tengah
+                            colors.pageBackground.withValues(alpha: 0.3),
+                            // Putih solid di paling bawah
+                            colors.pageBackground.withValues(alpha: 0.6),
+                          ],
+                          stops: const [0.0, 0.5, 1.0],
+                        ),
                       ),
                     ),
                   ),
@@ -427,107 +430,112 @@ class _HomePageState extends ConsumerState<HomePage>
                 left: 0,
                 right: 0,
                 bottom: MediaQuery.of(context).padding.bottom + 12,
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: _isScrolled,
-                  builder: (context, isScrolled, _) => LyraBottomBar(
-                    currentIndex: _currentTab,
-                    isScrolled: isScrolled,
-                    playerPanel: _playerPanel,
-                    onHomeTap: () {
-                      // Jika sedang di halaman detail (bukan root)
-                      bool isInsideDetail = false;
-                      if (_currentTab == 1 && !_isSongsRoot)
-                        isInsideDetail = true;
-                      if (_currentTab == 2 && !_isPlaylistRoot) {
-                        isInsideDetail = true;
-                      }
-                      if (_currentTab == 3 && !_isLibraryRoot) {
-                        isInsideDetail = true;
-                      }
+                child: RepaintBoundary(
+                  child: ValueListenableBuilder<bool>(
+                    valueListenable: _isScrolled,
+                    builder: (context, isScrolled, _) => LyraBottomBar(
+                      currentIndex: _currentTab,
+                      isScrolled: isScrolled,
+                      playerPanel: _playerPanel,
+                      onHomeTap: () {
+                        // Jika sedang di halaman detail (bukan root)
+                        bool isInsideDetail = false;
+                        if (_currentTab == 1 && !_isSongsRoot)
+                          isInsideDetail = true;
+                        if (_currentTab == 2 && !_isPlaylistRoot) {
+                          isInsideDetail = true;
+                        }
+                        if (_currentTab == 3 && !_isLibraryRoot) {
+                          isInsideDetail = true;
+                        }
 
-                      if (isInsideDetail) {
-                        bool handledScroll = false;
+                        if (isInsideDetail) {
+                          bool handledScroll = false;
 
-                        // CEK SCROLL KHUSUS UNTUK TAB PLAYLIST (Tab 2)
-                        if (_currentTab == 2) {
-                          final detailState = playlistPageKey
-                              .currentState
-                              ?.detailPageKey
-                              .currentState;
-                          if (detailState != null &&
-                              detailState.isScrolledDown) {
-                            detailState.scrollToTop();
-                            handledScroll = true; // Berhasil di-scroll
+                          // CEK SCROLL KHUSUS UNTUK TAB PLAYLIST (Tab 2)
+                          if (_currentTab == 2) {
+                            final detailState = playlistPageKey
+                                .currentState
+                                ?.detailPageKey
+                                .currentState;
+                            if (detailState != null &&
+                                detailState.isScrolledDown) {
+                              detailState.scrollToTop();
+                              handledScroll = true; // Berhasil di-scroll
+                            }
                           }
+
+                          // Jika scroll sudah ditangani, hentikan proses (jangan tutup halaman)
+                          if (handledScroll) return;
+
+                          _switchTab(0);
+                          return;
                         }
 
-                        // Jika scroll sudah ditangani, hentikan proses (jangan tutup halaman)
-                        if (handledScroll) return;
-
-                        _switchTab(0);
-                        return;
-                      }
-
-                      // Cek apakah halaman root sedang di-scroll (Kode lama kamu biarkan saja)
-                      bool isScrolledDown = false;
-                      if (_currentTab == 0 && _activeOffsetForTab(0) > 10) {
-                        isScrolledDown = true;
-                      } else if (_currentTab == 1) {
-                        isScrolledDown =
-                            songsPageKey.currentState?.isScrolledDown ?? false;
-                      } else if (_currentTab == 2) {
-                        isScrolledDown =
-                            playlistPageKey.currentState?.isScrolledDown ??
-                            false;
-                      } else if (_currentTab == 3) {
-                        isScrolledDown =
-                            libraryPageKey.currentState?.isScrolledDown ??
-                            false;
-                      }
-
-                      // Jika root sedang di-scroll, luncurkan ke atas
-                      if (isScrolledDown) {
-                        // ... (kode if-else milikmu biarkan sama)
-                        if (_currentTab == 0 &&
-                            _mainScrollController.hasClients) {
-                          _mainScrollController.animateTo(
-                            0.0,
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeOutCubic,
-                          );
+                        // Cek apakah halaman root sedang di-scroll (Kode lama kamu biarkan saja)
+                        bool isScrolledDown = false;
+                        if (_currentTab == 0 && _activeOffsetForTab(0) > 10) {
+                          isScrolledDown = true;
                         } else if (_currentTab == 1) {
-                          songsPageKey.currentState?.scrollToTop();
+                          isScrolledDown =
+                              songsPageKey.currentState?.isScrolledDown ??
+                              false;
                         } else if (_currentTab == 2) {
-                          playlistPageKey.currentState?.scrollToTop();
+                          isScrolledDown =
+                              playlistPageKey.currentState?.isScrolledDown ??
+                              false;
                         } else if (_currentTab == 3) {
-                          libraryPageKey.currentState?.scrollToTop();
+                          isScrolledDown =
+                              libraryPageKey.currentState?.isScrolledDown ??
+                              false;
                         }
-                        return;
-                      }
 
-                      // Jika sudah di paling atas, pindah ke tab Beranda
-                      _switchTab(0);
-                    },
-                    onTabChanged: (index) {
-                      // Jika menekan tab yang sama, kembalikan ke halaman utama tab tersebut
-                      if (index == _currentTab) {
-                        if (index == 1) {
-                          _songsNavKey.currentState?.popUntil((r) => r.isFirst);
+                        // Jika root sedang di-scroll, luncurkan ke atas
+                        if (isScrolledDown) {
+                          // ... (kode if-else milikmu biarkan sama)
+                          if (_currentTab == 0 &&
+                              _mainScrollController.hasClients) {
+                            _mainScrollController.animateTo(
+                              0.0,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeOutCubic,
+                            );
+                          } else if (_currentTab == 1) {
+                            songsPageKey.currentState?.scrollToTop();
+                          } else if (_currentTab == 2) {
+                            playlistPageKey.currentState?.scrollToTop();
+                          } else if (_currentTab == 3) {
+                            libraryPageKey.currentState?.scrollToTop();
+                          }
+                          return;
                         }
-                        if (index == 2) {
-                          _playlistNavKey.currentState?.popUntil(
-                            (r) => r.isFirst,
-                          );
+
+                        // Jika sudah di paling atas, pindah ke tab Beranda
+                        _switchTab(0);
+                      },
+                      onTabChanged: (index) {
+                        // Jika menekan tab yang sama, kembalikan ke halaman utama tab tersebut
+                        if (index == _currentTab) {
+                          if (index == 1) {
+                            _songsNavKey.currentState?.popUntil(
+                              (r) => r.isFirst,
+                            );
+                          }
+                          if (index == 2) {
+                            _playlistNavKey.currentState?.popUntil(
+                              (r) => r.isFirst,
+                            );
+                          }
+                          if (index == 3) {
+                            _libraryNavKey.currentState?.popUntil(
+                              (r) => r.isFirst,
+                            );
+                          }
+                        } else {
+                          _switchTab(index);
                         }
-                        if (index == 3) {
-                          _libraryNavKey.currentState?.popUntil(
-                            (r) => r.isFirst,
-                          );
-                        }
-                      } else {
-                        _switchTab(index);
-                      }
-                    },
+                      },
+                    ),
                   ),
                 ),
               ),

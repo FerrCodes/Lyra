@@ -382,8 +382,9 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar>
                     );
                     if (hasItem) return row;
                     return ClipRect(
+                      clipper: _ShadowSafeClipper(1 - t),
                       child: Align(
-                        alignment: Alignment.bottomCenter,
+                        alignment: Alignment.topCenter,
                         heightFactor: t,
                         child: SizedBox(width: double.infinity, child: row),
                       ),
@@ -400,6 +401,7 @@ class _LyraBottomBarState extends ConsumerState<LyraBottomBar>
                       child: Padding(
                         padding: const EdgeInsets.only(right: _slot),
                         child: ClipRect(
+                          clipper: _ShadowSafeClipper(t),
                           child: Align(
                             alignment: Alignment.topCenter,
                             heightFactor: 1 - t,
@@ -909,4 +911,21 @@ class PlayerRoute extends PageRoute<void> {
       child: child,
     );
   }
+}
+
+// Clip untuk animasi menyusut yang tidak memotong bayangan GlassContainer.
+// t: 0 = terbuka penuh, 1 = tertutup.
+class _ShadowSafeClipper extends CustomClipper<Rect> {
+  const _ShadowSafeClipper(this.t);
+  final double t;
+
+  @override
+  Rect getClip(Size size) {
+    final top = 60.0 * (1 - t);
+    final bottom = t == 0 ? 100.0 : 0.0;
+    return Rect.fromLTRB(-100, -top, size.width + 100, size.height + bottom);
+  }
+
+  @override
+  bool shouldReclip(_ShadowSafeClipper old) => old.t != t;
 }
