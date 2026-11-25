@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ class SongArtwork extends StatefulWidget {
   final double radius;
   final int loadSize;
   final Widget placeholder;
+  final Duration loadDelay;
 
   const SongArtwork({
     super.key,
@@ -17,6 +19,7 @@ class SongArtwork extends StatefulWidget {
     this.size = 50,
     this.radius = 8,
     this.loadSize = 200,
+    this.loadDelay = Duration.zero,
   });
 
   static final LinkedHashMap<String, Uint8List> _small = LinkedHashMap();
@@ -55,6 +58,7 @@ class SongArtwork extends StatefulWidget {
 
 class _SongArtworkState extends State<SongArtwork> {
   Uint8List? _bytes;
+  Timer? _loadTimer;
 
   @override
   void initState() {
@@ -69,27 +73,49 @@ class _SongArtworkState extends State<SongArtwork> {
   }
 
   void _resolve() {
+    _loadTimer?.cancel();
+
+    if (widget.id == 0) {
+      _bytes = null;
+      return;
+    }
+
     final key = SongArtwork._key(widget.id, widget.loadSize);
     final cached = SongArtwork._cacheFor(widget.loadSize)[key];
     if (cached != null) {
       _bytes = cached;
       return;
     }
-    // _bytes lama sengaja dipertahankan sampai gambar baru siap (tanpa kedip)
+
     final id = widget.id;
     final loadSize = widget.loadSize;
-    SongArtwork._load(id, loadSize).then((b) {
-      if (mounted && widget.id == id && widget.loadSize == loadSize) {
-        setState(() => _bytes = b);
-      }
-    });
+
+    void start() {
+      SongArtwork._load(id, loadSize).then((b) {
+        if (mounted && widget.id == id && widget.loadSize == loadSize) {
+          setState(() => _bytes = b);
+        }
+      });
+    }
+
+    if (widget.loadDelay == Duration.zero) {
+      start();
+    } else {
+      _loadTimer = Timer(widget.loadDelay, start);
+    }
+  }
+
+  @override
+  void dispose() {
+    _loadTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final bytes = _bytes;
     final has = bytes != null && bytes.isNotEmpty;
-    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.radius),

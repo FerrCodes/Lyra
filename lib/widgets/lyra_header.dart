@@ -117,36 +117,41 @@ class TopBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 48,
-      width: isCircle ? 48 : null,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius: isCircle ? null : BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        shape: isCircle
-            ? const CircleBorder()
-            : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: isCircle
+    return RepaintBoundary(
+      // <--- TAMBAHKAN INI
+      child: Container(
+        height: 48,
+        width: isCircle ? 48 : null,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: isCircle ? null : BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          shape: isCircle
               ? const CircleBorder()
               : RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Center(
-            widthFactor: 1.0,
-            heightFactor: 1.0,
-            child: customChild ?? Icon(icon, color: Colors.black, size: 20),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: isCircle
+                ? const CircleBorder()
+                : RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+            child: Center(
+              widthFactor: 1.0,
+              heightFactor: 1.0,
+              child: customChild ?? Icon(icon, color: Colors.black, size: 20),
+            ),
           ),
         ),
       ),

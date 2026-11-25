@@ -30,11 +30,12 @@ class PlaylistHeader extends StatelessWidget {
             File(imagePath!),
             fit: BoxFit.cover,
             gaplessPlayback: true,
+            cacheWidth: 800,
             errorBuilder: (context, error, stackTrace) => PlaylistCover(
               playlistId: playlistId,
               imagePath: null,
               iconSize: 96,
-              artSize: 800,
+              artSize: 500,
             ),
           )
         else
@@ -42,7 +43,7 @@ class PlaylistHeader extends StatelessWidget {
             playlistId: playlistId,
             imagePath: null,
             iconSize: 96,
-            artSize: 800,
+            artSize: 500,
           ),
 
         // Menjaga judul dan deskripsi tetap terbaca di atas foto.

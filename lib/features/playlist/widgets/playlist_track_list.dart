@@ -18,6 +18,8 @@ class PlaylistTrackList extends StatelessWidget {
   final Function(Song song) onToggleSelection;
   final Function(Song song) onPlaySong;
   final Function(Song song) onShowOptions;
+  static final Stream<MediaItem?> _currentItemStream = audioHandler.mediaItem
+      .distinct((a, b) => a?.id == b?.id);
 
   const PlaylistTrackList({
     super.key,
@@ -154,17 +156,18 @@ class PlaylistTrackList extends StatelessWidget {
       );
     }
 
-    return StreamBuilder<MediaItem?>(
-      stream: audioHandler.mediaItem,
-      builder: (context, snapshot) {
-        final currentMediaItem = snapshot.data;
+    return SliverFixedExtentList.builder(
+      itemExtent: 72,
+      itemCount: displayedSongs.length,
+      addAutomaticKeepAlives: false,
+      itemBuilder: (context, index) {
+        final song = displayedSongs[index];
 
-        return SliverList.builder(
-          itemCount: displayedSongs.length,
-          itemBuilder: (context, index) {
-            final song = displayedSongs[index];
-            // Cek apakah lagu ini yang sedang diputar
-            final isPlaying = currentMediaItem?.id == song.path;
+        return StreamBuilder<MediaItem?>(
+          stream: _currentItemStream,
+          initialData: audioHandler.mediaItem.value,
+          builder: (context, snapshot) {
+            final isPlaying = snapshot.data?.id == song.path;
 
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -188,7 +191,6 @@ class PlaylistTrackList extends StatelessWidget {
                         ],
 
                         IconButton(
-                          tooltip: 'More options',
                           padding: EdgeInsets.zero,
                           visualDensity: VisualDensity.compact,
                           onPressed: () => onShowOptions(song),
@@ -215,6 +217,7 @@ class PlaylistTrackList extends StatelessWidget {
       id: int.tryParse(song.id) ?? 0,
       size: 50,
       radius: 8,
+      loadDelay: const Duration(milliseconds: 90),
       placeholder: Container(
         color: Colors.grey.shade300,
         child: const Icon(Icons.music_note, color: Colors.grey),
@@ -279,19 +282,21 @@ class _EqualizerAnimationState extends State<EqualizerAnimation>
     );
 
     // Pantau status putar (playing/paused)
-    _playbackStateSub = audioHandler.playbackState.listen((state) {
-      if (state.playing) {
-        // Jika lagu main, jalankan animasi
-        if (!_controller.isAnimating) {
-          _controller.repeat(reverse: true);
-        }
-      } else {
-        // Jika lagu pause, hentikan animasi tepat di frame terakhir
-        if (_controller.isAnimating) {
-          _controller.stop();
-        }
-      }
-    });
+    _playbackStateSub = audioHandler.playbackState
+        .distinct((a, b) => a.playing == b.playing)
+        .listen((state) {
+          if (state.playing) {
+            // Jika lagu main, jalankan animasi
+            if (!_controller.isAnimating) {
+              _controller.repeat(reverse: true);
+            }
+          } else {
+            // Jika lagu pause, hentikan animasi tepat di frame terakhir
+            if (_controller.isAnimating) {
+              _controller.stop();
+            }
+          }
+        });
   }
 
   @override
@@ -303,21 +308,23 @@ class _EqualizerAnimationState extends State<EqualizerAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _buildBar(math.sin(_controller.value * math.pi * 2).abs(), 12),
-            const SizedBox(width: 2),
-            _buildBar(math.cos(_controller.value * math.pi * 2).abs(), 16),
-            const SizedBox(width: 2),
-            _buildBar(math.sin(_controller.value * math.pi * 3).abs(), 10),
-          ],
-        );
-      },
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _buildBar(math.sin(_controller.value * math.pi * 2).abs(), 12),
+              const SizedBox(width: 2),
+              _buildBar(math.cos(_controller.value * math.pi * 2).abs(), 16),
+              const SizedBox(width: 2),
+              _buildBar(math.sin(_controller.value * math.pi * 3).abs(), 10),
+            ],
+          );
+        },
+      ),
     );
   }
 

@@ -42,6 +42,8 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   String _searchQuery = '';
   Map<String, String> _albumIdsCache = const {};
   List<dynamic>? _lastAllSongs;
+  late final Stream<PlaybackState> _playingStream = audioHandler.playbackState
+      .distinct((a, b) => a.playing == b.playing);
 
   @override
   void initState() {
@@ -571,13 +573,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -892,7 +887,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   // Tombol Play (Kapsul Biru Khas Lyra)
   Widget _buildPlayButton() {
     return StreamBuilder<PlaybackState>(
-      stream: audioHandler.playbackState,
+      stream: _playingStream,
       builder: (context, snapshot) {
         final isPlaying = snapshot.data?.playing ?? false;
 
@@ -915,14 +910,6 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             decoration: BoxDecoration(
               color: Colors.blue.shade600,
               borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  // Bayangan juga disesuaikan dengan warna biru
-                  color: Colors.blue.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -958,17 +945,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
       child: Container(
         height: 44,
         width: 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
         child: const Center(
           child: Icon(Icons.shuffle_rounded, color: Colors.black87, size: 20),
         ),
@@ -1072,8 +1049,8 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
   @override
   Widget build(BuildContext context) {
     const pageColor = Color(0xFFF6F5F1);
-    final screenWidth = MediaQuery.of(context).size.width;
-    final topPadding = MediaQuery.of(context).padding.top;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final topPadding = MediaQuery.paddingOf(context).top;
     final headerHeight = screenWidth + topPadding + 32;
     final topInset = topPadding + 60;
 
@@ -1103,6 +1080,7 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
             Positioned.fill(
               child: CustomScrollView(
                 controller: _scrollController,
+                cacheExtent: 600,
                 slivers: [
                   SliverToBoxAdapter(
                     child: SizedBox(
@@ -1113,12 +1091,14 @@ class PlaylistDetailPageState extends ConsumerState<PlaylistDetailPage> {
                         maxHeight: headerHeight,
                         child: SizedBox(
                           height: headerHeight,
-                          child: PlaylistHeader(
-                            imagePath: _currentImagePath,
-                            playlistName: _currentPlaylistName,
-                            songCount: _songsInPlaylist.length,
-                            description: _currentDescription,
-                            playlistId: widget.playlist.id,
+                          child: RepaintBoundary(
+                            child: PlaylistHeader(
+                              imagePath: _currentImagePath,
+                              playlistName: _currentPlaylistName,
+                              songCount: _songsInPlaylist.length,
+                              description: _currentDescription,
+                              playlistId: widget.playlist.id,
+                            ),
                           ),
                         ),
                       ),
@@ -1467,11 +1447,17 @@ class _PinnedActionRowDelegate extends SliverPersistentHeaderDelegate {
           height: topInset,
           color: overlapsContent ? color : Colors.transparent,
         ),
-        Container(height: rowHeight, color: color, child: child),
+        RepaintBoundary(
+          child: Container(height: rowHeight, color: color, child: child),
+        ),
       ],
     );
   }
 
   @override
-  bool shouldRebuild(covariant _PinnedActionRowDelegate old) => true;
+  bool shouldRebuild(covariant _PinnedActionRowDelegate old) {
+    return old.topInset != topInset ||
+        old.rowHeight != rowHeight ||
+        old.color != color;
+  }
 }
