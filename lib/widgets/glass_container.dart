@@ -22,49 +22,60 @@ class GlassContainer extends StatelessWidget {
     this.tintOpacity,
   });
 
+  Widget _maybeBlur(Widget child) {
+    if (blurSigma <= 0) return child;
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.lyra;
 
-    return CustomPaint(
-      painter: _OuterShadowPainter(radius: radius, color: colors.glassShadow),
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
-          child: ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-              child: Container(
-                padding: padding,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      tintOpacity != null
-                          ? colors.glassTintTop.withValues(alpha: tintOpacity!)
-                          : colors.glassTintTop,
-                      tintOpacity != null
-                          ? colors.glassTintBottom.withValues(
-                              alpha: tintOpacity!,
-                            )
-                          : colors.glassTintBottom,
-                    ],
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _OuterShadowPainter(radius: radius, color: colors.glassShadow),
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: ClipRect(
+              child: _maybeBlur(
+                Container(
+                  padding: padding,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        tintOpacity != null
+                            ? colors.glassTintTop.withValues(
+                                alpha: tintOpacity!,
+                              )
+                            : colors.glassTintTop,
+                        tintOpacity != null
+                            ? colors.glassTintBottom.withValues(
+                                alpha: tintOpacity!,
+                              )
+                            : colors.glassTintBottom,
+                      ],
+                    ),
                   ),
-                ),
-                child: CustomPaint(
-                  painter: _GradientBorderPainter(
-                    radius: radius,
-                    topColor: colors.glassBorderTop,
-                    bottomColor: colors.glassBorderBottom,
-                    highlightColor:
-                        Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.03)
-                        : Colors.white.withValues(alpha: 0.08),
+                  child: CustomPaint(
+                    painter: _GradientBorderPainter(
+                      radius: radius,
+                      topColor: colors.glassBorderTop,
+                      bottomColor: colors.glassBorderBottom,
+                      highlightColor:
+                          Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withValues(alpha: 0.03)
+                          : Colors.white.withValues(alpha: 0.08),
+                    ),
+                    child: child,
                   ),
-                  child: child,
                 ),
               ),
             ),

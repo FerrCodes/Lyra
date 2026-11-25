@@ -49,6 +49,8 @@ Future<void> main() async {
       androidNotificationChannelName: 'Lyra Playback',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
+      artDownscaleWidth: 300,
+      artDownscaleHeight: 300,
     ),
   );
 
@@ -73,7 +75,6 @@ class LyraApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       locale: locale,
       localizationsDelegates: const [
-        // <--- TAMBAHKAN
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

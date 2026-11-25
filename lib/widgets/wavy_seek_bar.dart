@@ -281,9 +281,8 @@ class _WavyPainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round;
 
       final pathActive = Path();
-      final samplesPerCycle = 20.0;
       final periodPx = waveLength;
-      final waveStep = (periodPx / samplesPerCycle).clamp(1.2, trackHeight);
+      final waveStep = (periodPx / 12).clamp(2.0, 4.0);
 
       double yAt(double x) {
         final s = math.sin(

@@ -34,10 +34,17 @@ class _PlayerPageState extends State<PlayerPage> {
   Color? _dynamicColor;
   int? _lastAlbumId;
   final OnAudioQuery _audioQuery = OnAudioQuery();
-
   late final Stream<MediaItem?> _distinctMediaItemStream = audioHandler
       .mediaItem
       .distinct((a, b) => a?.id == b?.id);
+  late final Stream<PlaybackState> _playingStream = audioHandler.playbackState
+      .distinct((a, b) => a.playing == b.playing);
+  late final Stream<PlaybackState> _modeStream = audioHandler.playbackState
+      .distinct(
+        (a, b) =>
+            a.shuffleMode == b.shuffleMode && a.repeatMode == b.repeatMode,
+      );
+  Stream<List<Song>>? _favStream;
 
   Future<Color> _getDynamicColor(int albumId, Color fallback) async {
     if (_colorCache.containsKey(albumId)) return _colorCache[albumId]!;
@@ -137,111 +144,103 @@ class _PlayerPageState extends State<PlayerPage> {
             final baseColor = _dynamicColor ?? colors.pageBackground;
             final accentColor = _getContrastColor(baseColor, isDark);
 
-            return TweenAnimationBuilder<Color?>(
-              tween: ColorTween(end: baseColor),
-              duration: const Duration(milliseconds: 500),
-              builder: (context, animatedColor, child) {
-                final currentBaseColor = animatedColor ?? baseColor;
-
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        currentBaseColor.withValues(alpha: 0.3),
-                        colors.pageBackground,
-                      ],
-                    ),
-                  ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Column(
-                      children: [
-                        // CUSTOM TOP BAR
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      AppLocalizations.of(context)!.playingFrom(
-                                        item.extras?['sourceType'] ?? '',
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colors.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    Text(
-                                      item.extras?['sourceName'] ?? 'Unknown',
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        color: colors.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned.fill(
+                  child: TweenAnimationBuilder<Color?>(
+                    tween: ColorTween(end: baseColor),
+                    duration: const Duration(milliseconds: 500),
+                    builder: (context, animatedColor, _) {
+                      final c = animatedColor ?? baseColor;
+                      return DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              c.withValues(alpha: 0.3),
+                              colors.pageBackground,
                             ],
                           ),
                         ),
-
-                        const SizedBox(height: 17),
-
-                        // ALBUM ART (Dengan Parallax Scale)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: StreamBuilder<PlaybackState>(
-                            stream: audioHandler.playbackState,
-                            builder: (context, stateSnapshot) {
-                              final playing =
-                                  stateSnapshot.data?.playing ?? false;
-                              final baseScale = playing ? 1.04 : 0.89;
-
-                              // Jika ada animasi panel, bungkus dengan AnimatedBuilder
-                              if (widget.panelAnimation != null) {
-                                return AnimatedBuilder(
-                                  animation: widget.panelAnimation!,
-                                  builder: (context, child) {
-                                    // Nilai 0.0 (tertutup) = skala 0.7
-                                    // Nilai 1.0 (terbuka) = skala 1.0
-                                    final dragScale =
-                                        0.7 +
-                                        (0.3 * widget.panelAnimation!.value);
-
-                                    return Transform.scale(
-                                      scale: baseScale * dragScale,
-                                      child: child,
-                                    );
-                                  },
-                                  child: _buildAlbumArt(
-                                    context,
-                                    colors,
-                                    isDark,
-                                    albumId,
-                                    songId,
+                      );
+                    },
+                  ),
+                ),
+                SafeArea(
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      // CUSTOM TOP BAR
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    AppLocalizations.of(context)!.playingFrom(
+                                      item.extras?['sourceType'] ?? '',
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: colors.textSecondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                );
-                              }
+                                  Text(
+                                    item.extras?['sourceName'] ?? 'Unknown',
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-                              // Fallback jika dibuka lewat PlayerRoute (bukan panel)
-                              return AnimatedScale(
-                                scale: baseScale,
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeOutCubic,
+                      const SizedBox(height: 17),
+
+                      // ALBUM ART (Dengan Parallax Scale)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: StreamBuilder<PlaybackState>(
+                          stream: _playingStream,
+                          builder: (context, stateSnapshot) {
+                            final playing =
+                                stateSnapshot.data?.playing ?? false;
+                            final baseScale = playing ? 1.04 : 0.89;
+
+                            // Jika ada animasi panel, bungkus dengan AnimatedBuilder
+                            if (widget.panelAnimation != null) {
+                              return AnimatedBuilder(
+                                animation: widget.panelAnimation!,
+                                builder: (context, child) {
+                                  // Nilai 0.0 (tertutup) = skala 0.7
+                                  // Nilai 1.0 (terbuka) = skala 1.0
+                                  final dragScale =
+                                      0.7 +
+                                      (0.3 * widget.panelAnimation!.value);
+
+                                  return Transform.scale(
+                                    scale: baseScale * dragScale,
+                                    child: child,
+                                  );
+                                },
                                 child: _buildAlbumArt(
                                   context,
                                   colors,
@@ -250,22 +249,38 @@ class _PlayerPageState extends State<PlayerPage> {
                                   songId,
                                 ),
                               );
-                            },
-                          ),
+                            }
+
+                            // Fallback jika dibuka lewat PlayerRoute (bukan panel)
+                            return AnimatedScale(
+                              scale: baseScale,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeOutCubic,
+                              child: _buildAlbumArt(
+                                context,
+                                colors,
+                                isDark,
+                                albumId,
+                                songId,
+                              ),
+                            );
+                          },
                         ),
+                      ),
 
-                        const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                        // JUDUL & ARTIS
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    MarqueeText(
+                      // JUDUL & ARTIS
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  RepaintBoundary(
+                                    child: MarqueeText(
                                       text: item.title,
                                       style: TextStyle(
                                         fontSize: 22,
@@ -273,128 +288,131 @@ class _PlayerPageState extends State<PlayerPage> {
                                         color: colors.textPrimary,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      item.artist ?? 'Unknown Artist',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: colors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Consumer(
-                                builder: (context, ref, child) {
-                                  // Cari data lagu di local storage/mediastore
-                                  final allSongs =
-                                      ref.watch(allSongsProvider).value ?? [];
-                                  final localSong = allSongs.firstWhere(
-                                    (s) =>
-                                        s.path == item.id ||
-                                        (songId != 0 &&
-                                            s.id == songId.toString()),
-                                    orElse: () => local.Song(
-                                      id: '',
-                                      title: '',
-                                      artist: '',
-                                      album: '',
-                                      path: '',
-                                      durationMs: 0,
-                                      albumId: '',
-                                    ),
-                                  );
-
-                                  // Ambil database
-                                  final db = ref.read(databaseProvider);
-
-                                  // Pantau tabel favorit
-                                  return StreamBuilder<List<Song>>(
-                                    stream: db.watchFavorites(),
-                                    builder: (context, snapshot) {
-                                      final isFav =
-                                          snapshot.data?.any(
-                                            (s) =>
-                                                s.path == item.id ||
-                                                (localSong.id.isNotEmpty &&
-                                                    s.id == localSong.id),
-                                          ) ??
-                                          false;
-
-                                      return Container(
-                                        decoration: BoxDecoration(
-                                          color: colors.textSecondary
-                                              .withValues(alpha: 0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: IconButton(
-                                          icon: Icon(
-                                            isFav
-                                                ? Icons.favorite
-                                                : Icons.favorite_border,
-                                            color: isFav
-                                                ? colors.accent
-                                                : colors.textPrimary,
-                                            size: 20,
-                                          ),
-                                          onPressed: () async {
-                                            if (localSong.id.isEmpty) return;
-                                            // Ubah ke model database Drift
-                                            final dbSong = Song(
-                                              id: localSong.id,
-                                              title: localSong.title,
-                                              artist: localSong.artist,
-                                              album: localSong.album,
-                                              path: localSong.path,
-                                              durationMs: localSong.durationMs,
-                                              addedAt: DateTime.now(),
-                                            );
-
-                                            // Simpan/Hapus dari database
-                                            await db.toggleFavorite(dbSong);
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const Spacer(),
-
-                        // WAVY SEEK BAR
-                        StreamBuilder<Duration>(
-                          stream: AudioService.position,
-                          builder: (context, posSnapshot) {
-                            final position = posSnapshot.data ?? Duration.zero;
-                            final duration =
-                                audioHandler.mediaItem.value?.duration ??
-                                Duration.zero;
-
-                            final double progress = duration.inMilliseconds > 0
-                                ? position.inMilliseconds /
-                                      duration.inMilliseconds
-                                : 0.0;
-
-                            return StreamBuilder<PlaybackState>(
-                              stream: audioHandler.playbackState,
-                              builder: (context, stateSnapshot) {
-                                final playing =
-                                    stateSnapshot.data?.playing ?? false;
-
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 24,
                                   ),
-                                  child: Column(
-                                    children: [
-                                      WavySeekBar(
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    item.artist ?? 'Unknown Artist',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: colors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Consumer(
+                              builder: (context, ref, child) {
+                                // Cari data lagu di local storage/mediastore
+                                final allSongs =
+                                    ref.watch(allSongsProvider).value ?? [];
+                                final localSong = allSongs.firstWhere(
+                                  (s) =>
+                                      s.path == item.id ||
+                                      (songId != 0 &&
+                                          s.id == songId.toString()),
+                                  orElse: () => local.Song(
+                                    id: '',
+                                    title: '',
+                                    artist: '',
+                                    album: '',
+                                    path: '',
+                                    durationMs: 0,
+                                    albumId: '',
+                                  ),
+                                );
+
+                                // Ambil database
+                                final db = ref.read(databaseProvider);
+
+                                // Pantau tabel favorit
+                                return StreamBuilder<List<Song>>(
+                                  stream: _favStream ??= db.watchFavorites(),
+                                  builder: (context, snapshot) {
+                                    final isFav =
+                                        snapshot.data?.any(
+                                          (s) =>
+                                              s.path == item.id ||
+                                              (localSong.id.isNotEmpty &&
+                                                  s.id == localSong.id),
+                                        ) ??
+                                        false;
+
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: colors.textSecondary.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: IconButton(
+                                        icon: Icon(
+                                          isFav
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          color: isFav
+                                              ? colors.accent
+                                              : colors.textPrimary,
+                                          size: 20,
+                                        ),
+                                        onPressed: () async {
+                                          if (localSong.id.isEmpty) return;
+                                          // Ubah ke model database Drift
+                                          final dbSong = Song(
+                                            id: localSong.id,
+                                            title: localSong.title,
+                                            artist: localSong.artist,
+                                            album: localSong.album,
+                                            path: localSong.path,
+                                            durationMs: localSong.durationMs,
+                                            addedAt: DateTime.now(),
+                                          );
+
+                                          // Simpan/Hapus dari database
+                                          await db.toggleFavorite(dbSong);
+                                        },
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      // WAVY SEEK BAR
+                      StreamBuilder<Duration>(
+                        stream: AudioService.position,
+                        builder: (context, posSnapshot) {
+                          final position = posSnapshot.data ?? Duration.zero;
+                          final duration =
+                              audioHandler.mediaItem.value?.duration ??
+                              Duration.zero;
+
+                          final double progress = duration.inMilliseconds > 0
+                              ? position.inMilliseconds /
+                                    duration.inMilliseconds
+                              : 0.0;
+
+                          return StreamBuilder<PlaybackState>(
+                            stream: _playingStream,
+                            builder: (context, stateSnapshot) {
+                              final playing =
+                                  stateSnapshot.data?.playing ?? false;
+
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                ),
+                                child: Column(
+                                  children: [
+                                    RepaintBoundary(
+                                      child: WavySeekBar(
                                         progress: progress,
                                         duration: duration,
                                         isPlaying: playing,
@@ -413,362 +431,355 @@ class _PlayerPageState extends State<PlayerPage> {
                                           );
                                         },
                                       ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            _formatDuration(position),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: colors.textSecondary,
-                                            ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          _formatDuration(position),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: colors.textSecondary,
                                           ),
+                                        ),
+                                        Text(
+                                          _formatDuration(duration),
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: colors.textSecondary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 24),
+
+                      // TOMBOL KONTROL UTAMA
+                      StreamBuilder<PlaybackState>(
+                        stream: _playingStream,
+                        builder: (context, stateSnapshot) {
+                          final playing = stateSnapshot.data?.playing ?? false;
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                PressableScale(
+                                  onTap: () => audioHandler.skipToPrevious(),
+                                  child: GlassContainer(
+                                    blurSigma: 0,
+                                    width: 48,
+                                    height: 48,
+                                    radius: 24,
+                                    child: Icon(
+                                      Icons.skip_previous_rounded,
+                                      color: colors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: PressableScale(
+                                    onTap: () {
+                                      playing
+                                          ? audioHandler.pause()
+                                          : audioHandler.play();
+                                    },
+                                    child: Container(
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: accentColor.withValues(
+                                          alpha: 0.18,
+                                        ),
+                                        borderRadius: BorderRadius.circular(30),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            playing
+                                                ? Icons.pause_rounded
+                                                : Icons.play_arrow_rounded,
+                                            color: accentColor,
+                                            size: 28,
+                                          ),
+                                          const SizedBox(width: 8),
                                           Text(
-                                            _formatDuration(duration),
+                                            playing
+                                                ? AppLocalizations.of(
+                                                    context,
+                                                  )!.pauseLabel
+                                                : AppLocalizations.of(
+                                                    context,
+                                                  )!.playLabel,
                                             style: TextStyle(
-                                              fontSize: 11,
-                                              color: colors.textSecondary,
+                                              color: accentColor,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
                                         ],
                                       ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-
-                        // TOMBOL KONTROL UTAMA
-                        StreamBuilder<PlaybackState>(
-                          stream: audioHandler.playbackState,
-                          builder: (context, stateSnapshot) {
-                            final playing =
-                                stateSnapshot.data?.playing ?? false;
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  PressableScale(
-                                    onTap: () => audioHandler.skipToPrevious(),
-                                    child: GlassContainer(
-                                      width: 48,
-                                      height: 48,
-                                      radius: 24,
-                                      child: Icon(
-                                        Icons.skip_previous_rounded,
-                                        color: colors.textPrimary,
-                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: PressableScale(
-                                      onTap: () {
-                                        playing
-                                            ? audioHandler.pause()
-                                            : audioHandler.play();
-                                      },
-                                      child: Container(
-                                        height: 60,
-                                        decoration: BoxDecoration(
-                                          color: accentColor.withValues(
-                                            alpha: 0.18,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            30,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              playing
-                                                  ? Icons.pause_rounded
-                                                  : Icons.play_arrow_rounded,
-                                              color: accentColor,
-                                              size: 28,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              playing
-                                                  ? AppLocalizations.of(
-                                                      context,
-                                                    )!.pauseLabel
-                                                  : AppLocalizations.of(
-                                                      context,
-                                                    )!.playLabel,
-                                              style: TextStyle(
-                                                color: accentColor,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                ),
+                                const SizedBox(width: 16),
+                                PressableScale(
+                                  onTap: () {
+                                    audioHandler.skipToNext();
+                                  },
+                                  child: GlassContainer(
+                                    blurSigma: 0,
+                                    width: 48,
+                                    height: 48,
+                                    radius: 24,
+                                    child: Icon(
+                                      Icons.skip_next_rounded,
+                                      color: colors.textPrimary,
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
-                                  PressableScale(
-                                    onTap: () {
-                                      audioHandler.skipToNext();
-                                    },
-                                    child: GlassContainer(
-                                      width: 48,
-                                      height: 48,
-                                      radius: 24,
-                                      child: Icon(
-                                        Icons.skip_next_rounded,
-                                        color: colors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
 
-                        const SizedBox(height: 32),
+                      const SizedBox(height: 32),
 
-                        // MENU IKON BAWAH (Shuffle & Repeat dengan Kaca)
-                        StreamBuilder<PlaybackState>(
-                          stream: audioHandler.playbackState,
-                          builder: (context, snapshot) {
-                            final state = snapshot.data;
-                            final isShuffleOn =
-                                state?.shuffleMode ==
-                                AudioServiceShuffleMode.all;
-                            final repeatMode =
-                                state?.repeatMode ??
-                                AudioServiceRepeatMode.none;
-                            final isRepeatOn =
-                                repeatMode == AudioServiceRepeatMode.all ||
-                                repeatMode == AudioServiceRepeatMode.one;
+                      // MENU IKON BAWAH (Shuffle & Repeat dengan Kaca)
+                      StreamBuilder<PlaybackState>(
+                        stream: _modeStream,
+                        builder: (context, snapshot) {
+                          final state = snapshot.data;
+                          final isShuffleOn =
+                              state?.shuffleMode == AudioServiceShuffleMode.all;
+                          final repeatMode =
+                              state?.repeatMode ?? AudioServiceRepeatMode.none;
+                          final isRepeatOn =
+                              repeatMode == AudioServiceRepeatMode.all ||
+                              repeatMode == AudioServiceRepeatMode.one;
 
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  PressableScale(
-                                    onTap: () {
-                                      showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        backgroundColor: Colors.transparent,
-                                        builder: (context) {
-                                          return DraggableScrollableSheet(
-                                            initialChildSize: 0.5,
-                                            minChildSize: 0.3,
-                                            maxChildSize: 0.95,
-                                            snap: true,
-                                            expand: false,
-                                            builder:
-                                                (context, scrollController) {
-                                                  return QueuePage(
-                                                    scrollController:
-                                                        scrollController,
-                                                  );
-                                                },
-                                          );
-                                        },
-                                      );
-                                    },
-                                    child: GlassContainer(
-                                      width: 44,
-                                      height: 44,
-                                      radius: 14,
-                                      child: Icon(
-                                        Icons.queue_music_rounded,
-                                        color: colors.textPrimary,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  // --- TOMBOL SLEEP TIMER (DENGAN INDIKATOR WAKTU) ---
-                                  PressableScale(
-                                    onTap: () => _showSleepTimerSheet(context),
-                                    child: ValueListenableBuilder<bool>(
-                                      valueListenable:
-                                          (audioHandler as LyraAudioHandler)
-                                              .sleepTimerActiveNotifier,
-                                      builder: (context, isActive, _) {
-                                        return ValueListenableBuilder<Duration>(
-                                          valueListenable:
-                                              (audioHandler as LyraAudioHandler)
-                                                  .sleepTimerRemainingNotifier,
-                                          builder: (context, remaining, _) {
-                                            // Format sisa waktu (misal: 29:45 atau 01:15:00)
-                                            String timeText = '';
-                                            if (isActive) {
-                                              final h = remaining.inHours;
-                                              final m = remaining.inMinutes
-                                                  .remainder(60)
-                                                  .toString()
-                                                  .padLeft(2, '0');
-                                              final s = remaining.inSeconds
-                                                  .remainder(60)
-                                                  .toString()
-                                                  .padLeft(2, '0');
-                                              if (h > 0) {
-                                                timeText = '$h:$m:$s';
-                                              } else {
-                                                timeText = '$m:$s';
-                                              }
-                                            }
-                                            return Tooltip(
-                                              message: isActive
-                                                  ? AppLocalizations.of(
-                                                      context,
-                                                    )!.timeRemaining(timeText)
-                                                  : AppLocalizations.of(
-                                                      context,
-                                                    )!.sleepTimer,
-                                              child: GlassContainer(
-                                                width: 44,
-                                                height: 44,
-                                                radius: 14,
-                                                // Beri sedikit padding horizontal jika ada teks
-                                                child: Center(
-                                                  child: isActive
-                                                      ? Padding(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 4,
-                                                              ),
-                                                          child: FittedBox(
-                                                            fit: BoxFit
-                                                                .scaleDown,
-                                                            child: Text(
-                                                              timeText,
-                                                              maxLines: 1,
-                                                              style: TextStyle(
-                                                                color:
-                                                                    accentColor,
-                                                                fontSize: 9,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        )
-                                                      : Icon(
-                                                          Icons
-                                                              .bedtime_outlined,
-                                                          color: colors
-                                                              .textPrimary,
-                                                          size: 20,
-                                                        ),
-                                                ),
-                                              ),
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                PressableScale(
+                                  onTap: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (context) {
+                                        return DraggableScrollableSheet(
+                                          initialChildSize: 0.5,
+                                          minChildSize: 0.3,
+                                          maxChildSize: 0.95,
+                                          snap: true,
+                                          expand: false,
+                                          builder: (context, scrollController) {
+                                            return QueuePage(
+                                              scrollController:
+                                                  scrollController,
                                             );
                                           },
                                         );
                                       },
+                                    );
+                                  },
+                                  child: GlassContainer(
+                                    blurSigma: 0,
+                                    width: 44,
+                                    height: 44,
+                                    radius: 14,
+                                    child: Icon(
+                                      Icons.queue_music_rounded,
+                                      color: colors.textPrimary,
+                                      size: 20,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  // --- TOMBOL SHUFFLE ---
-                                  PressableScale(
-                                    onTap: () {
-                                      final nextMode = isShuffleOn
-                                          ? AudioServiceShuffleMode.none
-                                          : AudioServiceShuffleMode.all;
-                                      audioHandler.setShuffleMode(nextMode);
+                                ),
+                                const SizedBox(width: 12),
+                                // --- TOMBOL SLEEP TIMER (DENGAN INDIKATOR WAKTU) ---
+                                PressableScale(
+                                  onTap: () => _showSleepTimerSheet(context),
+                                  child: ValueListenableBuilder<bool>(
+                                    valueListenable:
+                                        (audioHandler as LyraAudioHandler)
+                                            .sleepTimerActiveNotifier,
+                                    builder: (context, isActive, _) {
+                                      return ValueListenableBuilder<Duration>(
+                                        valueListenable:
+                                            (audioHandler as LyraAudioHandler)
+                                                .sleepTimerRemainingNotifier,
+                                        builder: (context, remaining, _) {
+                                          // Format sisa waktu (misal: 29:45 atau 01:15:00)
+                                          String timeText = '';
+                                          if (isActive) {
+                                            final h = remaining.inHours;
+                                            final m = remaining.inMinutes
+                                                .remainder(60)
+                                                .toString()
+                                                .padLeft(2, '0');
+                                            final s = remaining.inSeconds
+                                                .remainder(60)
+                                                .toString()
+                                                .padLeft(2, '0');
+                                            if (h > 0) {
+                                              timeText = '$h:$m:$s';
+                                            } else {
+                                              timeText = '$m:$s';
+                                            }
+                                          }
+                                          return Tooltip(
+                                            message: isActive
+                                                ? AppLocalizations.of(
+                                                    context,
+                                                  )!.timeRemaining(timeText)
+                                                : AppLocalizations.of(
+                                                    context,
+                                                  )!.sleepTimer,
+                                            child: GlassContainer(
+                                              blurSigma: 0,
+                                              width: 44,
+                                              height: 44,
+                                              radius: 14,
+                                              // Beri sedikit padding horizontal jika ada teks
+                                              child: Center(
+                                                child: isActive
+                                                    ? Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 4,
+                                                            ),
+                                                        child: FittedBox(
+                                                          fit: BoxFit.scaleDown,
+                                                          child: Text(
+                                                            timeText,
+                                                            maxLines: 1,
+                                                            style: TextStyle(
+                                                              color:
+                                                                  accentColor,
+                                                              fontSize: 9,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      )
+                                                    : Icon(
+                                                        Icons.bedtime_outlined,
+                                                        color:
+                                                            colors.textPrimary,
+                                                        size: 20,
+                                                      ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
                                     },
-                                    child: GlassContainer(
-                                      width: 44,
-                                      height: 44,
-                                      radius: 14,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(10),
-                                        child: CustomShuffleIcon(
-                                          isOn: isShuffleOn,
-                                          color: isShuffleOn
-                                              ? accentColor
-                                              : colors.textPrimary,
-                                        ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                // --- TOMBOL SHUFFLE ---
+                                PressableScale(
+                                  onTap: () {
+                                    final nextMode = isShuffleOn
+                                        ? AudioServiceShuffleMode.none
+                                        : AudioServiceShuffleMode.all;
+                                    audioHandler.setShuffleMode(nextMode);
+                                  },
+                                  child: GlassContainer(
+                                    blurSigma: 0,
+                                    width: 44,
+                                    height: 44,
+                                    radius: 14,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(10),
+                                      child: CustomShuffleIcon(
+                                        isOn: isShuffleOn,
+                                        color: isShuffleOn
+                                            ? accentColor
+                                            : colors.textPrimary,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  // --- TOMBOL REPEAT ---
-                                  PressableScale(
-                                    onTap: () {
-                                      AudioServiceRepeatMode nextMode =
-                                          AudioServiceRepeatMode.all;
-                                      if (repeatMode ==
-                                          AudioServiceRepeatMode.all) {
-                                        nextMode = AudioServiceRepeatMode.one;
-                                      } else if (repeatMode ==
-                                          AudioServiceRepeatMode.one) {
-                                        nextMode = AudioServiceRepeatMode.none;
-                                      }
-                                      audioHandler.setRepeatMode(nextMode);
-                                    },
-                                    child: GlassContainer(
-                                      width: 44,
-                                      height: 44,
-                                      radius: 14,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(10),
-                                        child: CustomRepeatIcon(
-                                          isAll:
-                                              repeatMode ==
-                                              AudioServiceRepeatMode.all,
-                                          isOne:
-                                              repeatMode ==
-                                              AudioServiceRepeatMode.one,
-                                          color: isRepeatOn
-                                              ? accentColor
-                                              : colors.textPrimary,
-                                        ),
+                                ),
+                                const SizedBox(width: 12),
+                                // --- TOMBOL REPEAT ---
+                                PressableScale(
+                                  onTap: () {
+                                    AudioServiceRepeatMode nextMode =
+                                        AudioServiceRepeatMode.all;
+                                    if (repeatMode ==
+                                        AudioServiceRepeatMode.all) {
+                                      nextMode = AudioServiceRepeatMode.one;
+                                    } else if (repeatMode ==
+                                        AudioServiceRepeatMode.one) {
+                                      nextMode = AudioServiceRepeatMode.none;
+                                    }
+                                    audioHandler.setRepeatMode(nextMode);
+                                  },
+                                  child: GlassContainer(
+                                    blurSigma: 0,
+                                    width: 44,
+                                    height: 44,
+                                    radius: 14,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(10),
+                                      child: CustomRepeatIcon(
+                                        isAll:
+                                            repeatMode ==
+                                            AudioServiceRepeatMode.all,
+                                        isOne:
+                                            repeatMode ==
+                                            AudioServiceRepeatMode.one,
+                                        color: isRepeatOn
+                                            ? accentColor
+                                            : colors.textPrimary,
                                       ),
                                     ),
                                   ),
-                                  const Spacer(),
-                                  PressableScale(
-                                    onTap: () =>
-                                        _showMoreControlsSheet(context),
-                                    child: GlassContainer(
-                                      width: 44,
-                                      height: 44,
-                                      radius: 14,
-                                      child: Icon(
-                                        Icons.tune_rounded,
-                                        color: colors.textPrimary,
-                                        size: 24,
-                                      ),
+                                ),
+                                const Spacer(),
+                                PressableScale(
+                                  onTap: () => _showMoreControlsSheet(context),
+                                  child: GlassContainer(
+                                    blurSigma: 0,
+                                    width: 44,
+                                    height: 44,
+                                    radius: 14,
+                                    child: Icon(
+                                      Icons.tune_rounded,
+                                      color: colors.textPrimary,
+                                      size: 24,
                                     ),
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
 
-                        const SizedBox(height: 32),
-                      ],
-                    ),
+                      const SizedBox(height: 32),
+                    ],
                   ),
-                );
-              },
+                ),
+              ],
             );
           },
         ),
@@ -783,30 +794,46 @@ class _PlayerPageState extends State<PlayerPage> {
     int albumId,
     int songId,
   ) {
-    return AspectRatio(
-      aspectRatio: 1.0,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
-            ),
-          ],
-        ),
-        child: songId == 0
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: QueryArtworkWidget(
-                  id: albumId,
-                  type: ArtworkType.ALBUM,
-                  size: 800,
-                  artworkFit: BoxFit.cover,
-                  artworkBorder: BorderRadius.circular(24),
-                  nullArtworkWidget: Container(
+    return RepaintBoundary(
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 15),
+              ),
+            ],
+          ),
+          child: songId == 0
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: QueryArtworkWidget(
+                    id: albumId,
+                    type: ArtworkType.ALBUM,
+                    size: 800,
+                    artworkFit: BoxFit.cover,
+                    artworkBorder: BorderRadius.circular(24),
+                    nullArtworkWidget: Container(
+                      color: colors.textSecondary.withValues(alpha: 0.2),
+                      child: Icon(
+                        Icons.music_note,
+                        size: 100,
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                  ),
+                )
+              : SongArtwork(
+                  id: songId,
+                  size: double.infinity,
+                  radius: 24,
+                  loadSize: 800,
+                  placeholder: Container(
                     color: colors.textSecondary.withValues(alpha: 0.2),
                     child: Icon(
                       Icons.music_note,
@@ -815,21 +842,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     ),
                   ),
                 ),
-              )
-            : SongArtwork(
-                id: songId,
-                size: double.infinity,
-                radius: 24,
-                loadSize: 800,
-                placeholder: Container(
-                  color: colors.textSecondary.withValues(alpha: 0.2),
-                  child: Icon(
-                    Icons.music_note,
-                    size: 100,
-                    color: colors.textPrimary,
-                  ),
-                ),
-              ),
+        ),
       ),
     );
   }
