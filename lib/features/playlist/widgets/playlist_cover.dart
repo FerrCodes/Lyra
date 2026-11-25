@@ -25,12 +25,14 @@ class PlaylistCover extends ConsumerStatefulWidget {
 // Tambahkan AutomaticKeepAliveClientMixin agar tidak di-destroy saat di-scroll
 class _PlaylistCoverState extends ConsumerState<PlaylistCover>
     with AutomaticKeepAliveClientMixin {
+  static final Map<int, List<String>> _songIdsCache = {};
   late Stream<List<String>> _songIdsStream;
   List<String>? _latestSongIds;
 
   @override
   void initState() {
     super.initState();
+    _latestSongIds = _songIdsCache[widget.playlistId];
     _songIdsStream = ref
         .read(databaseProvider)
         .watchPlaylistSongIds(widget.playlistId);
@@ -40,6 +42,7 @@ class _PlaylistCoverState extends ConsumerState<PlaylistCover>
   void didUpdateWidget(covariant PlaylistCover oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.playlistId != widget.playlistId) {
+      _latestSongIds = _songIdsCache[widget.playlistId];
       _songIdsStream = ref
           .read(databaseProvider)
           .watchPlaylistSongIds(widget.playlistId);
@@ -72,12 +75,13 @@ class _PlaylistCoverState extends ConsumerState<PlaylistCover>
   Widget _mosaic() {
     return StreamBuilder<List<String>>(
       stream: _songIdsStream,
-      initialData: _latestSongIds,
+      initialData: _latestSongIds ?? _songIdsCache[widget.playlistId],
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
           _latestSongIds = snapshot.data;
+          _songIdsCache[widget.playlistId] = snapshot.data!;
         }
-        final ids = snapshot.data ?? _latestSongIds ?? const <String>[];
+        final ids = snapshot.data ?? _latestSongIds ?? _songIdsCache[widget.playlistId] ?? const <String>[];
 
         // Ambil maksimal 4 songId unik (TANPA memanggil allSongsProvider lagi)
         final list = <String>[];
@@ -91,23 +95,24 @@ class _PlaylistCoverState extends ConsumerState<PlaylistCover>
         }
 
         if (list.isEmpty) return _placeholder();
-        if (list.length < 4) return _art(list.first);
+        if (list.length < 4) return _art(list.first, widget.artSize);
 
+        final tileSize = (widget.artSize / 2).round();
         return Column(
           children: [
             Expanded(
               child: Row(
                 children: [
-                  Expanded(child: _art(list[0])),
-                  Expanded(child: _art(list[1])),
+                  Expanded(child: _art(list[0], tileSize)),
+                  Expanded(child: _art(list[1], tileSize)),
                 ],
               ),
             ),
             Expanded(
               child: Row(
                 children: [
-                  Expanded(child: _art(list[2])),
-                  Expanded(child: _art(list[3])),
+                  Expanded(child: _art(list[2], tileSize)),
+                  Expanded(child: _art(list[3], tileSize)),
                 ],
               ),
             ),
@@ -117,12 +122,12 @@ class _PlaylistCoverState extends ConsumerState<PlaylistCover>
     );
   }
 
-  Widget _art(String songId) {
+  Widget _art(String songId, int loadSize) {
     return SongArtwork(
       id: int.tryParse(songId) ?? 0,
       size: double.infinity,
       radius: 0,
-      loadSize: widget.artSize,
+      loadSize: loadSize,
       placeholder: _placeholder(),
     );
   }

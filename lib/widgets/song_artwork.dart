@@ -116,6 +116,9 @@ class _SongArtworkState extends State<SongArtwork> {
     final bytes = _bytes;
     final has = bytes != null && bytes.isNotEmpty;
     final dpr = MediaQuery.devicePixelRatioOf(context);
+    final targetCacheWidth = widget.size.isFinite
+        ? (widget.size * dpr).round()
+        : (widget.loadSize > 0 ? widget.loadSize : 200);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(widget.radius),
@@ -127,9 +130,7 @@ class _SongArtworkState extends State<SongArtwork> {
                 bytes,
                 fit: BoxFit.cover,
                 gaplessPlayback: true,
-                cacheWidth: widget.size.isFinite
-                    ? (widget.size * dpr).round()
-                    : null,
+                cacheWidth: targetCacheWidth,
               )
             : widget.placeholder,
       ),

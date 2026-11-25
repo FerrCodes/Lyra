@@ -156,25 +156,37 @@ class PlaylistTrackList extends StatelessWidget {
       );
     }
 
-    return SliverFixedExtentList.builder(
-      itemExtent: 72,
-      itemCount: displayedSongs.length,
-      addAutomaticKeepAlives: false,
-      itemBuilder: (context, index) {
-        final song = displayedSongs[index];
-
-        return StreamBuilder<MediaItem?>(
-          stream: _currentItemStream,
-          initialData: audioHandler.mediaItem.value,
-          builder: (context, snapshot) {
-            final isPlaying = snapshot.data?.id == song.path;
+    // PERBAIKAN PERFORMA SCROLL:
+    // 1. StreamBuilder diangkat ke LUAR itemBuilder — hanya 1 subscription
+    //    untuk seluruh daftar, bukan 1 subscription per baris.
+    // 2. addRepaintBoundaries: false — JANGAN bungkus setiap baris dalam
+    //    RepaintBoundary. Saat scroll, semua baris bergerak bersamaan, jadi
+    //    layer terpisah per-baris justru menambah beban compositing GPU
+    //    tanpa manfaat. EqualizerAnimation sudah punya RepaintBoundary
+    //    sendiri di dalamnya, cukup untuk mengisolasi animasinya.
+    // 3. addAutomaticKeepAlives: false — tanpa AutomaticKeepAliveClientMixin
+    //    di sub-tree, wrapper AutomaticKeepAlive hanya menambah overhead.
+    //    Artwork sudah di-cache statis di SongArtwork, jadi rebuild murah.
+    return StreamBuilder<MediaItem?>(
+      stream: _currentItemStream,
+      initialData: audioHandler.mediaItem.value,
+      builder: (context, snapshot) {
+        final currentId = snapshot.data?.id;
+        return SliverFixedExtentList.builder(
+          itemExtent: 72,
+          itemCount: displayedSongs.length,
+          addAutomaticKeepAlives: false,
+          addRepaintBoundaries: false,
+          itemBuilder: (context, index) {
+            final song = displayedSongs[index];
+            final isPlaying = currentId == song.path;
 
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(17),
+                  borderRadius: const BorderRadius.all(Radius.circular(17)),
                   onTap: () => onPlaySong(song),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 8, 0, 8),
