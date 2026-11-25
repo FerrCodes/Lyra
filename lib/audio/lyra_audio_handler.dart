@@ -11,14 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer(
-    audioLoadConfiguration: const AudioLoadConfiguration(
-      androidLoadControl: AndroidLoadControl(
-        minBufferDuration: Duration(seconds: 10),
-        maxBufferDuration: Duration(seconds: 30),
-        bufferForPlaybackDuration: Duration(milliseconds: 250),
-        bufferForPlaybackAfterRebufferDuration: Duration(milliseconds: 500),
-      ),
-    ),
+    useLazyPreparation: false, // Menyiapkan lagu selanjutnya tanpa menunggu
   );
   final OnAudioQuery _audioQuery = OnAudioQuery();
   late final Future<void> _sessionInitFuture;
@@ -70,11 +63,6 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     _player.loopModeStream.listen(
       (_) => _broadcastState(_player.playbackEvent),
     );
-    _player.playerStateStream.listen((s) {
-      debugPrint(
-        '[SKIP] ${s.processingState} playing=${s.playing} @ ${_skipWatch.elapsedMilliseconds} ms',
-      );
-    });
     _indexSub = _player.currentIndexStream.distinct().listen((index) {
       debugPrint(
         '[SKIP] index berubah -> $index @ ${_skipWatch.elapsedMilliseconds} ms',
@@ -153,13 +141,16 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
         ],
         systemActions: const {MediaAction.seek},
         androidCompactActionIndices: const [1, 2, 3],
-        processingState: switch (_player.processingState) {
-          ProcessingState.idle => AudioProcessingState.idle,
-          ProcessingState.loading => AudioProcessingState.loading,
-          ProcessingState.buffering => AudioProcessingState.buffering,
-          ProcessingState.ready => AudioProcessingState.ready,
-          ProcessingState.completed => AudioProcessingState.completed,
-        },
+        processingState: _isTransitioning || _pendingIndex != null
+            ? AudioProcessingState
+                  .ready // Paksa hilangkan spinner saat transisi
+            : switch (_player.processingState) {
+                ProcessingState.idle => AudioProcessingState.idle,
+                ProcessingState.loading => AudioProcessingState.loading,
+                ProcessingState.buffering => AudioProcessingState.buffering,
+                ProcessingState.ready => AudioProcessingState.ready,
+                ProcessingState.completed => AudioProcessingState.completed,
+              },
         playing: playing,
         updatePosition: _pendingIndex != null
             ? Duration.zero
@@ -266,8 +257,8 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   // ===== Skip cepat: tap beruntun digabung jadi satu lompatan =====
   int? _pendingIndex;
-  Timer? _metaTimer;
   bool _skipRunning = false;
+  bool _isTransitioning = false;
 
   void _skipBy(int delta) {
     final order = _player.effectiveIndices; // urutan putar (ikut shuffle)
@@ -288,43 +279,41 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     final q = queue.value;
     if (index < 0 || index >= q.length) return;
     _pendingIndex = index;
-
-    // Tap pertama: langsung. Tap beruntun: tunggu 150 ms, hanya yang terakhir dipasang
-    final firstTap = !_skipRunning;
-    _metaTimer?.cancel();
-    void pushMeta() {
-      final i = _pendingIndex ?? _player.currentIndex;
-      if (i == null || i >= queue.value.length) return;
-      mediaItem.add(_withCachedArt(queue.value[i]));
-      _fetchAndUpdateArtwork(queue.value[i]);
-      _broadcastState(_player.playbackEvent);
-    }
-
-    if (firstTap) {
-      pushMeta();
-      _drainSkips();
-    } else {
-      _metaTimer = Timer(const Duration(milliseconds: 150), pushMeta);
-    }
-    _broadcastState(_player.playbackEvent);
+    final targetItem = q[index];
+    mediaItem.add(_withCachedArt(targetItem)); // Sampul & teks INSTAN
+    _fetchAndUpdateArtwork(targetItem);
+    _broadcastState(_player.playbackEvent); // Seek bar INSTAN
+    _drainSkips(); // Jalankan audio di latar belakang
   }
 
   Future<void> _drainSkips() async {
+    if (_skipRunning) return;
     _skipRunning = true;
+    _isTransitioning = true; // Sembunyikan spinner
+
     try {
-      // Selama masih ada target baru, lompat ke target terakhir saja
       while (_pendingIndex != null) {
-        final target = _pendingIndex!;
+        // Tunggu 60ms. Jika user nekan lagi dalam 60ms ini,
+        // audio tidak akan memutar lagu perantara, langsung ke target akhir.
+        await Future.delayed(const Duration(milliseconds: 60));
+
+        final target = _pendingIndex;
+        if (target == null) break;
+        _pendingIndex = null;
+
+        // Eksekusi seek audio ke target akhir
         await _player.seek(Duration.zero, index: target);
-        if (_pendingIndex == target) _pendingIndex = null;
       }
     } catch (e) {
       debugPrint('Gagal skip: $e');
       _pendingIndex = null;
     } finally {
+      _isTransitioning = false;
       _skipRunning = false;
       _resyncCurrent();
-      _metaTimer?.cancel();
+
+      // Paksa UI update terakhir
+      _broadcastState(_player.playbackEvent);
       final d = _player.duration;
       final c = mediaItem.value;
       if (d != null && c != null && c.duration != d) {
@@ -468,7 +457,10 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> seek(Duration position) async {
+    _isTransitioning = true; // Sembunyikan spinner saat seek
+    playbackState.add(playbackState.value.copyWith(updatePosition: position));
     await _player.seek(position);
+    _isTransitioning = false;
     _broadcastState(_player.playbackEvent);
   }
 
