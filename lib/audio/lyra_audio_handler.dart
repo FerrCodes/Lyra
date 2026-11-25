@@ -278,30 +278,34 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   void _jumpTo(int index) {
     final q = queue.value;
     if (index < 0 || index >= q.length) return;
-    _pendingIndex = index;
+    _pendingIndex = index; // Catat target keinginan (Desired State)
+
+    // UPDATE UI SEKETIKA (Tanpa menunggu audio)
     final targetItem = q[index];
-    mediaItem.add(_withCachedArt(targetItem)); // Sampul & teks INSTAN
-    _fetchAndUpdateArtwork(targetItem);
-    _broadcastState(_player.playbackEvent); // Seek bar INSTAN
-    _drainSkips(); // Jalankan audio di latar belakang
+    mediaItem.add(_withCachedArt(targetItem));
+    _fetchAndUpdateArtwork(targetItem); // Ambil sampul di background
+    // UPDATE SEEK BAR KE 0 DAN HILANGKAN SPINNER
+    _broadcastState(_player.playbackEvent);
+    // PROSES AUDIO DI BELAKANG
+    _drainSkips();
   }
 
   Future<void> _drainSkips() async {
     if (_skipRunning) return;
     _skipRunning = true;
-    _isTransitioning = true; // Sembunyikan spinner
+    _isTransitioning = true; // Kunci spinner agar tidak muncul
 
     try {
       while (_pendingIndex != null) {
-        // Tunggu 60ms. Jika user nekan lagi dalam 60ms ini,
-        // audio tidak akan memutar lagu perantara, langsung ke target akhir.
-        await Future.delayed(const Duration(milliseconds: 60));
+        // Tunggu 80ms. Jika user nekan lagi, target akan berubah.
+        await Future.delayed(const Duration(milliseconds: 80));
 
         final target = _pendingIndex;
         if (target == null) break;
-        _pendingIndex = null;
 
-        // Eksekusi seek audio ke target akhir
+        _pendingIndex = null; // Kosongkan sebelum seek agar tap baru ditangkap
+
+        // Eksekusi audio melompat ke target
         await _player.seek(Duration.zero, index: target);
       }
     } catch (e) {
@@ -310,15 +314,8 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     } finally {
       _isTransitioning = false;
       _skipRunning = false;
-      _resyncCurrent();
-
-      // Paksa UI update terakhir
+      _resyncCurrent(); // Sinkronkan state terakhir
       _broadcastState(_player.playbackEvent);
-      final d = _player.duration;
-      final c = mediaItem.value;
-      if (d != null && c != null && c.duration != d) {
-        mediaItem.add(c.copyWith(duration: d));
-      }
     }
   }
 
@@ -528,13 +525,16 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToPrevious() async {
-    // Hanya ulang dari awal kalau tidak sedang skip beruntun
-    if (_pendingIndex == null &&
-        _player.position > const Duration(seconds: 10)) {
+    // Jika _pendingIndex != null, artinya kita sedang di posisi 00:00 secara virtual
+    final pos = _pendingIndex != null ? Duration.zero : _player.position;
+
+    if (pos > const Duration(seconds: 10)) {
+      // Ulangi lagu dari awal
       await _player.seek(Duration.zero);
       _broadcastState(_player.playbackEvent);
       return;
     }
+
     _skipBy(-1);
   }
 
