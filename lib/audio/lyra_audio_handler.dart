@@ -10,16 +10,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
-  final AudioPlayer _player = AudioPlayer(
-    useLazyPreparation: false, // Menyiapkan lagu selanjutnya tanpa menunggu
-  );
+  final AudioPlayer _player = AudioPlayer(useLazyPreparation: true);
   final OnAudioQuery _audioQuery = OnAudioQuery();
   late final Future<void> _sessionInitFuture;
+  late final Future<void> _modesInitFuture;
   late final StreamSubscription<PlaybackEvent> _playbackSub;
   late final StreamSubscription<int?> _indexSub;
   late final StreamSubscription<Duration?> _durationSub;
   Map<String, String> _currentAlbumIds = {};
   bool _mutatingQueue = false;
+  int _queueGen = 0;
   Timer? _sleepTimer;
   static const _kShuffle = 'lyra_shuffle_mode';
   static const _kRepeat = 'lyra_repeat_mode';
@@ -55,8 +55,16 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   LyraAudioHandler() {
     _sessionInitFuture = _initAudioSession();
-    _restorePlaybackModes();
-    _playbackSub = _player.playbackEventStream.listen(_broadcastState);
+    _modesInitFuture = _restorePlaybackModes();
+    _player.playerStateStream.listen((state) {
+      debugPrint(
+        '[PLAYER] playing=${state.playing}, state=${state.processingState}, gen=$_queueGen, idx=${_player.currentIndex}',
+      );
+    });
+    _player.errorStream.listen((e) {
+      debugPrint('[PLAYER] Error: code=${e.code}, message=${e.message}');
+    });
+    _playbackSub = _player.playbackEventStream.listen(_onPlaybackEvent);
     _player.shuffleModeEnabledStream.listen(
       (_) => _broadcastState(_player.playbackEvent),
     );
@@ -64,9 +72,6 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
       (_) => _broadcastState(_player.playbackEvent),
     );
     _indexSub = _player.currentIndexStream.distinct().listen((index) {
-      debugPrint(
-        '[SKIP] index berubah -> $index @ ${_skipWatch.elapsedMilliseconds} ms',
-      );
       if (_mutatingQueue || _pendingIndex != null) return;
       if (index != null && index >= 0 && index < queue.value.length) {
         final currentItem = _withCachedArt(queue.value[index]);
@@ -111,63 +116,132 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  void _broadcastState(PlaybackEvent event) {
+  AudioProcessingState _effectiveProcessingState() {
+    final real = switch (_player.processingState) {
+      ProcessingState.idle => AudioProcessingState.idle,
+      ProcessingState.loading => AudioProcessingState.loading,
+      ProcessingState.buffering => AudioProcessingState.buffering,
+      ProcessingState.ready => AudioProcessingState.ready,
+      ProcessingState.completed => AudioProcessingState.completed,
+    };
+    if (_pendingIndex != null) {
+      return _showSpinner
+          ? AudioProcessingState.buffering
+          : AudioProcessingState.ready;
+    }
+    if (_manualSeekPending &&
+        !_manualSpinner &&
+        (real == AudioProcessingState.buffering ||
+            real == AudioProcessingState.loading)) {
+      return AudioProcessingState.ready;
+    }
+    return real;
+  }
+
+  void _broadcastState(PlaybackEvent event, {bool force = false}) {
     final playing = _player.playing;
     final shuffleOn = _player.shuffleModeEnabled;
     final loop = _player.loopMode;
 
-    playbackState.add(
-      playbackState.value.copyWith(
-        controls: [
-          MediaControl.custom(
-            androidIcon: shuffleOn
-                ? 'drawable/ic_shuffle_on'
-                : 'drawable/ic_shuffle_off',
-            label: 'Shuffle',
-            name: 'toggleShuffle',
-          ),
-          MediaControl.skipToPrevious,
-          if (playing) MediaControl.pause else MediaControl.play,
-          MediaControl.skipToNext,
-          MediaControl.custom(
-            androidIcon: switch (loop) {
-              LoopMode.off => 'drawable/ic_repeat_off',
-              LoopMode.all => 'drawable/ic_repeat_all',
-              LoopMode.one => 'drawable/ic_repeat_one',
-            },
-            label: 'Repeat',
-            name: 'cycleRepeat',
-          ),
-        ],
-        systemActions: const {MediaAction.seek},
-        androidCompactActionIndices: const [1, 2, 3],
-        processingState: _isTransitioning || _pendingIndex != null
-            ? AudioProcessingState
-                  .ready // Paksa hilangkan spinner saat transisi
-            : switch (_player.processingState) {
-                ProcessingState.idle => AudioProcessingState.idle,
-                ProcessingState.loading => AudioProcessingState.loading,
-                ProcessingState.buffering => AudioProcessingState.buffering,
-                ProcessingState.ready => AudioProcessingState.ready,
-                ProcessingState.completed => AudioProcessingState.completed,
-              },
-        playing: playing,
-        updatePosition: _pendingIndex != null
-            ? Duration.zero
-            : _player.position,
-        bufferedPosition: _player.bufferedPosition,
-        speed: _player.speed,
-        queueIndex: _pendingIndex ?? event.currentIndex,
-        shuffleMode: shuffleOn
-            ? AudioServiceShuffleMode.all
-            : AudioServiceShuffleMode.none,
-        repeatMode: switch (loop) {
-          LoopMode.off => AudioServiceRepeatMode.none,
-          LoopMode.all => AudioServiceRepeatMode.all,
-          LoopMode.one => AudioServiceRepeatMode.one,
-        },
-      ),
+    final next = playbackState.value.copyWith(
+      controls: [
+        MediaControl.custom(
+          androidIcon: shuffleOn
+              ? 'drawable/ic_shuffle_on'
+              : 'drawable/ic_shuffle_off',
+          label: 'Shuffle',
+          name: 'toggleShuffle',
+        ),
+        MediaControl.skipToPrevious,
+        if (playing) MediaControl.pause else MediaControl.play,
+        MediaControl.skipToNext,
+        MediaControl.custom(
+          androidIcon: switch (loop) {
+            LoopMode.off => 'drawable/ic_repeat_off',
+            LoopMode.all => 'drawable/ic_repeat_all',
+            LoopMode.one => 'drawable/ic_repeat_one',
+          },
+          label: 'Repeat',
+          name: 'cycleRepeat',
+        ),
+      ],
+      systemActions: const {MediaAction.seek},
+      androidCompactActionIndices: const [1, 2, 3],
+      processingState: _effectiveProcessingState(),
+      playing: playing,
+      updatePosition: _pendingIndex != null ? Duration.zero : _player.position,
+      bufferedPosition: _player.bufferedPosition,
+      speed: _player.speed,
+      queueIndex: _pendingIndex ?? event.currentIndex,
+      shuffleMode: shuffleOn
+          ? AudioServiceShuffleMode.all
+          : AudioServiceShuffleMode.none,
+      repeatMode: switch (loop) {
+        LoopMode.off => AudioServiceRepeatMode.none,
+        LoopMode.all => AudioServiceRepeatMode.all,
+        LoopMode.one => AudioServiceRepeatMode.one,
+      },
     );
+
+    final prev = playbackState.value;
+    if (!force) {
+      final expected = prev.playing
+          ? _lastSentPos + (DateTime.now().difference(_lastSentAt) * prev.speed)
+          : _lastSentPos;
+      final drift = (next.updatePosition - expected).abs();
+      final same =
+          prev.playing == next.playing &&
+          prev.processingState == next.processingState &&
+          prev.queueIndex == next.queueIndex &&
+          prev.shuffleMode == next.shuffleMode &&
+          prev.repeatMode == next.repeatMode &&
+          prev.speed == next.speed &&
+          drift < const Duration(milliseconds: 400);
+      if (same) return;
+    }
+    _lastSentPos = next.updatePosition;
+    _lastSentAt = DateTime.now();
+    playbackState.add(next);
+  }
+
+  // Menangani event pemutar: begitu pemutar READY di lagu tujuan, niat skip
+  // selesai saat itu juga (bukan menunggu future seek).
+  void _onPlaybackEvent(PlaybackEvent event) {
+    final target = _pendingIndex;
+    if (target != null &&
+        event.currentIndex == target &&
+        event.processingState == ProcessingState.ready) {
+      _finishIntent();
+    }
+
+    // --- DIAGNOSTIC TRACE STARTUP ---
+    if (_traceStartupTime != null &&
+        event.currentIndex == _traceStartupTargetIndex &&
+        _traceStartupQueueGen == _queueGen) {
+      if (!_traceReadyLogged &&
+          event.processingState == ProcessingState.ready) {
+        _traceReadyLogged = true;
+        final elapsed = DateTime.now()
+            .difference(_traceStartupTime!)
+            .inMilliseconds;
+        debugPrint(
+          '[QUEUE][Gen $_queueGen] Target READY, elapsed=${elapsed}ms',
+        );
+      }
+      if (_traceReadyLogged && !_tracePlayingLogged && _player.playing) {
+        _tracePlayingLogged = true;
+        final elapsed = DateTime.now()
+            .difference(_traceStartupTime!)
+            .inMilliseconds;
+        debugPrint(
+          '[QUEUE][Gen $_queueGen] Playing confirmed, elapsed=${elapsed}ms',
+        );
+        _traceStartupTime = null; // Hentikan trace setelah sukses
+      }
+    }
+    // --------------------------------
+
+    _broadcastState(event);
   }
 
   Future<void> playQueue(
@@ -180,45 +254,93 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
     if (songs.isEmpty) return;
     if (initialIndex < 0 || initialIndex >= songs.length) initialIndex = 0;
 
-    await _sessionInitFuture;
-    _currentAlbumIds = albumIds ?? {};
+    final currentGen = ++_queueGen;
+    debugPrint('[QUEUE] Request Gen $currentGen received');
 
-    final mediaItems = songs.map((s) {
-      return MediaItem(
-        id: s.path,
-        title: s.title,
-        artist: s.artist,
-        album: s.album,
-        duration: Duration(milliseconds: s.durationMs),
-        extras: {
-          'albumId': _currentAlbumIds[s.path] ?? '0',
-          'songId': s.id,
-          'sourceType': sourceType ?? 'Unknown',
-          'sourceName': sourceName ?? 'Unknown',
-        },
-      );
-    }).toList();
-
-    final audioSources = songs.map((s) {
-      // Langsung gunakan path (jauh lebih cepat dari content://)
-      return AudioSource.file(s.path);
-    }).toList();
+    // 1. Bersihkan state navigasi lama
+    _pendingIndex = null;
+    _spinnerTimer?.cancel();
+    _showSpinner = false;
+    _seekTimer?.cancel();
+    _metaTimer?.cancel();
+    _seekToken++;
+    _mutatingQueue = true;
 
     try {
-      await _player.setAudioSources(audioSources, initialIndex: initialIndex);
-      queue.add(mediaItems);
-      mediaItem.add(mediaItems[initialIndex]);
-      unawaited(play());
+      await _sessionInitFuture;
+      await _modesInitFuture;
 
-      // Ambil gambar untuk lagu pertama secara background
-      _fetchAndUpdateArtwork(mediaItems[initialIndex]);
-      unawaited(_prefetchAllArt(mediaItems, initialIndex));
-    } catch (e) {
-      playbackState.add(
-        playbackState.value.copyWith(
-          processingState: AudioProcessingState.error,
-        ),
+      if (currentGen != _queueGen) return;
+      _currentAlbumIds = albumIds ?? {};
+
+      final mediaItems = songs.map((s) {
+        return MediaItem(
+          id: s.path,
+          title: s.title,
+          artist: s.artist,
+          album: s.album,
+          duration: Duration(milliseconds: s.durationMs),
+          extras: {
+            'albumId': _currentAlbumIds[s.path] ?? '0',
+            'songId': s.id,
+            'sourceType': sourceType ?? 'Unknown',
+            'sourceName': sourceName ?? 'Unknown',
+          },
+        );
+      }).toList();
+
+      final audioSources = songs.map((s) {
+        return AudioSource.file(s.path);
+      }).toList();
+
+      // 2. UPDATE UI SEGERA (Judul & Sampul)
+      mediaItem.add(_withCachedArt(mediaItems[initialIndex]));
+
+      // 3. JANGAN PAUSE MANUAL! Biarkan setAudioSources mengambil alih.
+      if (currentGen != _queueGen) return;
+
+      await _player.setAudioSources(
+        audioSources,
+        initialIndex: initialIndex,
+        preload: false,
       );
+
+      if (currentGen != _queueGen) return;
+
+      _mutatingQueue = false; // Buka kunci sebelum play
+
+      // 4. Selalu perintahkan Play
+      unawaited(
+        play().catchError((e) {
+          debugPrint('Play error: $e');
+        }),
+      );
+
+      // 5. Kirim antrean 700+ lagu ke Android secara BACKGROUND
+      // Ini mencegah lag saat memuat daftar lagu
+      unawaited(() async {
+        queue.add(mediaItems);
+        _fetchAndUpdateArtwork(mediaItems[initialIndex]);
+        unawaited(_prefetchAllArt(mediaItems, initialIndex));
+      }());
+    } on PlayerInterruptedException {
+      // Jika request ini bukan yang terbaru, abaikan interupsinya.
+      if (currentGen == _queueGen) {
+        debugPrint('[QUEUE] Interrupted Gen $currentGen');
+      }
+    } catch (e) {
+      if (currentGen == _queueGen) {
+        debugPrint('[QUEUE] Gagal playQueue Gen $currentGen: $e');
+        playbackState.add(
+          playbackState.value.copyWith(
+            processingState: AudioProcessingState.error,
+          ),
+        );
+      }
+    } finally {
+      if (currentGen == _queueGen) {
+        _mutatingQueue = false;
+      }
     }
   }
 
@@ -253,12 +375,35 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   // Cache artwork per album supaya notifikasi langsung dapat gambar
   final Map<String, Uri> _artCache = {};
-  final Stopwatch _skipWatch = Stopwatch();
-
   // ===== Skip cepat: tap beruntun digabung jadi satu lompatan =====
   int? _pendingIndex;
-  bool _skipRunning = false;
-  bool _isTransitioning = false;
+  bool _showSpinner = false;
+  Timer? _spinnerTimer;
+
+  // --- Skip: batal-dan-ganti ---
+  int _seekToken = 0;
+  Timer? _seekTimer;
+  DateTime _lastSeekIssued = DateTime.fromMillisecondsSinceEpoch(0);
+  static const Duration _seekGap = Duration(milliseconds: 100);
+
+  // --- Metadata: throttle leading + trailing ---
+  Timer? _metaTimer;
+  DateTime _lastMetaPush = DateTime.fromMillisecondsSinceEpoch(0);
+  static const Duration _metaGap = Duration(milliseconds: 300);
+
+  // --- Seek manual: spinner ditahan ---
+  bool _manualSeekPending = false;
+  bool _manualSpinner = false;
+  Timer? _manualSeekTimer;
+
+  // --- Dedupe playbackState ---
+  Duration _lastSentPos = Duration.zero;
+  int? _traceStartupTargetIndex;
+  int? _traceStartupQueueGen;
+  DateTime? _traceStartupTime;
+  bool _traceReadyLogged = false;
+  bool _tracePlayingLogged = false;
+  DateTime _lastSentAt = DateTime.now();
 
   void _skipBy(int delta) {
     final order = _player.effectiveIndices; // urutan putar (ikut shuffle)
@@ -278,45 +423,88 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   void _jumpTo(int index) {
     final q = queue.value;
     if (index < 0 || index >= q.length) return;
-    _pendingIndex = index; // Catat target keinginan (Desired State)
+    _pendingIndex = index; // niat terbaru
 
-    // UPDATE UI SEKETIKA (Tanpa menunggu audio)
-    final targetItem = q[index];
-    mediaItem.add(_withCachedArt(targetItem));
-    _fetchAndUpdateArtwork(targetItem); // Ambil sampul di background
-    // UPDATE SEEK BAR KE 0 DAN HILANGKAN SPINNER
-    _broadcastState(_player.playbackEvent);
-    // PROSES AUDIO DI BELAKANG
-    _drainSkips();
+    // 1) Metadata: tap pertama langsung, selanjutnya dijarangkan
+    _scheduleMeta();
+
+    // 2) Spinner baru muncul bila 400 ms setelah tap terakhir target belum siap
+    _showSpinner = false;
+    _spinnerTimer?.cancel();
+    _spinnerTimer = Timer(const Duration(milliseconds: 400), () {
+      if (_pendingIndex != null) {
+        _showSpinner = true;
+        _broadcastState(_player.playbackEvent, force: true);
+      }
+    });
+
+    // 3) Seek bar langsung ke 0, tanpa spinner
+    _broadcastState(_player.playbackEvent, force: true);
+
+    // 4) Audio: batalkan muat sebelumnya, menuju target terbaru
+    _scheduleSeek();
   }
 
-  Future<void> _drainSkips() async {
-    if (_skipRunning) return;
-    _skipRunning = true;
-    _isTransitioning = true; // Kunci spinner agar tidak muncul
+  // Seek audio: tap pertama langsung, tap berikutnya paling sering tiap _seekGap
+  void _scheduleSeek() {
+    final elapsed = DateTime.now().difference(_lastSeekIssued);
+    _seekTimer?.cancel();
+    if (elapsed >= _seekGap) {
+      _issueSeek();
+    } else {
+      _seekTimer = Timer(_seekGap - elapsed, _issueSeek);
+    }
+  }
+
+  Future<void> _issueSeek() async {
+    final target = _pendingIndex;
+    if (target == null) return;
+    _lastSeekIssued = DateTime.now();
+    final token = ++_seekToken;
+    final gen = _queueGen;
 
     try {
-      while (_pendingIndex != null) {
-        // Tunggu 80ms. Jika user nekan lagi, target akan berubah.
-        await Future.delayed(const Duration(milliseconds: 80));
-
-        final target = _pendingIndex;
-        if (target == null) break;
-
-        _pendingIndex = null; // Kosongkan sebelum seek agar tap baru ditangkap
-
-        // Eksekusi audio melompat ke target
-        await _player.seek(Duration.zero, index: target);
-      }
+      // Seek baru otomatis menggantikan muat sebelumnya (hanya yang terbaru menang)
+      await _player.seek(Duration.zero, index: target);
+    } on PlayerInterruptedException {
+      return; // digantikan seek yang lebih baru
     } catch (e) {
-      debugPrint('Gagal skip: $e');
-      _pendingIndex = null;
-    } finally {
-      _isTransitioning = false;
-      _skipRunning = false;
-      _resyncCurrent(); // Sinkronkan state terakhir
-      _broadcastState(_player.playbackEvent);
+      if (token == _seekToken && gen == _queueGen) {
+        debugPrint('Gagal skip: $e');
+        _pendingIndex = null;
+        _spinnerTimer?.cancel();
+        _showSpinner = false;
+        _resyncCurrent();
+      }
+      return;
     }
+
+    // Hanya seek terbaru yang boleh menyelesaikan niat
+    if (token == _seekToken && gen == _queueGen && _pendingIndex == target) {
+      _finishIntent();
+      _broadcastState(_player.playbackEvent, force: true);
+    }
+  }
+
+  // Metadata: tap pertama langsung, selanjutnya paling sering tiap _metaGap.
+  void _scheduleMeta() {
+    final elapsed = DateTime.now().difference(_lastMetaPush);
+    _metaTimer?.cancel();
+    if (elapsed >= _metaGap) {
+      _pushTargetMeta();
+    } else {
+      _metaTimer = Timer(_metaGap - elapsed, _pushTargetMeta);
+    }
+  }
+
+  void _pushTargetMeta() {
+    final i = _pendingIndex;
+    final q = queue.value;
+    if (i == null || i < 0 || i >= q.length) return;
+    _lastMetaPush = DateTime.now();
+    final item = q[i];
+    mediaItem.add(_withCachedArt(item));
+    _fetchAndUpdateArtwork(item);
   }
 
   MediaItem _withCachedArt(MediaItem item) {
@@ -436,7 +624,7 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
       final id = int.tryParse(items[i].extras?['albumId']?.toString() ?? '');
       if (id == null || id == 0 || !seen.add(id)) continue;
       await _loadArt(id);
-      if (seen.length >= 100) break; // batas supaya tidak berat
+      if (seen.length >= 30) break; // batas supaya tidak berat
     }
   }
 
@@ -454,11 +642,25 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> seek(Duration position) async {
-    _isTransitioning = true; // Sembunyikan spinner saat seek
+    _manualSeekPending = true;
+    _manualSpinner = false;
+    _manualSeekTimer?.cancel();
+    _manualSeekTimer = Timer(const Duration(milliseconds: 400), () {
+      if (_manualSeekPending) {
+        _manualSpinner = true;
+        _broadcastState(_player.playbackEvent, force: true);
+      }
+    });
+
     playbackState.add(playbackState.value.copyWith(updatePosition: position));
-    await _player.seek(position);
-    _isTransitioning = false;
-    _broadcastState(_player.playbackEvent);
+    try {
+      await _player.seek(position);
+    } finally {
+      _manualSeekPending = false;
+      _manualSpinner = false;
+      _manualSeekTimer?.cancel();
+    }
+    _broadcastState(_player.playbackEvent, force: true);
   }
 
   @override
@@ -544,8 +746,12 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   // Bersihkan resource saat aplikasi ditutup
   Future<void> disposePlayer() async {
     _sleepTimer?.cancel();
+    _spinnerTimer?.cancel();
     sleepTimerActiveNotifier.dispose();
     sleepTimerRemainingNotifier.dispose();
+    _seekTimer?.cancel();
+    _metaTimer?.cancel();
+    _manualSeekTimer?.cancel();
     await _indexSub.cancel();
     await _playbackSub.cancel();
     await _durationSub.cancel();
@@ -564,4 +770,36 @@ class LyraAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
   double get speed => _player.speed;
   Stream<double> get speedStream => _player.speedStream;
+
+  void _finishIntent() {
+    _pendingIndex = null;
+    _spinnerTimer?.cancel();
+    _showSpinner = false;
+
+    final d = _player.duration;
+    final cur = mediaItem.value;
+    if (cur != null && d != null && cur.duration != d) {
+      mediaItem.add(cur.copyWith(duration: d));
+    }
+    final i = _player.currentIndex;
+    if (i != null) {
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (_player.currentIndex == i) _prefetchNeighborArt(i);
+      });
+    }
+
+    // SISAKAN HANYA INI:
+    _metaTimer?.cancel();
+    _seekTimer?.cancel();
+
+    final ci = _player.currentIndex;
+    final qq = queue.value;
+    if (ci != null &&
+        ci >= 0 &&
+        ci < qq.length &&
+        mediaItem.value?.id != qq[ci].id) {
+      mediaItem.add(_withCachedArt(qq[ci]));
+      _fetchAndUpdateArtwork(qq[ci]);
+    }
+  }
 }
